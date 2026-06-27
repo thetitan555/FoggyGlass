@@ -157,6 +157,12 @@ ledger append-only; resolved entries stay as a record.
   sandboxes are network-isolated and cannot reach GitHub. The user pushes
   periodically (one command / the `push` helper at repo root) to keep an
   off-machine backup; nothing in the inter-role flow waits on a push.
+- **If a git command complains that `index.lock` (or `HEAD.lock`) already
+  exists:** it's a stale lock — this mounted folder doesn't always let the
+  sandbox auto-delete git's lock files. Clear it by *renaming* it out of the
+  way (`mv .git/index.lock .git/index.lock.stale`) and retry; deletion may be
+  blocked but rename works. From the user's own machine, `del .git\index.lock`
+  works normally. Harmless, but it stalls a commit until cleared.
 - **Confirm paths on first run.** Each role confirms this layout with the user at
   the start of its first session; if a path here is wrong, that's a flag to the
   Strategist.
