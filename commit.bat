@@ -1,11 +1,15 @@
 @echo off
 setlocal enabledelayedexpansion
-REM FoggyGlass - commit all changes, then push to GitHub.
-REM Runs on YOUR machine with native git (the role sandboxes cannot do this
-REM safely). Roles edit files and, when ready to checkpoint, write their commit
-REM message into COMMIT_MSG.txt; this script uses it, then deletes it.
+REM FoggyGlass - commit all changes locally, WITHOUT pushing.
+REM Runs on YOUR machine with native git, so it sidesteps the mounted-folder
+REM git fragility entirely. Use it to checkpoint a role's work; run push.bat
+REM (or this then push.bat) when you want it backed up to GitHub.
+REM
+REM A role signals "ready to commit" by writing its message into COMMIT_MSG.txt
+REM and telling you in chat. This script reads that message, then deletes the
+REM file. If there's no COMMIT_MSG.txt it just asks you for a message.
 cd /d "%~dp0"
-echo === FoggyGlass: commit ^& push ===
+echo === FoggyGlass: commit (local only) ===
 echo.
 
 REM Clear stale git lock files left behind by earlier sandbox operations. In
@@ -23,21 +27,12 @@ if errorlevel 1 (
   if "!MSG!"=="" set "MSG=checkpoint"
   git commit -m "!MSG!"
   if exist COMMIT_MSG.txt del COMMIT_MSG.txt
+  echo.
+  echo Committed locally. Run push.bat when you want it on GitHub.
 ) else (
-  echo Nothing to commit - pushing existing commits.
+  echo Nothing to commit - working tree is clean.
 )
 
-echo.
-echo Pushing to origin/main...
-git push origin main
-echo.
-if errorlevel 1 (
-  echo Push failed - see above. If it mentions non-fast-forward, run:
-  echo     git pull --rebase
-  echo and then run this again.
-) else (
-  echo Done - committed and pushed.
-)
 echo.
 echo Press any key to close.
 pause >nul

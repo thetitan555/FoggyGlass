@@ -4,3 +4,7 @@
 docs/roles/consultant-corner/charter.md
 docs/roles/consultant-corner/principles.md
 docs/roles/consultant-corner/technical-tenets.md
+
+# Checkpoint request: a role writes its proposed commit message here; commit.bat
+# / push.bat read it and delete it. Transient, never tracked.
+COMMIT_MSG.txt

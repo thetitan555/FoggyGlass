@@ -16,23 +16,31 @@ The five roles run as **separate Cowork projects (and one outside-Cowork chat)
 that do not share memory.** They cannot talk to each other. They coordinate
 through exactly two channels:
 
-1. **The shared local repo** — **every role mounts the same folder on the user's
-   disk (`E:\FoggyGlass`).** This is a hard requirement, not a convenience: the
-   role sandboxes are network-isolated and *cannot reach GitHub at all*, so they
-   cannot sync through the remote. They share state only by sharing the same
-   local working copy. A role "hands off" work by **committing** it; the next
-   role sees that commit on the same disk. Every artifact lives here.
+1. **The shared working tree** — **every role mounts the same folder on the
+   user's disk (`E:\FoggyGlass`).** This is a hard requirement, not a
+   convenience: the role sandboxes are network-isolated and *cannot reach GitHub
+   at all*, so they cannot sync through a remote. They share state only by
+   sharing the same local working copy. A role "hands off" work simply by
+   **saving the file**; because it's the same disk, the next role sees it
+   immediately — no commit, no pull, no git in the handoff at all. Every artifact
+   lives here.
 2. **The user** — the only live connection between rooms. The user carries the
    signal "go look at X" from one role to the next, and carries flagged problems
    back to their owner.
 
-**GitHub's role:** off-machine backup and history, *not* the inter-role
-transport. The role sandboxes can't push (network-blocked). Pushing is an action
-the **user** runs from their own machine, where real credentials live — a
-periodic sync, not part of any handoff. See "Working agreements."
+**Git's role, and who runs it:** git is for history and off-machine backup —
+*not* the inter-role transport (the shared working tree is). **Roles never run
+git.** Committing and pushing both happen with native git on the user's Windows
+machine, via the `commit.bat` and `push.bat` helpers at the repo root, because
+git operations through the mounted folder are unreliable (see "Working
+agreements"). A role that wants its work checkpointed writes its commit message
+into `COMMIT_MSG.txt` at the repo root and tells the user "ready"; the user runs
+a helper. Every git operation stays on a healthy filesystem, with the user —
+already the relay — as the trigger.
 
-Design consequence: if it isn't committed to the shared repo, it didn't happen.
-No role may rely on something another role "knows" — only on what's committed.
+Design consequence: if it isn't **saved to the shared working tree**, it didn't
+happen. No role may rely on something another role "knows" — only on what's on
+the shared disk. (Commits are checkpoints to history, not the handoff.)
 
 ## Where things live
 
@@ -75,7 +83,7 @@ the Architect appends rulings.
    keeping the game legible? — and decides whether it becomes a brief.
 2. **Brief** *(Strategist).* States intent and constraints — the problem it
    solves *for the charter*, who it's for, what success feels like, what it
-   trades against, open questions. **Not implementation.** Pushed to
+   trades against, open questions. **Not implementation.** Saved to
    `/docs/briefs/`. Handoff signal to the Architect via the user.
 3. **Spec** *(Architect).* Turns the brief into a precise, buildable spec with
    **acceptance criteria** (checkable statements of "done and correct"), records
@@ -125,10 +133,11 @@ freeze, so "advantage is observable" can't be verified.
 Resolution (owner fills): …
 ```
 
-The raiser pushes the flag and tells the user. The user relays it to the owner.
+The raiser writes the flag and tells the user. The user relays it to the owner.
 The owner resolves — edits their artifact if needed, writes the resolution line,
-flips `[open]` to `[resolved]`, pushes — and the user relays back. Keep the
-ledger append-only; resolved entries stay as a record.
+flips `[open]` to `[resolved]` — and the user relays back. (The change reaches
+GitHub at the next checkpoint, when the user runs a helper.) Keep the ledger
+append-only; resolved entries stay as a record.
 
 **Consultant-originated flags.** The Consultant is outside the pipeline. At the
 user's request and with the user's confirmation, it may *draft* a flag as a
@@ -156,22 +165,21 @@ user pasted into its chat; the owner sanity-checks against live state first.
 
 ## Working agreements
 
-- **Commit granularity:** one logical change per commit; reference the brief,
-  ticket, or flag it serves in the message (e.g. `brief: debug-training-mode`).
-- **Commit when you stop; read the latest commits when you start.** All roles
-  share one local working copy, so a committed change is immediately visible to
-  the next role — no pull needed. Uncommitted local edits are invisible to
-  everyone else: commit before you hand off.
-- **Pushing to GitHub is the user's action, from their own machine.** The role
-  sandboxes are network-isolated and cannot reach GitHub. The user pushes
-  periodically (one command / the `push` helper at repo root) to keep an
-  off-machine backup; nothing in the inter-role flow waits on a push.
-- **If a git command complains that `index.lock` (or `HEAD.lock`) already
-  exists:** it's a stale lock — this mounted folder doesn't always let the
-  sandbox auto-delete git's lock files. Clear it by *renaming* it out of the
-  way (`mv .git/index.lock .git/index.lock.stale`) and retry; deletion may be
-  blocked but rename works. From the user's own machine, `del .git\index.lock`
-  works normally. Harmless, but it stalls a commit until cleared.
+- **Roles don't run git — they save files and request checkpoints.** Edit files
+  in place; the handoff is the saved file on the shared disk. When a unit of work
+  is ready to checkpoint, write a one-line message to `COMMIT_MSG.txt` at the
+  repo root and tell the user "ready." Do not run `git` from the sandbox.
+- **Why git is Windows-only here.** The repo lives on a Windows folder mounted
+  into the Linux sandboxes, and git's crash-safety assumes POSIX semantics the
+  mount doesn't honor (atomic rename, unlink-of-open-files, read-after-write
+  coherence). Sandbox-side git leaks undeletable lock files, can silently commit
+  *stale* bytes, and has corrupted the index outright. So all git runs natively
+  on Windows: **`commit.bat`** (checkpoint locally) and **`push.bat`** (commit +
+  push to GitHub), both run by the user. Each reads `COMMIT_MSG.txt` for the
+  message and clears it after.
+- **Commit granularity (set by the message a role proposes):** one logical change
+  per checkpoint where practical; the message references the brief, ticket, or
+  flag it serves (e.g. `brief: debug-training-mode`).
 - **Confirm paths on first run.** Each role confirms this layout with the user at
   the start of its first session; if a path here is wrong, that's a flag to the
   Strategist.
