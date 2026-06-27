@@ -37,7 +37,8 @@ No role may rely on something another role "knows" — only on what's committed.
 ## Where things live
 
 All coordination artifacts live in `/docs`. Game code lives in the engine
-project tree (path is the Architect's call; recorded here once set).
+project tree — **`/game`** at repo root (the Architect's call, recorded in
+`/docs/spec/decisions.md` AD-013).
 
 | Artifact | Path | Owner (writes) | Readers |
 |---|---|---|---|
@@ -51,7 +52,7 @@ project tree (path is the Architect's call; recorded here once set).
 | Spec + acceptance criteria | `/docs/spec/*.md` | **Architect** | Developer, QA |
 | Architecture decisions | `/docs/spec/decisions.md` | **Architect** | all |
 | Tickets | `/docs/tickets/*.md` | **Architect** | Developer, QA |
-| Game code + dev tests | engine project tree | **Developer** | all |
+| Game code + dev tests | `/game` (engine project tree) | **Developer** | all |
 | Judgment-call log | `/docs/judgment-log.md` | **Developer** writes; **Architect** ratifies | QA, Architect |
 | Audit + drift reports | `/docs/audits/*.md` | **QA** | routed to owner |
 | Flag ledger | `/docs/flags.md` | **any role** appends; **owner** resolves | all |

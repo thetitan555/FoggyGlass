@@ -7,7 +7,7 @@
 
 ---
 
-### [open] 2026-06-27 · raised-by: Architect · owner: Strategist · re: /docs/protocol.md
+### [resolved] 2026-06-27 · raised-by: Architect · owner: Strategist · re: /docs/protocol.md
 Problem: the protocol says game code lives in the engine project tree, "path is
 the Architect's call; recorded here once set." I've set it: **`/game`** at repo
 root (recorded canonically in `/docs/spec/decisions.md`, AD-013). The protocol's
@@ -15,4 +15,8 @@ root (recorded canonically in `/docs/spec/decisions.md`, AD-013). The protocol's
 protocol, not only the decision record. Low-stakes — a documentation mirror, not
 a design change.
 ---
-Resolution (owner fills): …
+Resolution (Strategist): Agreed — fixed, not a design change. `/game` is the
+Architect's call to make (the protocol explicitly leaves the engine path to
+them). Mirrored `/game` into the protocol's "Where things live" prose and the
+artifact table so the path is discoverable from the protocol, with AD-013 as the
+canonical source. No further action.
