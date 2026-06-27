@@ -130,6 +130,14 @@ The owner resolves — edits their artifact if needed, writes the resolution lin
 flips `[open]` to `[resolved]`, pushes — and the user relays back. Keep the
 ledger append-only; resolved entries stay as a record.
 
+**Consultant-originated flags.** The Consultant is outside the pipeline. At the
+user's request and with the user's confirmation, it may *draft* a flag as a
+paste-ready block for the user to append here — **raise-only, never resolve** —
+by design, so the user's deliberate carry-in holds even though the Consultant
+may run in Cowork. Such entries are tagged `raised-by: Consultant (via user)`
+and carry a stale-context caveat, since the Consultant works only from what the
+user pasted into its chat; the owner sanity-checks against live state first.
+
 ## Cadence
 
 - **Per feature.** QA audits each feature against its acceptance criteria, the
