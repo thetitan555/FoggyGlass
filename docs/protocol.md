@@ -16,15 +16,23 @@ The five roles run as **separate Cowork projects (and one outside-Cowork chat)
 that do not share memory.** They cannot talk to each other. They coordinate
 through exactly two channels:
 
-1. **The git repo** — every artifact lives here. A role "hands off" work by
-   committing and pushing it. A role "receives" work by pulling and reading it.
-   Nothing is handed off until it's pushed.
+1. **The shared local repo** — **every role mounts the same folder on the user's
+   disk (`E:\FoggyGlass`).** This is a hard requirement, not a convenience: the
+   role sandboxes are network-isolated and *cannot reach GitHub at all*, so they
+   cannot sync through the remote. They share state only by sharing the same
+   local working copy. A role "hands off" work by **committing** it; the next
+   role sees that commit on the same disk. Every artifact lives here.
 2. **The user** — the only live connection between rooms. The user carries the
    signal "go look at X" from one role to the next, and carries flagged problems
    back to their owner.
 
-Design consequence: if it isn't written down and pushed, it didn't happen. No
-role may rely on something another role "knows" — only on what's in the repo.
+**GitHub's role:** off-machine backup and history, *not* the inter-role
+transport. The role sandboxes can't push (network-blocked). Pushing is an action
+the **user** runs from their own machine, where real credentials live — a
+periodic sync, not part of any handoff. See "Working agreements."
+
+Design consequence: if it isn't committed to the shared repo, it didn't happen.
+No role may rely on something another role "knows" — only on what's committed.
 
 ## Where things live
 
@@ -140,12 +148,4 @@ ledger append-only; resolved entries stay as a record.
 ## Working agreements
 
 - **Commit granularity:** one logical change per commit; reference the brief,
-  ticket, or flag it serves in the message (e.g. `brief: debug-training-mode`).
-- **Pull before you start; push when you stop.** Stale local state is silent
-  drift. Treat the pushed repo as the only source of truth.
-- **Confirm paths on first run.** Each role confirms this layout with the user at
-  the start of its first session; if a path here is wrong, that's a flag to the
-  Strategist.
-- **This protocol is revisable, not sacred.** It exists before real work so
-  nothing is built into a vacuum, but reality outranks it. When it stops serving
-  the work, flag it to the Strategist and it gets fixed.
+  ticket, or flag it serves in the messag
