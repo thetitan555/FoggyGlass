@@ -148,4 +148,18 @@ ledger append-only; resolved entries stay as a record.
 ## Working agreements
 
 - **Commit granularity:** one logical change per commit; reference the brief,
-  ticket, or flag it serves in the messag
+  ticket, or flag it serves in the message (e.g. `brief: debug-training-mode`).
+- **Commit when you stop; read the latest commits when you start.** All roles
+  share one local working copy, so a committed change is immediately visible to
+  the next role — no pull needed. Uncommitted local edits are invisible to
+  everyone else: commit before you hand off.
+- **Pushing to GitHub is the user's action, from their own machine.** The role
+  sandboxes are network-isolated and cannot reach GitHub. The user pushes
+  periodically (one command / the `push` helper at repo root) to keep an
+  off-machine backup; nothing in the inter-role flow waits on a push.
+- **Confirm paths on first run.** Each role confirms this layout with the user at
+  the start of its first session; if a path here is wrong, that's a flag to the
+  Strategist.
+- **This protocol is revisable, not sacred.** It exists before real work so
+  nothing is built into a vacuum, but reality outranks it. When it stops serving
+  the work, flag it to the Strategist and it gets fixed.
