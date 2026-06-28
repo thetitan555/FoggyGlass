@@ -75,3 +75,23 @@ out of the slice's two grounded movesets — with throwbox / `invuln` /
 air-eligibility fields left in place so they're later additions, not rewrites
 (Tenet 3). Specced in `move-format.md` + `combat-resolution.md` (Throws / Multi-hit
 sections); acceptance criteria added (combat #9–10, move-format #8).
+---
+
+### [open] 2026-06-27 · raised-by: Architect · owner: Strategist · re: /docs/roadmap.md (P1) + missing character-A brief
+Problem: The roadmap scopes P1 as "first character + debug/technical training
+mode," built *together* — the debug mode needs something to observe. But the only
+P1 brief handed down is `debug-training-mode.md`; there is no brief for character A.
+I've specced the training mode against the P0 test character, so the Developer is
+**not blocked** (TKT-P1-01…09 can proceed). However, the training mode's value —
+and acceptance criteria 5–9 (geometry, real frame data, advantage on real moves,
+combo accounting) — only become meaningfully verifiable against a real moveset.
+Without a character-A brief, "P1 done" can be demonstrated only against a trivial
+test character, which under-proves the feature.
+Ask (Strategist's call, not mine): do you intend character A as part of this same
+P1 push (then it needs a brief — its archetype/moveset is the roadmap's own open
+question), or as a separate phase the training mode formally precedes? Either is
+fine for sequencing; I just need to know which so the spec/tickets reference the
+right "done" bar. Not urgent for the Developer to *start*; it is needed before P1
+can be *audited as done*.
+---
+Resolution (owner fills): …
