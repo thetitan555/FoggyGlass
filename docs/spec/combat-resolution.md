@@ -36,6 +36,21 @@
 A frozen, ordered pipeline is what makes interaction outcomes deterministic and
 gives the debug readout a fixed thing to narrate.
 
+## Input buffer (AD-022)
+
+Buffering is sim-side (AD-003), evaluated in phase 2 over `input_history`:
+
+- **Motion leniency:** a motion (`236`, `623`, …) is recognized if its directions
+  occur in order within the last **9 frames**.
+- **Command buffer:** a recognized command (special, throw, special-cancel) is held
+  up to **6 frames** and executes on the first frame the character is **actionable**
+  (reversal on wakeup / after blockstun / after hitstop) or the first frame a
+  **cancel window** opens. A `623` buffered during blockstun thus comes out as a
+  frame-1 reversal.
+
+Deterministic — a pure function of `input_history`, identical for every input
+source (so replays/netcode reproduce it for free).
+
 ## Hit vs block
 
 Whether an incoming hit is a block is determined by the defender holding a
@@ -190,3 +205,7 @@ deterministic, serializable sim.
 10. **Throws.** A throw connects through block (bypasses blockstun); a defender
     throw input within the tech window techs it to neutral with no damage;
     simultaneous throws within the window clash to a tech (AD-016).
+11. **Input buffer.** A motion recognizes only if completed within the 9-frame
+    window; a command buffered up to 6 frames executes on the first actionable
+    frame (a `623` held through blockstun fires frame-1) and within a cancel window
+    fires at the cancel point (AD-022). Deterministic across input sources.

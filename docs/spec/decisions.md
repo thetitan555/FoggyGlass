@@ -287,3 +287,22 @@ format and the `SimState` shape, and this touches no tenet.
 **Rejected.** Modeling the fireball as a long-lived character hitbox (can't
 out-live recovery or move independently of the character); a bespoke fireball
 system (a projectile entity generalizes; a one-off doesn't).
+
+### AD-022 · Input buffer: motion leniency + command buffer — settled (2026-06-27)
+**Decision.** Buffering is sim-side (AD-003), evaluated each tick over
+`input_history`. Two slice-wide windows:
+- **Motion window = 9 frames.** A motion's directional sequence (e.g. `236`,
+  `623`) is recognized if its directions occur in order within the last 9 frames.
+- **Command buffer = 6 frames.** A recognized command (special, throw, or a
+  special-cancel) is held up to 6 frames and **executes on the first frame the
+  character is actionable** (reversal on wakeup / after blockstun / after hitstop)
+  **or the first frame a cancel window opens** (special-cancel leniency).
+
+Same windows for every character and every input source.
+**Why.** The brief's reversal-on-wakeup and the link/cancel game need fair,
+consistent leniency; frame-perfect-only inputs would be unfair and off-genre. One
+system buffer keeps it uniform and deterministic (a pure function of
+`input_history`, so replays/netcode reproduce it for free — Tenet 2).
+**Rejected.** Per-character buffers (drift — the thing the Architect prevents); no
+buffer (frame-perfect reversals; punishingly inconsistent); buffering in the input
+source (AD-003 — would diverge across sources).
