@@ -120,9 +120,10 @@ not just runnable but defensible — and the architecture is proven extensible.*
 
 ## Open questions (resolve before the phase that needs them)
 
-- **Character A/B archetypes and exact movesets** — content, deferred to the P1
-  and P2 briefs. The *split* between them matters (distinct enough to test the
-  format and matchup legibility); the specifics don't yet.
+- **Character A archetype** — *resolved:* a grounded, simplified shoto, briefed
+  in `/docs/briefs/character-a.md`. **Character B archetype** — open, deferred to
+  the P2 brief; it will be chosen to *contrast* A (the split is what tests the
+  format and matchup legibility). Exact movesets are the Architect's to spec.
 - **Match rules** — rounds, timer, health values: a P2-brief detail, defaulted
   to a conventional best-of for now unless you want otherwise.
 - **What the training mode must expose, exactly** — the P1 brief pins this; it's

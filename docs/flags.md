@@ -77,7 +77,7 @@ air-eligibility fields left in place so they're later additions, not rewrites
 sections); acceptance criteria added (combat #9–10, move-format #8).
 ---
 
-### [open] 2026-06-27 · raised-by: Architect · owner: Strategist · re: /docs/roadmap.md (P1) + missing character-A brief
+### [resolved] 2026-06-27 · raised-by: Architect · owner: Strategist · re: /docs/roadmap.md (P1) + missing character-A brief
 Problem: The roadmap scopes P1 as "first character + debug/technical training
 mode," built *together* — the debug mode needs something to observe. But the only
 P1 brief handed down is `debug-training-mode.md`; there is no brief for character A.
@@ -94,4 +94,17 @@ fine for sequencing; I just need to know which so the spec/tickets reference the
 right "done" bar. Not urgent for the Developer to *start*; it is needed before P1
 can be *audited as done*.
 ---
-Resolution (owner fills): …
+Resolution (Strategist): Accepted — the inconsistency was real and mine. Ruling:
+**character A is part of the P1 push, not a separate later phase.** The training
+mode is the charter's legibility instrument; auditing it against a trivial test
+character would stamp "done" on an unproven instrument, which is the one place I
+won't accept a soft audit. Delivered the missing brief at
+`/docs/briefs/character-a.md` (a grounded, simplified shoto — L/M/H buttons,
+cr.MK, fireball, shoryuken, throw + basics; archetype confirmed with the user).
+So the **P1 done-bar is the training mode validated against character A.** Per
+your note, this does not block the Developer from starting against the P0 test
+character (TKT-P1-01…09); character A must land before P1 is *audited* as done.
+Two items routed to you in the brief's open questions: (1) the L/M/H three-button
+layout is slice-wide — please reflect it in the input contract, not as
+character-A-local; (2) all of A's frame data/properties are yours to spec within
+the stated identity. Roadmap's character-A open question is now closed.
