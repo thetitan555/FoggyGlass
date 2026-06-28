@@ -19,9 +19,11 @@
    but no transition executes until the first unfrozen tick (AD-017).
 3. **Movement integration.** Apply per-state/keyframe motion and physics to
    `position`/`velocity` (fixed-point integers, AD-014); resolve pushbox
-   collisions and stage bounds.
+   collisions and stage bounds. Integrate live projectiles' positions too (AD-021),
+   and process any `spawn` actions firing this tick (subject to the per-owner cap).
 4. **Overlap detection.** Resolve each character's active hitboxes/hurtboxes/
-   throwboxes from move data (derived, not stored) and test AABB overlaps.
+   throwboxes from move data (derived, not stored) and test AABB overlaps. Include
+   live projectile hitboxes vs. the opponent's hurtbox (AD-021).
 5. **Hit resolution.** For each confirmed hit (respecting `id_group` single-hit,
    or `rehit_interval` for cadenced multi-hit), apply damage (after scaling), set
    the defender's `hit_reaction`/`block_reaction` state, set stun, set hitstop on
@@ -102,6 +104,17 @@ the pressure/combo cases legibility most depends on. The static value answers
 - Damage scaling applies from a single scaling definition (per hit-count or per
   scaling state) before damage is subtracted — deterministic and surfaced.
 - Combo state resets when the defender returns to actionable/neutral.
+
+## Projectiles (AD-021)
+
+- A `spawn` keyframe creates a `Projectile` in `SimState.projectiles` if the owner
+  is under the per-owner cap (1 for the slice); otherwise the spawn is suppressed.
+- Each tick a projectile integrates its own fixed-point position (phase 3), its
+  hitbox is tested against the opponent's hurtbox (phase 4), and on hit/block it
+  resolves like any hit (phase 5) — damage, stun, hitstop, pushback — then is
+  **consumed**. It also despawns when `lifetime` elapses or it leaves the stage.
+- A projectile's hit is attributed to its `owner` for combo/advantage accounting.
+  Projectile-vs-projectile interaction is out of slice scope (AD-021).
 
 ## Multi-hit / rehit (AD-016)
 

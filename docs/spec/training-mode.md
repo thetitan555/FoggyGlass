@@ -37,10 +37,19 @@ read-only inspection surface. All lean directly on Tenets 1 & 2.
 - `snapshot() -> StateBlob` / `restore(StateBlob)` — full serializable state
   round-trip (Tenet 1, `simulation.md`).
 - **Reset granularity — Architect's call (brief deferred to me):** a **single
-  reset slot**. `capture_reset()` stores the current state as the reset point;
-  `do_reset()` restores it. This is the minimum that makes reps fast; multiple
-  saved situations are a later extension, explicitly out of slice scope. The slot
-  is a `StateBlob`, so multi-slot is additive, not a redesign.
+  reset slot**. `capture_reset()` stores the reset point; `do_reset()` restores it.
+  This is the minimum that makes reps fast; multiple saved situations are a later
+  extension, explicitly out of slice scope. The slot is additive to multi-slot,
+  not a redesign.
+- **Reset restores sim *and* playback position (AD-020).** The reset point is
+  **both** the sim `StateBlob` **and** the playback position of each
+  `RecordPlaybackSource` — because the playback cursor lives outside `SimState`
+  (sources are external, Tenet 2), so restoring state alone would desync the dummy
+  and break the rep. `do_reset()` restores both, so a recorded sequence replays in
+  sync every rep. This coordination lives **in this training-mode harness** (which
+  owns both the runner and the sources), not in the sim — the sim still knows
+  nothing about input sources, so Tenet 2 holds. Independent/"metronome" playback
+  (reset sim, keep the dummy rolling) is out of slice scope.
 
 **Record / playback dummy (Tenet 2 — an input source, not an AI).**
 - `RecordPlaybackSource` *implements `InputSource`* with three modes:
@@ -57,8 +66,10 @@ Each overlay renders only from the inspection surface. Grouped into the units th
 tickets build:
 
 **Geometry overlay.** Draw each player's resolved `BoxView`s in world space,
-color-coded by `kind` (hurt / hit / throw / push). Active hitboxes are visually
-distinct. This is "see what hit and what whiffed."
+color-coded by `kind` (hurt / hit / throw / push), converting each box's
+fixed-point `rect` to pixels via the render projection (`inspection-surface.md`,
+AD-019). Active hitboxes are visually distinct. This is "see what hit and what
+whiffed."
 
 **Frame-data & advantage panel.** For the move(s) in play: static
 `startup / active / recovery` and `on_hit_adv / on_block_adv` (the pinned values).
@@ -113,3 +124,8 @@ beyond legibility.
 11. **Same surface as QA.** The values displayed equal those the determinism /
     golden harness reads from the same inspection surface — no second source of
     truth.
+12. **Reset re-syncs the dummy (AD-020).** Record a dummy sequence,
+    `capture_reset()`, play forward, `do_reset()` → the dummy replays the identical
+    inputs from the reset point and the whole rep is bit-identical on repeat. (This
+    covers the reset+playback *interaction*, which criteria 3 and 4 test only
+    independently.)

@@ -43,6 +43,7 @@ live node references). Top-level fields:
 | `tick` | Monotonic tick counter; the authoritative clock. |
 | `rng` | Seed + current RNG state, **inside** the serialized state (Tenet 1). Any randomness draws from here. |
 | `players[2]` | Per-player state (below). |
+| `projectiles` | List of live projectile entities (AD-021) — owner, fixed-point position/velocity, hit data, lifetime. Capped at one per owner for the slice. Empty when none are out. |
 | `stage` | Bounds / wall positions / any stage state affecting the sim. |
 
 Per-player state (`players[i]`):

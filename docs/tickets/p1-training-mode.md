@@ -37,7 +37,8 @@ content) sharpens validation when it lands.
 `BoxView`, `FrameData`, `AdvantageView`, `HitEvent`) as read-only views over the
 current state, sourcing advantage/frame-data from the sim's own functions (no
 re-derivation). Build the interface first; this is the seam everything else reads.
-**Acceptance:** `inspection-surface.md` criteria 1–5.
+Snapshot-able views are fixed-point only; px is a render-only projection (AD-019).
+**Acceptance:** `inspection-surface.md` criteria 1–6.
 
 ### TKT-P1-02 · Frame control (pause / resume / step-once)
 **Serves:** `training-mode.md` → Control layer (frame control). **Depends:** P0 sim
@@ -47,18 +48,45 @@ one tick and crosses hitstop one tick per call (AD-010).
 
 ### TKT-P1-03 · Situation save / restore + single reset slot
 **Serves:** `training-mode.md` → Control layer (reset). **Depends:** P0
-serializable state. **Scope:** `snapshot`/`restore`; one reset slot
-(`capture_reset`/`do_reset`) over a `StateBlob`. No multi-slot.
-**Acceptance:** `training-mode.md` criterion 3.
+serializable state; **TKT-P1-04** (reset point includes source playback position).
+**Scope:** `snapshot`/`restore`; one reset slot (`capture_reset`/`do_reset`). The
+reset point bundles the sim `StateBlob` **and** each `RecordPlaybackSource`'s
+playback position, and `do_reset()` restores both so the dummy re-syncs (AD-020).
+No multi-slot. Coordination lives in the harness, not the sim (Tenet 2 intact).
+**Acceptance:** `training-mode.md` criteria 3 and 12.
 
 ### TKT-P1-04 · Record/playback dummy (input source)
 **Serves:** `training-mode.md` → Control layer (dummy); `input.md`. **Depends:** P0
 `InputSource` interface. **Scope:** `RecordPlaybackSource` implementing
 `InputSource` with `PASSTHROUGH` / `RECORDING` / `PLAYBACK` modes over a raw
-`InputFrame` buffer, looping playback. No AI/behavior.
-**Acceptance:** `training-mode.md` criterion 4.
+`InputFrame` buffer, looping playback. No AI/behavior. Expose a readable/restorable
+playback position so the reset point (TKT-P1-03) can re-sync it (AD-020); being
+frame-indexed (`input.md`) makes this natural.
+**Acceptance:** `training-mode.md` criteria 4 and 12.
 
 ---
+
+### TKT-P1-0P · Projectile entity system
+**Serves:** AD-021; `move-format.md` (spawn/`Projectile`), `simulation.md`
+(`SimState.projectiles`), `combat-resolution.md` (Projectiles section),
+`inspection-surface.md` (`projectiles()`). **Depends:** P0 sim loop + state.
+**Scope:** Add `SimState.projectiles`; the `spawn` keyframe action with per-owner
+cap; per-tick integration, overlap-vs-opponent-hurtbox, hit/block resolution, and
+despawn (consumed / lifetime / off-stage); expose `ProjectileView`. Sim-facing —
+character A's fireball needs it. No projectile-vs-projectile (deferred).
+**Acceptance:** `character-a.md` criterion 3; surfaced in the geometry overlay
+(training-mode criterion 5).
+
+## Content (authored against the format)
+
+### TKT-P1-10 · Author character A move data
+**Serves:** `character-a.md` (full kit). **Depends:** P0 move format; **TKT-P1-0P**
+(fireball). **Scope:** Author all of A — movement, 9 normals, fireball/shoryuken
+(L/M/H), throw — purely as `.tres` move data with the listed frame data, hitboxes,
+properties, and `CancelRule`s (special-cancels + links only; no gatlings/jump
+cancels). No engine changes. This is the training mode's first *real* test subject
+and the P1 done-bar (per the Strategist's flag resolution).
+**Acceptance:** `character-a.md` criteria 1–7.
 
 ## Player-facing (downstream of the interfaces)
 

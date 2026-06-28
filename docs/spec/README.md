@@ -32,8 +32,16 @@ literal, and the team's instrumentation.
 - **`training-mode.md`** — the feature spec: control layer (frame control,
   save/restore reset, record/playback dummy) + readout layer (geometry, frame-data
   & advantage, live state, input history), with acceptance criteria.
+- **`character-a.md`** — character A's full frame data (the baseline shoto): a
+  juiced fundamentals character — links + special-cancels + a scary DP, **no
+  gatlings / no jump cancels** (reserved for B). The training mode's first real
+  test subject and the P1 done-bar.
 - **`/docs/tickets/p1-training-mode.md`** — the seam-ordered ticket decomposition
-  (TKT-P1-01…09).
+  (TKT-P1-0P projectiles, 01…09 mode, 10 character-A authoring).
+
+Architecture note: character A's fireball added **projectiles** as first-class
+serialized sim entities (AD-021) — see `simulation.md`, `move-format.md`,
+`combat-resolution.md`, `inspection-surface.md`.
 
 **Sequencing.** At the systems/content seam the player-facing side is downstream
 of the simulation-facing interface, so the inspection surface (`simulation.md`),

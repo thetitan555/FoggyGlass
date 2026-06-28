@@ -60,6 +60,16 @@ is the consistency guard that lets character B be *content, not engineering*.
 | `throwboxes` | List of `Box` for throws (optional). |
 | `motion` | Per-range movement deltas / velocity sets (optional). |
 | `invuln` | Optional invulnerability flags (e.g. throw-invuln, strike-invuln) for this range. |
+| `spawn` | Optional (AD-021). Spawns a projectile this range: `{ projectile, offset, velocity }`. Subject to the owner's live-projectile cap; if the cap is full the spawn is suppressed. |
+
+### `Projectile` (spawned entity — AD-021)
+| Field | Meaning |
+|---|---|
+| `owner` | Player index that spawned it (for cap, facing, and combo attribution). |
+| `position`, `velocity` | Fixed-point; integrates each tick independently of the owner. |
+| `hitbox` | A `HitBox` (geometry + hit data) carried by the projectile. |
+| `lifetime` | Frames it persists before despawning; consumed on hit/block. |
+| `max_per_owner` | Live cap (1 for the slice fireball). |
 
 ### `CancelRule` (one entry in `MoveState.cancels` — AD-015)
 | Field | Meaning |

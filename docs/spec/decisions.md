@@ -236,3 +236,54 @@ system-wide without violating AD-002's dumb-input-layer rule.
 **Rejected.** Naming L/M/H inside the input bitfield (couples the input layer to
 move semantics — AD-002 violation); leaving the count to each character (sources
 couldn't agree on the input shape).
+
+### AD-019 · Inspection surface is fixed-point truth only; pixel projection is render-only — settled (2026-06-27, Consultant flag)
+**Decision.** The snapshot-able inspection surface carries only fixed-point integer
+truth — no float fields. Pixel coordinates are a deterministic render-only
+projection (fixed→px) computed for drawing and **excluded from every
+golden/determinism snapshot**.
+**Why.** QA golden-files and the UI read the *same* surface (AD-011). If a snapshot
+included `_px` floats, cross-platform float drift (Tenet 1) could break goldens —
+defeating the very harness the surface exists to serve. Splitting truth (snapshot)
+from projection (render) keeps one surface while keeping snapshots float-free.
+**Rejected.** Keeping `position_px`/`rect_px` as surface fields (puts floats in the
+golden set); a second parallel surface for QA (two sources of truth — the thing
+AD-011 forbids).
+
+### AD-020 · A training-mode reset restores sim state *and* input-source playback position — settled (2026-06-27, Consultant flag)
+**Decision.** The reset point captures both the sim `StateBlob` and the playback
+position of each `RecordPlaybackSource`; `do_reset()` restores both, so a recorded
+sequence replays **in sync** with the rep (the default and only slice behavior).
+Independent/"metronome" playback (reset sim but keep the dummy rolling) is
+explicitly out of slice scope — add only if later wanted.
+**Why.** The playback cursor lives outside `SimState` (sources are external,
+Tenet 2), so restoring `SimState` alone desyncs the dummy and breaks the core
+training-rep loop. The fix lives in the **training-mode harness**, which sits above
+the sim and owns both the runner and the sources — so it coordinates "restore
+snapshot + rewind cursor" as one operation. The sim still knows nothing about
+sources, so **Tenet 2 holds** (no tenet change; considered and ruled clear). The
+frame-indexed `InputSource` contract (`input.md`) makes the rewind natural:
+restoring the tick re-queries the same frames.
+**Rejected.** Resetting `SimState` only (desyncs the dummy); pushing the cursor
+into `SimState` (would make the sim own source state — Tenet 2 violation).
+
+### AD-021 · Projectiles are first-class serialized sim entities — settled (2026-06-27, surfaced by character A's fireball)
+**Decision.** A projectile (e.g. character A's fireball) is a sim entity in
+`SimState.projectiles[]`, not a hitbox attached to a character. It is spawned by a
+**`spawn` keyframe action** in the move data, carries its own fixed-point position
+/velocity and hit data, integrates and resolves in the fixed phase order like a
+character's boxes, and is consumed on hit/block or when its lifetime ends. The
+slice caps **one live projectile per owner** (classic shoto fireball). Projectiles
+are exposed through the inspection surface like any other sim truth.
+**Why.** A character's move boxes are attached to the character and live only
+during active frames; a fireball is *detached* and *persists* independently —
+travelling after the move recovers. That's a different lifetime and ownership, so
+it needs to be its own serialized entity. Doing so keeps determinism and
+serialization intact (it's just more state in `SimState`) and is `build-for-
+extension` (Tenet 3): B's tools, supers, traps reuse the same entity.
+**Scope.** Projectile-vs-projectile interaction is deferred (no slice character
+needs it yet); the field set leaves it open. **Mine to add** — I own the move
+format and the `SimState` shape, and this touches no tenet.
+**Rejected.** Modeling the fireball as a long-lived character hitbox (can't
+out-live recovery or move independently of the character); a bespoke fireball
+system (a projectile entity generalizes; a one-off doesn't).
