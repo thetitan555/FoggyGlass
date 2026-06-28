@@ -25,9 +25,11 @@ Contract:
 - **Pure in contract.** The next state is a function only of `(state, in_p1,
   in_p2)`. No reads of wall-clock, `delta`, unseeded RNG, engine input polling,
   or the scene tree.
-- **In-place mutation is allowed** (AD-004) — `step` may mutate an owned
-  `SimState` rather than allocate a copy — *provided* the no-external-reads rule
-  holds, so the result is still determined solely by the inputs.
+- **Must not mutate its input** (AD-004). `step` writes the next state into a
+  *distinct* state object and leaves `state` untouched, so purity is structurally
+  verifiable (`hash(prev)` is unchanged after the call). Buffer reuse is allowed —
+  a state no longer live may be recycled as the output buffer — so this is not
+  per-tick allocation churn.
 - The internal phase order `step` runs is fixed and specified in
   `combat-resolution.md` (AD-009).
 
@@ -47,7 +49,7 @@ Per-player state (`players[i]`):
 
 | Field | Notes |
 |---|---|
-| `position`, `velocity` | Floats (AD-005). |
+| `position`, `velocity` | Fixed-point integers (AD-005, AD-014) — never floats. |
 | `facing` | Which way the character faces; the raw→forward/back conversion uses this. |
 | `health` | Current health. |
 | `state_id`, `frame_in_state` | Current state-machine state and the frame within it (see `move-format.md`). |
@@ -71,7 +73,9 @@ position)` — not persisted. State stays minimal and single-sourced.
 
 ## Physics / overlap ownership
 
-- All hit/hurt/push overlap is **our own AABB test** inside `step` (AD-012).
+- All hit/hurt/push overlap is **our own AABB test** inside `step` (AD-012),
+  on fixed-point integer coordinates — overlap is integer compare, movement is
+  integer add (AD-014).
 - No Godot RigidBody/CharacterBody integration or built-in physics step advances
   anything in `SimState`. An engine node used purely as a stateless geometry
   query inside the fixed step is permitted (Tenet 1's carve-out), but never as a
@@ -110,3 +114,8 @@ sim internals.
    construction.
 7. **No engine-physics state.** No gameplay value in `SimState` is owned/advanced
    by a Godot physics body.
+8. **No floats in sim state.** `SimState` contains no float fields; positions,
+   velocities, and gameplay math are fixed-point integers (AD-005, AD-014). The
+   sim performs no transcendental (trig/sqrt) operations.
+9. **Immutable input.** After `next = step(prev, a, b)`, `hash(prev)` is identical
+   to before the call — `step` did not mutate its input (AD-004).

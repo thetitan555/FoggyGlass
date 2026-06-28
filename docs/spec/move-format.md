@@ -39,7 +39,7 @@ is the consistency guard that lets character B be *content, not engineering*.
 | `id` | Stable identifier. |
 | `states` | The set of `MoveState`s this character has. |
 | `button_map` | Maps generic `BUTTON_n` (+ direction/motion) → `state_id`. The only place buttons gain meaning. |
-| `physics` | Walk/dash/jump/gravity constants (floats). |
+| `physics` | Walk/dash/jump/gravity constants, as baked fixed-point integers (AD-014). |
 
 ### `MoveState`
 | Field | Meaning |
@@ -48,7 +48,7 @@ is the consistency guard that lets character B be *content, not engineering*.
 | `category` | One of the engine-level categories above. |
 | `duration` | Total frames before the state ends / returns to actionable. |
 | `timeline` | Ordered list of `Keyframe` ranges. |
-| `cancels` | Cancel rules: which `state_id`s this can transition into, and the window/condition (e.g. on-hit, on-block, frame range, special-cancel tag). |
+| `cancels` | A list of `CancelRule` (see below) — not one opaque field (AD-015). |
 | `loop` | Whether `duration` loops (idle/walk) or plays once. |
 
 ### `Keyframe` (a frame range within a `MoveState`)
@@ -61,10 +61,24 @@ is the consistency guard that lets character B be *content, not engineering*.
 | `motion` | Per-range movement deltas / velocity sets (optional). |
 | `invuln` | Optional invulnerability flags (e.g. throw-invuln, strike-invuln) for this range. |
 
+### `CancelRule` (one entry in `MoveState.cancels` — AD-015)
+| Field | Meaning |
+|---|---|
+| `target` | Destination `state_id`, or a tag/group naming a set of states. |
+| `condition` | `on_hit` \| `on_block` \| `on_contact` \| `on_whiff` \| `always`. |
+| `window` | Frame range within the move the cancel is allowed; default first-active→end. |
+| `input` | Required command (button/motion) to take the cancel. |
+| `requires_tag` | Optional cancel tag that must be present (granted by a connecting `HitBox.cancel_tags`). |
+
+Move classes are expressed, not special-cased: **gatling/chain** = `on_contact`
+to another normal within a `window`; **special-cancel** = `requires_tag` granted
+by the hit; **whiff-cancel** = `on_whiff`. Rehit/multi-hit is *not* a cancel —
+see `HitBox.rehit_interval` and AD-016.
+
 ### `Box` (geometry, character-local)
 | Field | Meaning |
 |---|---|
-| `x`, `y`, `w`, `h` | AABB in character-local space; flipped by `facing`, offset by `position`. |
+| `x`, `y`, `w`, `h` | AABB in character-local space, **fixed-point units** (AD-014); flipped by `facing`, offset by `position`. |
 
 `pushbox` (collision box) is defined per `MoveState`/category rather than
 per-keyframe unless a move overrides it.
@@ -81,6 +95,8 @@ per-keyframe unless a move overrides it.
 | `hit_reaction`, `block_reaction` | Which defender `state_id` (category `HITSTUN`/`BLOCKSTUN`) the hit forces. |
 | `cancel_tags` | Tags this hitbox grants for the attacker's cancels (e.g. enables special-cancel). |
 | `id_group` | Groups hitboxes of one attack so a single attack hits once (no multi-count from overlapping boxes). |
+| `rehit_interval` | Optional (AD-016). If set, this `id_group` may hit the same target again after this many frames — the cadenced multi-hit form. Unset ⇒ one hit per contact. |
+| `throwbox` flag | A `HitBox`/`Box` may be marked a throw (AD-016): on connect it bypasses blockstun and enters the throw resolution path (see `combat-resolution.md`). |
 
 ## Derived frame data (one canonical definition — AD-008)
 
@@ -111,3 +127,11 @@ way, so two characters can't disagree about what "startup" or "advantage" means.
    one hit, not several.
 6. **One pattern.** Every character's states declare a valid engine-level
    `category`; no character introduces a state machine outside this pattern.
+7. **Typed cancels.** A `MoveState`'s cancels are a list of `CancelRule`s; a
+   gatling, a special-cancel (tag-gated), and a whiff-cancel are each authorable
+   purely as data with no engine change, and resolve per their `condition`/`window`.
+8. **Multi-hit forms.** A sequential multi-hit (distinct `id_group`s across
+   keyframes) lands each hit once; a `rehit_interval` hitbox re-hits the same
+   target on its cadence and not between intervals.
+9. **Fixed-point data.** All geometry/physics values consumed by the runtime are
+   integers (baked fixed-point, AD-014); no float reaches `step`.

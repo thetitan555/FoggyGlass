@@ -42,24 +42,36 @@ from the same raw bits.
 **Rejected.** Buffering in the input source (would have to be re-implemented and
 kept in sync across every source).
 
-### AD-004 · Fixed 60 Hz tick; `step(state, inP1, inP2)` is pure in contract — settled
+### AD-004 · Fixed 60 Hz tick; `step` is pure and does not mutate its input — settled (revised 2026-06-27, Consultant flag)
 **Decision.** All gameplay advances on a fixed 60 Hz tick inside
-`physics_process`, off our own tick counter in state. The step's output depends
-only on `(prev state, two inputs)`. Implemented as in-place mutation of an owned
-state object for speed, but with no external/wall-clock/`delta` reads.
-**Why.** Tenet 1. Purity is the contract; in-place mutation is an implementation
-detail that does not break it as long as nothing outside the inputs is read.
-**Rejected.** Advancing on render/`delta`; immutable copy-per-step (correct but
-needless allocation pressure for a single-machine sim).
+`physics_process`, off our own tick counter in state. `step(state, inP1, inP2)`
+is a pure function of `(prev state, two inputs)` and **must not mutate its input
+state** — it writes the next state into a *distinct* state object. Buffer reuse
+is allowed (a state no longer live may be recycled as the output buffer), so this
+is not per-tick allocation churn.
+**Why.** Tenet 1 + Tenet 3: the slice exists to *prove* determinism, so purity
+must be structurally verifiable, not upheld by discipline. With non-mutation,
+`prev` is provably untouched after `step` (`hash(prev)` unchanged), turning a
+purity violation into a cheap standing assertion instead of a bug found only when
+a golden/determinism test happens to hit the offending path. At slice scale the
+cost is negligible.
+**Rejected.** In-place mutation of the input (fast, but purity checkable only by
+discipline — the earlier stance, now overturned). Fresh allocation every tick
+(unnecessary once non-live buffers are recycled).
 
-### AD-005 · Floats now; fixed-point deferred — settled
-**Decision.** Positions/velocities are floats for the slice.
-**Why.** Tenet 1 is explicit: single-machine rollback needs only purity, for
-which floats are fine. Fixed-point is only required for cross-platform *lockstep*,
-which is not a slice goal. Keeping floats keeps rollback open without paying the
-fixed-point tax now.
-**Rejected.** Fixed-point from day one — premature; a deterministic-math decision
-to revisit only if lockstep becomes a real goal (the tenet's call, not mine).
+### AD-005 · Fixed-point sim math from the start — settled (revised 2026-06-27, user directive)
+**Decision.** Positions, velocities, and all gameplay math in `SimState` use a
+fixed-point integer representation (see AD-014), not floats. Floats appear only
+in the *view* (fixed→float for rendering).
+**Why.** The user elected not to defer this. Tenet 1 framed fixed-point as the
+bar for cross-platform *lockstep* and optional for single-machine rollback; doing
+it now *exceeds* the minimum bar rather than violating it, and clears lockstep's
+hardest obstacle while the sim is still small and cheap to get right. For a
+box-based 2D fighter it does not seriously raise scope: AABB overlap and movement
+are integer add/compare, and the slice needs no transcendental math.
+**Supersedes.** The prior "floats now, fixed-point deferred" stance.
+**Rejected.** Floats now (keeps rollback open but leaves lockstep a later
+rewrite-risk; the user judged the pull-forward cost low enough to take now).
 
 ### AD-006 · Move/frame data authored as `.tres` Resources against a documented schema — settled
 **Decision.** Moves are Godot custom `Resource` (`.tres`) files conforming to a
@@ -82,15 +94,27 @@ character B without becoming "A-shaped."
 **Rejected.** Per-character bespoke state machines (drift engine; defeats the
 content seam).
 
-### AD-008 · One canonical advantage formula, computed in one place — settled
-**Decision.** Advantage = `defender_remaining_stun − attacker_remaining_recovery`,
-computed each tick in a single function and surfaced through the inspection
-surface. Neutral is "restored" when both players are actionable.
-**Why.** The charter's legibility promise and the brief both demand that "what
-hit, what whiffed, who's plus" is observable and *consistent*. One formula in one
-place is the only way two characters can't disagree about what advantage means.
-**Rejected.** Per-move or per-character advantage handling (the canonical drift
-the Architect exists to prevent).
+### AD-008 · One advantage computation: a pinned static number and a live readout — settled (revised 2026-06-27, Consultant flag)
+**Decision.** One function computes `defender_remaining_stun −
+attacker_remaining_recovery`, but two clearly-distinct values are surfaced:
+- **Static move frame-advantage** (frame data / UI): computed at a *pinned
+  reference frame* — contact on the move's **first active frame**, attacker
+  **uncancelled**. The conventional on-hit/on-block number; a property of the move.
+- **Live advantage** (training-mode per-tick): the same formula where
+  `attacker_remaining_recovery` is the attacker's *actual* frames-to-actionable
+  in the current situation, **including any committed cancel**. The truthful
+  "who is plus right now."
+
+So `attacker_remaining_recovery` is defined as actual frames-to-actionable, not
+raw move-state recovery — the live number stays correct in the pressure/combo
+cases legibility depends on. Neutral is "restored" when both players are actionable.
+**Why.** Per-tick-only left no canonical number for content to read; raw-recovery-
+only lied once a cancel shortened recovery — exactly the legibility-critical
+cases. A pinned static value plus a cancel-aware live value resolves both while
+keeping one formula in one place.
+**Rejected.** A single number serving both roles (it can't — one is a move
+property, one is situational); per-move or per-character advantage handling (the
+canonical drift the Architect exists to prevent).
 
 ### AD-009 · Fixed intra-tick phase order — settled
 **Decision.** Each tick runs a fixed phase order: inputs → state-machine /
@@ -132,4 +156,68 @@ coordination artifacts.
 **Why.** Clean separation of the build from its substrate. The protocol leaves
 this path to the Architect; recorded here as the canonical call.
 **Note.** The protocol table's engine-path slot should mirror this — raised to
-the Strategist (see `flags.md`).
+the Strategist (see `flags.md`). *(Resolved: Strategist mirrored it.)*
+
+### AD-014 · Fixed-point convention — settled (2026-06-27)
+**Decision.** One scalar fixed-point type: 64-bit signed integer, fractional
+scale `2^16` (1 game unit = 65536 sub-units). Multiply = `(a*b) >> 16`, divide =
+`(a << 16) / b`; a single documented rounding rule (round-to-nearest, ties away
+from zero) governs anywhere a conversion rounds. A small `FP` helper owns these
+ops. **No transcendental math in the sim** for the slice — velocities are authored
+as vectors; no normalization / trig / sqrt. Move and physics data reach the
+runtime as **baked fixed-point integers**: authoring may use friendly units, but
+the float→fixed bake happens once, off the hot path, never inside `step`.
+**Why.** A power-of-two scale makes multiply/divide cheap shifts; baking keeps the
+runtime pure-integer and lockstep-safe; banning transcendentals removes the only
+common cross-platform float-divergence source a 2D box fighter would otherwise hit.
+**Rejected.** Per-tick float→fixed conversion (reintroduces float risk on the hot
+path); a third-party fixed-point library (a handful of ops doesn't justify it).
+
+### AD-015 · Cancels are a list of typed rules, not one opaque field — settled (2026-06-27, Consultant flag)
+**Decision.** `MoveState.cancels` is a list of `CancelRule`s, each:
+`target` (state id or tag/group), `condition` (`on_hit` | `on_block` |
+`on_contact` | `on_whiff` | `always`), `window` (frame range within the move;
+default first-active→end), `input` (required command), `requires_tag` (optional
+cancel tag). Move classes fall out of this: gatling/chain = `on_contact` to
+another normal within a window; special-cancel = `requires_tag` granted by the
+connecting hitbox; whiff-cancel = `on_whiff`. Rehit/multi-hit is **not** a cancel
+(AD-016).
+**Why.** A single field carrying gatling/special/whiff semantics had no model;
+it was neither authorable nor auditable consistently. A typed rule list makes each
+cancel class explicit and the format generalizable.
+**Rejected.** Keeping the opaque field.
+
+### AD-016 · Multi-hit and throw resolution models — settled (2026-06-27, Consultant flag)
+**Decision.**
+- **Multi-hit.** Two authorable forms: (a) *sequential* — distinct hitboxes in
+  distinct `id_group`s across timeline keyframes, each landing once; (b)
+  *cadenced rehit* — a hitbox with `rehit_interval` (frames) lets the same
+  `id_group` hit the same target again after the interval. `id_group` still
+  guarantees one hit per group per contact.
+- **Throws.** A throwbox overlapping a throwable hurtbox connects and **bypasses
+  blockstun** (throws are not blocked). A defender input within a **tech window**
+  (defined frames after the throw connects) techs it (both pushed to neutral).
+  Simultaneous ground throw attempts within the tech window resolve as a tech
+  (clash). **Deferred, explicitly:** air throws and formal throw-vs-throw priority
+  — not in the slice's two grounded movesets; the throwbox / `invuln` /
+  air-eligibility fields leave the door open (Tenet 3).
+**Why.** The format had no answer for two common move classes; this gives
+multi-hit a model and throws a real connect/tech path without overbuilding what
+the slice won't use.
+**Rejected.** Leaving both unstated (a contract gap a developer would invent at
+the keyboard).
+
+### AD-017 · Cancel timing across hitstop, and the grant→consume latency — settled (2026-06-27, Consultant flag)
+**Decision.** During hitstop a character is frozen: `frame_in_state` / `stun` do
+not advance (AD-010) and **no cancel transition executes**. Inputs are still
+recorded each tick (phase 1 always runs), so a cancel may be *buffered* during
+hitstop and **executes on the first unfrozen tick**. `cancel_tags` granted in
+phase 5 of tick T become available to the cancel phase (phase 2) starting tick
+**T+1**; this one-tick grant→consume latency is intentional and uniform (a hit's
+cancel window opens the frame after contact).
+**Why.** These were unstated, feel-defining decisions. Freezing cancels during
+hitstop keeps hitstop a true freeze while preserving buffering; the one-tick
+latency is an inherent, consistent consequence of the fixed phase order (AD-009),
+not an accident.
+**Rejected.** Executing cancels mid-hitstop (breaks freeze semantics); same-tick
+grant→consume (impossible under the phase order without a second pass).

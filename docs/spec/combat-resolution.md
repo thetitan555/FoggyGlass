@@ -14,15 +14,19 @@
    using `facing`.
 2. **State machine / buffering / cancels.** Advance `frame_in_state`; run
    buffering and motion/command recognition over `input_history`; apply legal
-   transitions and cancels per the character's `cancels` rules.
+   transitions and `CancelRule`s (`move-format.md`) per their `condition`/`window`
+   /`requires_tag`. A character under hitstop is frozen here: cancels may *buffer*
+   but no transition executes until the first unfrozen tick (AD-017).
 3. **Movement integration.** Apply per-state/keyframe motion and physics to
-   `position`/`velocity` (floats); resolve pushbox collisions and stage bounds.
+   `position`/`velocity` (fixed-point integers, AD-014); resolve pushbox
+   collisions and stage bounds.
 4. **Overlap detection.** Resolve each character's active hitboxes/hurtboxes/
    throwboxes from move data (derived, not stored) and test AABB overlaps.
-5. **Hit resolution.** For each confirmed hit (respecting `id_group` single-hit),
-   apply damage (after scaling), set the defender's `hit_reaction`/`block_reaction`
-   state, set stun, set hitstop on both parties, apply pushback/launch, grant
-   attacker `cancel_tags`, update combo state.
+5. **Hit resolution.** For each confirmed hit (respecting `id_group` single-hit,
+   or `rehit_interval` for cadenced multi-hit), apply damage (after scaling), set
+   the defender's `hit_reaction`/`block_reaction` state, set stun, set hitstop on
+   both parties, apply pushback/launch, grant attacker `cancel_tags`, update combo
+   state. Throwbox connects take the throw resolution path (below).
 6. **Advantage / neutral update.** Recompute advantage; flag neutral restoration.
 7. **Advance counters.** Decrement `hitstop`, `stun`; advance `tick`. Counters
    under active hitstop do not decrement (see below).
@@ -45,6 +49,12 @@ blockable state. On block, the defender enters a `BLOCKSTUN` state and takes
   `stun` **do not advance** — the action is frozen in place.
 - The **sim loop keeps ticking**; hitstop is countdown state, not a paused loop.
   Frame-step advances *through* hitstop one tick at a time.
+- **Cancels and hitstop (AD-017).** Inputs are still recorded each tick (phase 1
+  always runs), so a cancel may be *buffered* during hitstop; the transition
+  executes on the first unfrozen tick. `cancel_tags` granted in phase 5 of tick T
+  are available to the cancel phase starting tick **T+1** — a uniform one-tick
+  grant→consume latency, an inherent consequence of the fixed phase order, not a
+  bug.
 
 ## Stun & actionability
 
@@ -53,23 +63,37 @@ blockable state. On block, the defender enters a `BLOCKSTUN` state and takes
 - A defender in stun cannot act until it expires; this is the punish/true-string
   window the debug mode surfaces.
 
-## Advantage — the single canonical computation (AD-008)
+## Advantage — one formula, two surfaced values (AD-008)
 
-Computed in **one** function, each tick, surfaced through the inspection surface:
+A single function computes:
 
 ```
-advantage(attacker, defender) =
-    defender_remaining_stun − attacker_remaining_recovery
+advantage = defender_remaining_stun − attacker_remaining_recovery
 ```
 
-- Positive ⇒ attacker is plus (recovers and is actionable first); negative ⇒
-  minus (defender acts first — the punish window).
-- `attacker_remaining_recovery` = frames until the attacker is actionable
-  (remaining recovery of the current move state).
+where `attacker_remaining_recovery` is the attacker's **actual frames until
+actionable** in the current situation — *including any committed cancel*, not the
+raw recovery of the move state. Two distinct values are surfaced from this one
+function:
+
+- **Static move frame-advantage** (frame data / UI). Computed at a **pinned
+  reference**: contact on the move's **first active frame**, attacker
+  **uncancelled**. This is the conventional on-hit / on-block number and a
+  property of the move in isolation. It is what a frame-data display reads.
+- **Live advantage** (training-mode, per tick). The same formula evaluated on the
+  real situation, so it reflects cancels, late (meaty) contact, and current
+  remaining recovery. This is the truthful "who is plus *right now*."
+
+Why both: a per-tick-only value gave content/UI no canonical "the" number to read;
+a raw-recovery-only value lied the moment a cancel shortened recovery — exactly
+the pressure/combo cases legibility most depends on. The static value answers
+"what is this move," the live value answers "what is true now."
+
+- Positive ⇒ attacker is actionable first (plus); negative ⇒ defender acts first
+  (the punish window).
 - **Neutral restored** = the tick at which *both* players are actionable; the
   inspection surface flags this so "when neutral returns" is observable.
-- This formula is the only place advantage is computed; no per-move or
-  per-character variant exists.
+- One function, no per-move or per-character variant — the consistency guard.
 
 ## Combo & damage accounting
 
@@ -79,6 +103,29 @@ advantage(attacker, defender) =
   scaling state) before damage is subtracted — deterministic and surfaced.
 - Combo state resets when the defender returns to actionable/neutral.
 
+## Multi-hit / rehit (AD-016)
+
+- **Sequential** multi-hits are authored as distinct hitboxes in distinct
+  `id_group`s across timeline keyframes; each lands once by the single-hit rule.
+- **Cadenced** rehits use a hitbox's `rehit_interval`: after it hits a target,
+  the same `id_group` may hit that target again only once `rehit_interval` frames
+  have elapsed — no hit on the frames between.
+- Each connected hit increments combo and applies scaling like any other hit.
+
+## Throws (AD-016)
+
+- A **throwbox** overlapping a throwable hurtbox connects and **bypasses
+  blockstun** — throws are not blocked. On connect the defender enters the throw's
+  reaction state.
+- **Tech window.** If the defender inputs a throw within a defined window after
+  the throw connects, the throw is **teched**: both players are pushed back to
+  neutral, no damage. Simultaneous ground throw attempts within the window resolve
+  as a tech (clash).
+- **Deferred, explicitly (not in the slice):** air throws and formal
+  throw-vs-throw priority beyond the clash rule. The `throwbox` / `invuln` /
+  air-eligibility fields exist so these are additions, not rewrites (Tenet 3) —
+  flag if the slice grows a need for them.
+
 ## Inspection mapping (brief's required readouts → fields)
 
 Every brief readout reads through the one read-only inspection surface
@@ -86,8 +133,8 @@ Every brief readout reads through the one read-only inspection surface
 
 | Brief readout | Source |
 |---|---|
-| Frame data (startup/active/recovery, adv on hit/block) | Derived per `move-format.md`; advantage per the formula above. |
-| Advantage state (who ±, by how much, when neutral returns) | The advantage function + neutral flag. |
+| Frame data (startup/active/recovery, adv on hit/block) | Derived per `move-format.md`; advantage = the **static** pinned value. |
+| Advantage state (who ±, by how much, when neutral returns) | The **live** (cancel-aware) advantage + neutral flag. |
 | Hitbox / hurtbox / collision geometry | Resolved boxes from phase 4 (derived). |
 | Current state + frame | `state_id`, `frame_in_state`. |
 | Hitstop & stun | `hitstop`, `stun` counters. |
@@ -108,9 +155,11 @@ deterministic, serializable sim.
 2. **Phase order.** Interaction outcomes are stable and match the specified phase
    order; reordering phases changes results (i.e., the order is load-bearing and
    pinned).
-3. **Advantage = formula.** For a known interaction, the surfaced advantage equals
-   `defender_remaining_stun − attacker_remaining_recovery` by hand, on hit and on
-   block, and one function computes it for both characters.
+3. **Advantage = formula, both values.** For a known interaction the **static**
+   advantage (pinned: first-active contact, uncancelled) and the **live** advantage
+   (cancel-aware) each equal the by-hand value on hit and on block, and one
+   function computes both for both characters. A move that special-cancels shows a
+   live advantage that differs from its static number, correctly.
 4. **Hitstop semantics.** During `hitstop > 0`, the affected character's
    `frame_in_state`/`stun` hold constant for exactly `hitstop` ticks while the
    loop advances; frame-step crosses hitstop one tick per step.
@@ -120,3 +169,11 @@ deterministic, serializable sim.
    and one combo increment.
 7. **Readout completeness.** Every brief-required readout above is retrievable
    through the inspection surface for a live interaction.
+8. **Cancel timing.** A cancel input during hitstop executes on the first unfrozen
+   tick, not during the freeze; a `cancel_tag` granted on tick T is first usable on
+   T+1 (AD-017).
+9. **Multi-hit.** A sequential multi-hit registers each hit once; a `rehit_interval`
+   hitbox hits on its cadence and not on the intervening frames (AD-016).
+10. **Throws.** A throw connects through block (bypasses blockstun); a defender
+    throw input within the tech window techs it to neutral with no damage;
+    simultaneous throws within the window clash to a tech (AD-016).

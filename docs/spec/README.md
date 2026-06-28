@@ -29,5 +29,9 @@ serialization harness comes online *with* the sim loop, not after.
 
 ## Status
 
-P0 backbone: **spec drafted, awaiting review.** P1 (debug/technical training
-mode) spec + tickets: not yet started — next session.
+P0 backbone: **spec drafted; revised once** to adopt fixed-point sim math
+(AD-005/AD-014) and to resolve four Consultant flags — advantage static-vs-live
+(AD-008), the `CancelRule` model + cancel/hitstop timing (AD-015/AD-017),
+non-mutating `step` (AD-004), and multi-hit/throw models (AD-016). See `flags.md`
+for the resolutions. P1 (debug/technical training mode) spec + tickets: not yet
+started — next session.
