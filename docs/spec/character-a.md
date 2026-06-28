@@ -56,7 +56,7 @@ integer ticks at 60 Hz. **Advantage values are static** (first-active, uncancell
 |---|---|---|---|---|---|---|---|
 | `5L` | 4 | 3 | 6 | **+1** | **+4** | yes (on contact) | Fast poke / frame trap. |
 | `5M` | 5 | 4 | 11 | −2 | **+2** | yes (on contact) | Footsie + DP-cancel confirm. |
-| **`5H`** | 11 | 3 | 13 | **+3** | **+7** | no | **Forward-advancing pressure reset.** Plus on block; on hit it's the **3-frame link** into the high-damage combo. Advances ~30 px. |
+| **`5H`** | 25 | 3 | 13 | **+3** | **+7** | no | **Forward-advancing pressure reset / hard-read poke.** Very slow (reactable) and committal; plus on block and, on hit, the **3-frame link** into the high-damage combo. Advances ~30 px. |
 | `2L` | 4 | 3 | 7 | **+1** | **+3** | yes (on contact) | Low pressure starter, links. |
 | **`2M`** | 6 | 3 | 13 | −1 | **+3** | yes (on contact) | **The signature poke** — long range, whiff-punish, `> 236/623`. |
 | **`2H`** | 5 | 3 | 13 | −2 | air reset (no combo) | no | **Fast get-off-me anti-air.** Upper-body invuln **1–8**; low reward — a safer, weaker DP. |
