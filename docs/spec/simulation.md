@@ -95,7 +95,8 @@ sim internals.
   so they cannot disagree about sim truth (brief requirement).
 - Specific readouts (frame data, advantage, boxes, state+frame, hitstop/stun,
   input history, damage/combo) are enumerated in `combat-resolution.md`; this
-  spec fixes that they are read **through this one surface**.
+  spec fixes that they are read **through this one surface**. The concrete
+  read API is specified in `inspection-surface.md`.
 
 ## Acceptance criteria (QA-checkable)
 
