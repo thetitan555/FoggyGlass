@@ -25,6 +25,17 @@ player's raw input for one tick.
 | 4–11 | Buttons `BUTTON_0` … `BUTTON_7` (generic; un-named at this layer) |
 | 12–15 | Reserved — must be 0 |
 
+**Slice button set (AD-018).** The slice commits to **three attack buttons** —
+`BUTTON_0`, `BUTTON_1`, `BUTTON_2`, surfaced to players as **Light / Medium /
+Heavy** — used by *every* character and *every* input source. What this contract
+pins is the **count** (three attack buttons, slice-wide); the **L/M/H labels and
+the button→move meaning stay above the input layer** in each character's
+`button_map` (`move-format.md`), so the input layer remains semantically blank per
+AD-002. `BUTTON_3`…`BUTTON_7` stay reserved for post-slice (system buttons, more
+attacks). This satisfies the Strategist's character-A routing: the three-button
+layout is a system-level input fact, not a character-A-local one — and it does not
+conflict with the input spec, so nothing routes back.
+
 Rules:
 
 - **Raw, not facing-relative.** Bits 2/3 are physical Left/Right as pressed. The

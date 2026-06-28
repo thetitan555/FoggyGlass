@@ -221,3 +221,18 @@ latency is an inherent, consistent consequence of the fixed phase order (AD-009)
 not an accident.
 **Rejected.** Executing cancels mid-hitstop (breaks freeze semantics); same-tick
 grant→consume (impossible under the phase order without a second pass).
+
+### AD-018 · Slice uses three attack buttons (count at input layer, labels above it) — settled (2026-06-27, routed by Strategist via character-A brief)
+**Decision.** The slice's input representation carries **three attack buttons**
+(`BUTTON_0/1/2`), used by every character and every input source. The *count* is
+fixed at the input-contract level; the **L/M/H labels and button→move mapping live
+above the input layer** (character `button_map`), keeping the input layer
+semantically blank (AD-002). `BUTTON_3+` reserved for post-slice.
+**Why.** Character A surfaced "Light/Medium/Heavy, no punch/kick divide," but a
+button *layout* is a system-level fact (replays, netcode, the dummy, and both
+characters must agree on how many buttons exist), not a character-local one.
+Pinning the count while keeping meaning in the mapping layer reflects it
+system-wide without violating AD-002's dumb-input-layer rule.
+**Rejected.** Naming L/M/H inside the input bitfield (couples the input layer to
+move semantics — AD-002 violation); leaving the count to each character (sources
+couldn't agree on the input shape).

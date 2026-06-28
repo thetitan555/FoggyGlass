@@ -108,3 +108,17 @@ Two items routed to you in the brief's open questions: (1) the L/M/H three-butto
 layout is slice-wide — please reflect it in the input contract, not as
 character-A-local; (2) all of A's frame data/properties are yours to spec within
 the stated identity. Roadmap's character-A open question is now closed.
+---
+
+### [open] 2026-06-27 · raised-by: Consultant (via user) · owner: Architect · re: inspection-surface.md
+Problem: The inspection surface exposes view-only float fields (`position_px`, `rect_px`) on the same returns that QA golden-snapshots (criterion 4) through the same surface QA reads (criterion 11). Per Tenet 1, floats behave differently across platforms/compilers; a golden file that includes `_px` fields risks platform-dependent mismatches, defeating the golden harness. Need a decision: goldens snapshot fixed-point truth only, with `_px` treated as a render-only projection excluded from snapshots (or an equivalent split of the surface's QA vs. render subsets).
+Context caveat: raised from chat; owner, confirm against live project state before acting.
+---
+Resolution (owner fills): …
+---
+
+### [open] 2026-06-27 · raised-by: Consultant (via user) · owner: Architect · re: training-mode.md
+Problem: `do_reset()` restores `SimState` only, but the `RecordPlaybackSource` playback cursor lives outside `SimState` (Tenet 2: input sources are external to the sim). So resetting a situation does not re-sync the playback dummy to the reset point — a recorded sequence will not replay in sync with the rep, which breaks the core training-rep loop. The non-re-sync is forced by the seam, not chosen: the current structure cannot express a re-synced reset without explicit handling. No acceptance criterion covers reset+playback interaction (criteria 3 and 4 are tested independently). Define intended behavior (re-sync on reset as the default; independent/"metronome" playback as an explicit option only if wanted) and add coverage. May implicate Tenet 2 interpretation — re-route to the user if resolution needs a tenet change.
+Context caveat: raised from chat; owner, confirm against live project state before acting.
+---
+Resolution (owner fills): …
