@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3 uid="uid://bfg0main0scene0"]
+
+[ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://sim/tick_host.gd" id="2_tickhost"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="TickHost" type="Node" parent="."]
+script = ExtResource("2_tickhost")
+
+[node name="TickLabel" type="Label" parent="."]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 216.0
+offset_bottom = 39.0
+text = "sim tick: 0"

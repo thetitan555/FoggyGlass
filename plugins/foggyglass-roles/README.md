@@ -8,10 +8,10 @@ they can be invoked by name:
 - `foggyglass-developer` — implementation against the spec
 - `foggyglass-qa` — testing, drift control, audits
 
-The agent definitions are the same files kept in the project repo at
-`.claude/agents/`; this plugin is the delivery mechanism that makes them
-callable inside Cowork (which does not read a project's `.claude/agents/`
-directory the way Claude Code does).
+This directory (`plugins/foggyglass-roles/`) is the **authoritative, editable
+source** for the four role prompts. The plugin is the delivery mechanism that
+makes them callable inside Cowork, which does not read a project's
+`.claude/agents/` directory the way Claude Code does.
 
 ## Install (Cowork)
 
@@ -21,6 +21,6 @@ custom plugin file. Once installed, the roles appear namespaced as
 
 ## Keeping in sync
 
-The source of truth for each role's system prompt remains the repo's
-`.claude/agents/*.md`. When one changes, recopy it into `agents/` here, bump the
-`version` in `.claude-plugin/plugin.json`, re-zip, and re-upload.
+To change a role: edit the file under `agents/` here (the source of truth), bump
+the `version` in `.claude-plugin/plugin.json`, re-zip the plugin, and re-upload
+it via Cowork's Customize → Browse plugins.

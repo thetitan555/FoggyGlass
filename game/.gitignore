@@ -1,0 +1,16 @@
+# Godot 4 engine artifacts — never tracked. The project source (project.godot,
+# scenes, scripts, .tres data) IS tracked; these are derived/local caches.
+
+# Godot's import cache and editor-local state.
+.godot/
+
+# Exported builds.
+/build/
+*.exe
+*.pck
+*.zip
+
+# Editor/OS scratch.
+*.import
+.DS_Store
+Thumbs.db

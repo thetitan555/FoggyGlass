@@ -24,13 +24,20 @@ Treat them as inputs, not suggestions.
 
 ## Roles
 
-This project runs a small pipeline with dedicated subagents in
-`.claude/agents/`:
+This project runs a small pipeline of four roles, delivered as Cowork subagents
+by the installed **`foggyglass-roles`** plugin:
 
 - **`foggyglass-strategist`** — direction, priority, roadmap, briefs.
 - **`foggyglass-architect`** — technical spec, architecture decisions, tickets.
 - **`foggyglass-developer`** — implementation against the spec.
 - **`foggyglass-qa`** — testing, drift control, audits.
+
+Invoke a role by its subagent type (e.g.
+`foggyglass-roles:foggyglass-architect`). The authoritative, editable source for
+each role prompt lives in `plugins/foggyglass-roles/agents/`. To change a role,
+edit the file under `plugins/foggyglass-roles/agents/`, re-zip the plugin, and
+re-upload it via Cowork's Customize → Browse plugins. (Cowork does not read a
+project's `.claude/agents/` directory, so role definitions are not kept there.)
 
 Each role has its own read-first list and ownership boundaries defined in its
 agent file — see the individual files for specifics. Other pipeline artifacts
