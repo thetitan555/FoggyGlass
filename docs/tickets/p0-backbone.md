@@ -49,6 +49,12 @@ No SOCD here — that is sim-side (06, AD-003). Record/playback dummy is P1
 
 ### TKT-P0-03 · `SimState` + pure `step` + serialization
 **Serves:** `simulation.md`. **Depends:** 01, 02 (`step` takes two `InputFrame`s).
+**Seam swap inherited from 01 (ratified JC-004).** TKT-P0-01 pinned the fixed-tick
+clock discipline against a bare `int` tick-only stand-in behind a single `_advance`
+seam, because `SimState`/`step` did not yet exist (the 01→03 order is intended, not
+a defect). 03 replaces that stand-in with `step(state, in1, in2)` at `_advance` as
+a one-line swap and **must not alter the clock discipline** 01 established (one tick
+per `physics_process`, state-owned counter, `delta` never scales).
 **Scope:** The `SimState` plain-data graph per spec (tick, rng, `players[2]`,
 `projectiles` list — empty is fine for P0, stage); `step(state, in1, in2) →
 SimState`, **non-mutating** (AD-004), advancing tick and pushing `input_history`

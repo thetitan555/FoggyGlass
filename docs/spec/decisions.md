@@ -23,7 +23,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-011** Read-only inspection surface is the systems/content seam — settled
 - **AD-012** Our own AABB overlap; engine physics owns nothing — settled
 - **AD-013** Engine code lives under `/game` — settled
-- **AD-014** Fixed-point convention: 64-bit, scale 2^16, no transcendentals — settled
+- **AD-014** Fixed-point convention: 64-bit, scale 2^16, no transcendentals; `FP` packaging, two extractors, `mul` magnitude budget — settled
 - **AD-015** Cancels are typed `CancelRule` lists — settled
 - **AD-016** Multi-hit and throw resolution models — settled
 - **AD-017** Cancel timing across hitstop; T+1 grant→consume — settled
@@ -183,7 +183,7 @@ this path to the Architect; recorded here as the canonical call.
 **Note.** The protocol table's engine-path slot should mirror this — raised to
 the Strategist (see `flags.md`). *(Resolved: Strategist mirrored it.)*
 
-### AD-014 · Fixed-point convention — settled (2026-06-27)
+### AD-014 · Fixed-point convention — settled (2026-06-27; elaborated 2026-07-02, TKT-P0-01 ratifications)
 **Decision.** One scalar fixed-point type: 64-bit signed integer, fractional
 scale `2^16` (1 game unit = 65536 sub-units). Multiply = `(a*b) >> 16`, divide =
 `(a << 16) / b`; a single documented rounding rule (round-to-nearest, ties away
@@ -192,11 +192,48 @@ ops. **No transcendental math in the sim** for the slice — velocities are auth
 as vectors; no normalization / trig / sqrt. Move and physics data reach the
 runtime as **baked fixed-point integers**: authoring may use friendly units, but
 the float→fixed bake happens once, off the hot path, never inside `step`.
+
+**Helper packaging (ratified from JC-001).** The `FP` helper is a named class of
+all-static methods (`FP.mul(a,b)`, `FP.div(a,b)`, etc.) — no instance state, never
+instantiated, no autoload/global. The `FP.op()` call convention is the intended
+call site.
+
+**Extractors and which ops round (ratified from JC-002).** Two distinct
+extractors, both binding on all callers:
+- `round_to_int` applies the one rounding rule above (round-to-nearest, ties away
+  from zero). This is the rule for **conversions that round**.
+- `to_int` **truncates toward zero** (drops the fraction; `-1.9 → -1`, symmetric
+  with `1.9 → 1`). This is for callers that want plain fraction-drop, e.g.
+  whole-cell indexing.
+
+`mul`, `div`, and the float→fixed bakes all apply the rounding rule.
+**Prohibited:** arithmetic-shift "truncation" (`>>` floors toward −∞ for
+negatives) is *not* an allowed third behavior — no caller may reintroduce it.
+
+**`mul` operand-magnitude budget (ratified from JC-003).** `FP.mul` computes the
+64-bit product `a*b` before the `>> 16` shift with **no widening or guard**. This
+is correct while the *game-unit* product stays inside the signed-64 headroom:
+`|a_units * b_units| < 2^31` (each operand safely up to ~46340 game units when the
+other is comparable). This is the guaranteed magnitude contract. The slice's sim
+values (stage-bounded positions/velocities, box dimensions — all under ~10^3 game
+units) sit orders of magnitude inside the budget, so no guard is warranted now.
+**Escalation trigger:** if any sim value ever approaches this budget, widening the
+intermediate (128-bit or split-multiply) is a **revision to this AD**, not a
+silent code change — the magnitude guarantee lives in this owned contract so QA
+can assert against it, not in a method comment.
+
 **Why.** A power-of-two scale makes multiply/divide cheap shifts; baking keeps the
 runtime pure-integer and lockstep-safe; banning transcendentals removes the only
 common cross-platform float-divergence source a 2D box fighter would otherwise hit.
+Naming truncation and rounding as separate extractors keeps "which rule applied"
+explicit at every call site; stating the `mul` magnitude budget makes the
+unguarded product a *known, asserted bound* rather than a latent overflow.
 **Rejected.** Per-tick float→fixed conversion (reintroduces float risk on the hot
-path); a third-party fixed-point library (a handful of ops doesn't justify it).
+path); a third-party fixed-point library (a handful of ops doesn't justify it);
+128-bit/split-multiply `mul` now (correct at any magnitude but slower and
+unjustified inside the stated budget — deferred to the escalation trigger above);
+a single extractor (loses the truncation callers need); saturating-clamp `mul`
+(hides overflow rather than surfacing it).
 
 ### AD-015 · Cancels are a list of typed rules, not one opaque field — settled (2026-06-27, Consultant flag)
 **Decision.** `MoveState.cancels` is a list of `CancelRule`s, each:
