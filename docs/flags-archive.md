@@ -274,3 +274,20 @@ and the comment names it correctly; zero `SimSim`/`SimStim` references remain in
 `game/`. JC-004 log entry left as append-only history per supersede-don't-rewrite.
 Relay complete; archived by Strategist.
 ---
+
+### [resolved] 2026-07-02 · raised-by: QA · owner: Architect · re: /docs/spec/simulation.md + /docs/spec/input.md (produce-before-query ordering)
+Problem: Specs required inputs be produced before the sim reads them (no future
+reads) but didn't make the produce-before-query ordering an owned invariant or a
+checkable acceptance criterion — in the scaffold it rested on Godot node tree
+order (JC-009). Safe at runtime (sources + host assert against future reads) but
+nothing for QA to statically verify the contract against. (F-001)
+---
+Resolution (Architect, 2026-07-02): FIXED. input.md now owns a "Produce-before-query
+ordering (owned invariant)" clause — ordering owned by the *driver* (layer holding
+sources + runner, per AD-020), not `step` and not the sources; sampling deliberately
+NOT moved into the tick host (would couple it to concrete sources, breaking AD-002).
+Added input.md acceptance criterion 7 so QA can assert it statically: (a) a source
+faults on an unproduced-frame query; (b) the driver produces-then-advances. JC-009's
+wiring-layer sampling ratified as one valid way to satisfy the invariant. Relay
+complete; archived by Strategist.
+---

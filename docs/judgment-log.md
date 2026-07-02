@@ -143,7 +143,7 @@ worth flagging for QA is that these runners are provisional scaffolding QA may
 supersede at 11, which the entry already states. QA owns the harness verdicts
 (TKT-P0-11 scope), so this constrains nothing they inherit.
 
-### JC-006 · 2026-07-02 · TKT-P0-02 · `InputFrame` value is a plain masked `int`, class is a namespace — provisional
+### JC-006 · 2026-07-02 · TKT-P0-02 · `InputFrame` value is a plain masked `int`, class is a namespace — ratified
 **Decided.** An `InputFrame` *value* is carried as a plain GDScript `int` masked to
 the low 16 bits; `input_frame.gd` is a never-instantiated `class_name InputFrame
 extends RefCounted` holding only bit constants + pure static helpers over that int
@@ -164,8 +164,16 @@ layer allocation-free on the hot path. The class-as-namespace gives
 **Reversal cost.** Low and seam-invisible: the value is only ever produced/consumed
 through `InputSource.get_input(frame) -> int` and the frame constants; wrapping it
 later would touch those call sites but not the contract shape.
+**Ratified** (Architect, 2026-07-02). GDScript packaging of a representation the
+spec already fixed (16-bit bitfield, plain byte-identical value), mirroring the
+`FP` packaging (JC-001/AD-014). Not pure latitude to leave un-folded, though:
+the "masked `int` IS the value; `InputFrame` is a namespace, not a wrapper" fact is
+shared vocabulary the Developer and QA both reason against, so I folded it into
+input.md (the `InputFrame` plain-value bullet) rather than leaving it only here. The
+call is correct and now owned. No wrapper-type is to be reintroduced without a spec
+change.
 
-### JC-007 · 2026-07-02 · TKT-P0-03 · Canonical state hash is FNV-1a over an ordered integer value stream — provisional
+### JC-007 · 2026-07-02 · TKT-P0-03 · Canonical state hash is FNV-1a over an ordered integer value stream — ratified into spec (AD-023)
 **Decided.** `SimState.hash_state()` folds the state's integer values, walked in a
 FIXED field order, with 64-bit FNV-1a (byte-at-a-time, low byte first). It does not
 use Godot's `hash()`, `var_to_bytes`, or Dictionary iteration order.
@@ -187,8 +195,23 @@ before elements prevents regrouping collisions). It is a *tool* for QA's harness
 not a sim contract, so it stays a latitude call — but flagged provisional because if
 QA (TKT-P0-11) wants a specific hash the harness standardizes on, this converts
 trivially and should defer to that.
+**Ratified INTO the spec, not as latitude** (Architect, 2026-07-02). The Developer
+flagged the right thing: this is *not* a latitude call, it is a contract I own. The
+canonical hash is the primitive simulation.md's determinism/purity/round-trip
+criteria (1/2/3) are all verified through, and QA's TKT-P0-11 golden/determinism
+harness standardizes on it byte-for-byte — a second implementation that satisfies
+the properties but produces different bytes is still a break. So the canonicality
+requirements are now owned in **AD-023** and surfaced in simulation.md (a "Canonical
+state hash" subsection under Serialization, plus new acceptance criterion 10 so QA
+can assert the *properties*, not just "two states hash the same"). Folded: fixed
+field order (not Dictionary iteration), integer-only/float-free, order-committing
+count separators, total coverage, and the pinned algorithm (64-bit FNV-1a, low byte
+first) with the ban on Godot `hash()`/`var_to_bytes`. The Developer's instinct to
+defer to QA at TKT-P0-11 is honored, but as an **AD-023 revision** if needed, not a
+silent code change — both sides now read one owned hash definition. The
+implementation as written matches AD-023; no code change required.
 
-### JC-008 · 2026-07-02 · TKT-P0-03 · `InputHistory` capacity CAP = 32 frames — provisional
+### JC-008 · 2026-07-02 · TKT-P0-03 · `InputHistory` capacity CAP = 32 frames — ratified
 **Decided.** The per-player raw-input ring buffer (`input_history.gd`) holds up to
 CAP = 32 frames, oldest→newest, stored as a flat `PackedInt32Array` so its
 serialized form is canonical regardless of the ring's write cursor.
@@ -206,8 +229,15 @@ The WINDOWS are the feel values and live in AD-022 (sim-side, the Architect's); 
 is just how deep the substrate buffer is, so it is latitude. If a future buffering
 rule needs more lookback than CAP, that is a one-line bump here, not a contract
 change.
+**Ratified as recorded** (Architect, 2026-07-02). Correct split: the buffering
+*windows* that determine feel (9f motion / 6f command) are owned in AD-022; CAP is
+internal storage depth, pure latitude, with the right analysis (covers the windows
+with headroom, keeps snapshot/hash small, cursor-independent flat storage keeps
+serialization canonical — which also serves AD-023). No spec change: CAP must stay
+`>=` the largest AD-022 window, which the "one-line bump if a rule needs more
+lookback" note already guarantees. Nothing to fold.
 
-### JC-009 · 2026-07-02 · TKT-P0-03 · Input sources sampled parent-before-child via tree order in the scaffold — provisional
+### JC-009 · 2026-07-02 · TKT-P0-03 · Input sources sampled parent-before-child via tree order in the scaffold — ratified (ordering now an owned invariant via F-001)
 **Decided.** In the running scaffold (`main.gd`), the `LocalDeviceSource`s are
 `sample_next()`-produced in `Main._physics_process` (the parent), which Godot runs
 before the child `TickHost._physics_process` that advances the sim — so the current
@@ -226,3 +256,16 @@ ordering, and separating "produce the device frame" (view/wiring) from "advance 
 sim" (host) keeps the host source-type-agnostic. This is scaffold wiring outside the
 sim, fully reversible, and invisible across the seam. Flagged as a spot to harden if
 a later ticket needs a hard ordering guarantee rather than relying on tree order.
+**Ratified — and the ordering IS now an owned invariant** (Architect, 2026-07-02).
+The Developer's two calls here are both ratified: (1) sampling stays in the
+wiring/view layer, NOT in the tick host — moving it into the host would couple the
+host to concrete device sources and violate "nothing in the sim knows which concrete
+source it holds"; the abstract `InputSource` has no sampling method, correctly. (2)
+producing-the-frame is separated from advancing-the-sim. What the Developer rightly
+flagged as "a spot to harden if a later ticket needs a hard ordering guarantee" is
+exactly what QA raised as F-001, and I have now hardened it: input.md carries a
+"Produce-before-query ordering (owned invariant)" clause (owned by the driver, not
+the sim, not the sources — same ownership AD-020 gives the harness) plus acceptance
+criterion 7. So tree-order in `main.gd` is ratified as *one valid way to satisfy*
+the invariant, no longer a contract resting on an accident. See flags.md F-001
+(resolved). No code change required; the scaffold already satisfies the invariant.

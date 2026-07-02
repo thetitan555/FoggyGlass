@@ -32,6 +32,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-020** Reset restores sim state + playback position — settled
 - **AD-021** Projectiles are first-class serialized sim entities — settled
 - **AD-022** Input buffer: 9f motion window, 6f command buffer — settled
+- **AD-023** Canonical state hash: ordered FNV-1a over an integer value stream — settled
 
 ---
 
@@ -368,3 +369,41 @@ system buffer keeps it uniform and deterministic (a pure function of
 **Rejected.** Per-character buffers (drift — the thing the Architect prevents); no
 buffer (frame-perfect reversals; punishingly inconsistent); buffering in the input
 source (AD-003 — would diverge across sources).
+
+### AD-023 · Canonical state hash: ordered FNV-1a over an integer value stream — settled (2026-07-02, ratified from JC-007)
+**Decision.** `SimState`'s canonical hash — the primitive every determinism /
+round-trip / purity acceptance criterion (simulation.md 1/2/3) is verified through,
+and the primitive QA's golden/determinism harness (TKT-P0-11) standardizes on — is
+defined as a **deterministic function of the state's data alone**, with these
+binding properties:
+- **Fixed field order.** Fields are folded in an explicit, source-fixed order —
+  never Dictionary key-iteration order.
+- **Integer stream only.** Only the state's integer values are folded (the state is
+  float-free by AD-005/AD-019; no float ever enters the hash).
+- **Order-committing.** A count/size separator is folded before every
+  variable-length run (the players list, each `input_history`'s frames, the
+  projectile list) so a regrouping of the same bytes cannot collide.
+- **Total coverage.** Every field present in `to_dict` is covered by the hash (the
+  hashed key set equals the serialized key set).
+- **Chosen algorithm.** 64-bit **FNV-1a**, byte-at-a-time, low byte first, over that
+  ordered integer stream. GDScript ints are 64-bit two's-complement and wrap on
+  overflow, matching FNV's mod-2^64 arithmetic; the per-byte extraction (`>>` then
+  `& 0xFF`) yields the true two's-complement byte for negative values.
+- **Prohibited.** Godot's built-in `hash()`, `var_to_bytes(...).hash()`, or any hash
+  that depends on Dictionary iteration order or Godot's internal serialization —
+  none are documented as stable across engine versions/platforms, and instability
+  there would break QA goldens for reasons unrelated to sim state (the exact failure
+  AD-019 guards against for pixel floats).
+**Why.** The purity/determinism/round-trip proofs lean *entirely* on the hash being
+a function of the state's DATA, not of object identity or map ordering. Making the
+canonicality properties an owned contract — not a code comment — lets QA assert
+against them and lets any future re-derivation of the hash (a different language, a
+rollback re-sim host) reproduce the *same* value. The specific algorithm is pinned
+because the harness must agree byte-for-byte on one hash; a second implementation
+that satisfies the properties above but produces different bytes is still a break.
+**Rejected.** Leaving the algorithm a provisional dev latitude call (QA's harness
+depends on it — it is a contract, not latitude); `var_to_bytes(to_dict()).hash()` /
+Godot `hash()` (order/stability-dependent, per Prohibited above).
+**Note.** If QA (TKT-P0-11) needs to revise the algorithm for harness reasons, that
+is a revision to *this AD*, not a silent code change — the canonical hash is one
+owned definition both sides read.

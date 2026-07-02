@@ -44,7 +44,12 @@ Rules:
   held," not "that's a heavy attack." Mapping button → move is sim/character data.
 - **Reserved bits are zero.** Any non-zero reserved bit is an invalid frame.
 - `InputFrame` is a plain value: it serializes/restores byte-identically and is
-  part of the sim's serialized input history.
+  part of the sim's serialized input history. In the Godot implementation the value
+  is carried as a plain GDScript `int` masked to the low 16 bits — the masked int
+  *is* the value (it drops straight into a `PackedInt32Array` history and round-trips
+  as itself), never a boxed per-frame object. The `InputFrame` name is a namespace
+  of the bit constants and pure helpers over that int, not a wrapper type
+  (packaging ratified from JC-006, mirroring the `FP` convention in AD-014).
 
 ## `InputSource` — the one interface
 
@@ -66,6 +71,30 @@ Contract:
 - **Stateless to the sim.** The sim holds two sources (P1, P2), calls each once
   per tick for the current frame, and advances. Nothing in the sim knows which
   concrete source it holds.
+
+### Produce-before-query ordering (owned invariant)
+
+The "no future reads" rule above is a *contract on the source*. It rests on a
+matching *contract on the driver*: **a source must have produced frame N before the
+sim requests `get_input(N)`.** For the current frame, "produce" means the source
+has recorded the frame for that tick (a device source has sampled it; a
+buffer-backed source already holds it). This ordering is **owned by the layer that
+drives the tick** — the layer holding both the sources and the runner — not by
+`step` and not by the sources themselves (a source cannot know whether the frame it
+is asked for is "current" or "future"; only the driver knows).
+
+- The sim stays source-type-agnostic: sampling is **not** moved into the tick host
+  (that would couple the host to concrete device sources — it holds only the
+  abstract `InputSource`, which has no sampling method). The driver produces the
+  current frame into each source, *then* advances the sim, which queries it. This is
+  the same "harness above the sim coordinates the sources" ownership AD-020 already
+  establishes for reset/rewind.
+- The invariant is **defended, not merely arranged.** A source treats a query for a
+  frame it has not produced as a contract violation (fails loudly under a debug
+  build, per criterion 7), so a mis-ordered driver breaks visibly rather than
+  silently corrupting determinism. In the P0 scaffold the ordering is *arranged* by
+  Godot node tree order (parent samples before the child tick host advances —
+  JC-009); that is one valid way to satisfy the invariant, not the invariant itself.
 
 ### The producers (all the same interface)
 
@@ -110,3 +139,11 @@ commitment.
    produced it, and is produced by exactly one function.
 6. **Reserved-bit validity.** A frame with any of bits 12–15 set is rejected as
    invalid by the input boundary.
+7. **Produce-before-query.** A source that is queried for a frame it has not yet
+   produced treats it as a contract violation (fails loudly under a debug build,
+   not a silent default). Equivalently: for every tick the driver advances, the
+   current frame is produced into each source before `get_input(current_tick)` is
+   called. QA can assert this two ways: (a) drive a source with a frame not yet
+   produced and confirm it faults rather than returning a value; (b) confirm the
+   driving layer produces-then-advances (the ordering is owned by the driver, not
+   inferred from tree order).

@@ -72,6 +72,18 @@ position)` — not persisted. State stays minimal and single-sourced.
 - This is the one mechanism behind frame-step, situation-reset, replay, and
   rollback — they are all "snapshot, advance, maybe restore."
 
+### Canonical state hash
+
+`SimState` exposes a **canonical hash** — the single primitive the determinism,
+purity, and round-trip criteria below are verified through, and the one QA's
+golden/determinism harness (TKT-P0-11) standardizes on. It is a deterministic
+function of the state's *data* alone: fixed field order (never Dictionary
+iteration order), integer stream only (the state is float-free — AD-005/AD-019),
+order-committing (a count is folded before every variable-length run so regrouped
+bytes cannot collide), and total (every serialized field is covered). The
+algorithm and prohibitions are fixed in **AD-023**. Two states are "equal" for
+every criterion below iff their canonical hashes match.
+
 ## Physics / overlap ownership
 
 - All hit/hurt/push overlap is **our own AABB test** inside `step` (AD-012),
@@ -121,3 +133,10 @@ sim internals.
    sim performs no transcendental (trig/sqrt) operations.
 9. **Immutable input.** After `next = step(prev, a, b)`, `hash(prev)` is identical
    to before the call — `step` did not mutate its input (AD-004).
+10. **Hash canonicality (AD-023).** The canonical hash is a function of state data
+    only: it does not use Dictionary iteration order or Godot's built-in
+    `hash()`/`var_to_bytes`; every serialized field is covered (hashed key set ==
+    `to_dict` key set); a count separator precedes every variable-length run so two
+    states with the same bytes regrouped differently hash differently; and the hash
+    is float-free. Two states with identical data hash identically regardless of
+    construction path.

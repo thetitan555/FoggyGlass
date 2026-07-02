@@ -173,6 +173,63 @@ user pasted into its chat; the owner sanity-checks against live state first.
   calls are provisional until ratified; don't let them pile up unresolved, or the
   spec drifts out from under everyone.
 
+## Token economy — spend the fixed cost well
+
+> Added because the roles are memory-less: the expensive thing here is not the
+> work, it's the re-reading. This is the Strategist's guidance on where the tokens
+> actually go and how to spend them. Revisable like everything else — flag it if
+> it stops fitting.
+
+**The dominant cost is cold-start reading, not output.** Every role session —
+every subagent — re-pays the cost of reading its binding inputs (charter,
+principles, tenets, this protocol) plus its task-specific inputs, because no role
+carries memory across sessions. Producing the work is cheap next to that fixed
+re-read. The consequence that matters: **a feature's cost scales with the number
+of separate sessions it is split across**, not just the work in it. Four thin
+sessions pay four full re-reads; one session that carries the same work to a
+decision point pays one.
+
+**So batch to amortize, and minimize session count.** Prefer one session that runs
+a unit of work to its natural stopping point over several thin ones. Group
+same-owner work — adjacent tickets, every open flag for one owner, a spec change
+and the ticket updates it forces — into a single session. Every handoff that
+spawns a fresh session re-pays the fixed read, so collapse handoffs wherever the
+ownership model allows.
+
+**The batching tradeoff, named.** A bigger batch amortizes reading but costs two
+things: fewer checkpoints for the user to catch a wrong turn, and more lost work
+if a session dies mid-flight (a limit, a crash) — interrupted work that wasn't
+checkpointed or logged has to be reconstructed. So batch size trades tokens
+against steerability and blast-radius. Right-size it to **as much as can run
+before a genuine decision point or a natural checkpoint** — and write
+`COMMIT_MSG.txt` and judgment-log / flag entries *as you go*, not at the end, so
+an interruption loses as little as possible.
+
+**Prioritize spend by drift-cost.** Put scrutiny where divergence is expensive —
+determinism, the contracts multiple roles build against, the charter's legibility
+surfaces — and economize where a wrong call is cheap and reversible (packaging,
+cosmetics, internal factoring). This is the audit criterion's cherished-vs-tax
+logic turned on the team's own effort: a reading pass that protects the
+architecture earns its tokens; a pass that re-checks the trivially-correct is tax.
+When budget is tight, the *last* things cut are determinism/serialization
+verification, contract ratification, and the charter audit; the *first* things cut
+are rubber-stamp passes and re-reads of unchanged artifacts.
+
+**Keep the fixed read small — it multiplies across every session.** This is the
+highest-leverage lever, because shaving a role's mandatory read pays off in every
+future session that role ever runs. Reinforce what's already here: tickets and
+briefs name the exact spec sections a role must read (not "read the spec");
+`flags.md` holds open flags only; `decisions.md` is fronted by its index;
+rationale lives once and is cited, never restated. Every line a role does *not*
+have to re-read is a line saved in perpetuity.
+
+**Consolidate ownership passes where the model allows.** A single feature can
+touch several cold-start sessions — build, ratify, audit — each re-reading
+overlapping artifacts. Where two passes read the same artifact for compatible
+purposes, look for a way to collapse them *without* breaking one-owner-per-artifact
+or the upstream-correction rule. (The judgment-call review path is the first
+candidate — under discussion, not yet adopted; see the Strategist.)
+
 ## Working agreements
 
 - **Roles don't run git — they save files and request checkpoints.** Edit files
