@@ -142,3 +142,87 @@ choice to QA at TKT-P0-11. Nothing to fold into a spec — the one consequence
 worth flagging for QA is that these runners are provisional scaffolding QA may
 supersede at 11, which the entry already states. QA owns the harness verdicts
 (TKT-P0-11 scope), so this constrains nothing they inherit.
+
+### JC-006 · 2026-07-02 · TKT-P0-02 · `InputFrame` value is a plain masked `int`, class is a namespace — provisional
+**Decided.** An `InputFrame` *value* is carried as a plain GDScript `int` masked to
+the low 16 bits; `input_frame.gd` is a never-instantiated `class_name InputFrame
+extends RefCounted` holding only bit constants + pure static helpers over that int
+(mirrors the FP packaging, JC-001). No boxed per-frame object on the data path.
+**Serves.** TKT-P0-02 / input.md ("a single fixed-width unsigned bitfield (16
+bits)"; "`InputFrame` is a plain value: it serializes/restores byte-identically").
+The spec fixes the *representation* (16-bit bitfield) and the requirement (plain,
+byte-identical round-trip); how that value is *carried in GDScript* is left open.
+**Alternatives passed over.** A wrapper `Resource`/object per frame (boxes a 16-bit
+value — heavier to store in `input_history`, allocates per tick, and would need its
+own serialization to stay byte-identical; a plain int already round-trips as
+itself); a `PackedByteArray` per frame (over-engineered for 16 bits).
+**Why.** GDScript has no native `u16`. A masked `int` IS the value, so it drops
+straight into `input_history` (a `PackedInt32Array`) and any recorded buffer,
+round-trips byte-identically for free (input.md criterion 1), and keeps the input
+layer allocation-free on the hot path. The class-as-namespace gives
+`InputFrame.CONST` / `InputFrame.helper()` call sites with zero state.
+**Reversal cost.** Low and seam-invisible: the value is only ever produced/consumed
+through `InputSource.get_input(frame) -> int` and the frame constants; wrapping it
+later would touch those call sites but not the contract shape.
+
+### JC-007 · 2026-07-02 · TKT-P0-03 · Canonical state hash is FNV-1a over an ordered integer value stream — provisional
+**Decided.** `SimState.hash_state()` folds the state's integer values, walked in a
+FIXED field order, with 64-bit FNV-1a (byte-at-a-time, low byte first). It does not
+use Godot's `hash()`, `var_to_bytes`, or Dictionary iteration order.
+**Serves.** TKT-P0-03 ("a canonical state hash") + simulation.md criteria 1/2/3,
+which are all verified by "do two states hash the same?". The spec requires a
+*canonical* hash; the algorithm is left to the Developer.
+**Alternatives passed over.** `var_to_bytes(to_dict()).hash()` — depends on
+Dictionary key-iteration order and Godot's internal serialization, neither
+guaranteed stable across engine versions/platforms, so it would risk breaking QA
+goldens for reasons unrelated to sim state (the exact failure AD-019 guards against
+for a different case); Godot's built-in `hash()` on the dict — same order/stability
+concern, and not documented as platform-stable.
+**Why.** Purity/determinism/round-trip proofs lean entirely on the hash being a
+deterministic function of the state's DATA, not of object identity or map ordering.
+FNV-1a over an explicitly-ordered pure-integer stream is platform-independent
+(GDScript ints are 64-bit two's-complement and wrap on overflow, giving FNV's mod-
+2^64 arithmetic), float-free (AD-019), and order-committing (folding sizes/counts
+before elements prevents regrouping collisions). It is a *tool* for QA's harness,
+not a sim contract, so it stays a latitude call — but flagged provisional because if
+QA (TKT-P0-11) wants a specific hash the harness standardizes on, this converts
+trivially and should defer to that.
+
+### JC-008 · 2026-07-02 · TKT-P0-03 · `InputHistory` capacity CAP = 32 frames — provisional
+**Decided.** The per-player raw-input ring buffer (`input_history.gd`) holds up to
+CAP = 32 frames, oldest→newest, stored as a flat `PackedInt32Array` so its
+serialized form is canonical regardless of the ring's write cursor.
+**Serves.** TKT-P0-03 / simulation.md (`players[i].input_history` — "ring buffer of
+recent raw InputFrames"); AD-003/AD-022 fix the *buffering windows* (9-frame motion,
+6-frame command). The spec fixes the windows (feel, sim-side); the *storage depth*
+of the history is an internal capacity detail left open.
+**Alternatives passed over.** CAP = exactly the largest window (9) — no headroom, so
+any later rule needing more lookback silently truncates; unbounded history — grows
+the serialized state without bound and bloats every snapshot/hash for no gameplay
+need.
+**Why.** 32 covers the AD-022 windows (9/6) several times over with headroom for a
+future rule, while keeping the serialized state and the hashed frame-stream small.
+The WINDOWS are the feel values and live in AD-022 (sim-side, the Architect's); CAP
+is just how deep the substrate buffer is, so it is latitude. If a future buffering
+rule needs more lookback than CAP, that is a one-line bump here, not a contract
+change.
+
+### JC-009 · 2026-07-02 · TKT-P0-03 · Input sources sampled parent-before-child via tree order in the scaffold — provisional
+**Decided.** In the running scaffold (`main.gd`), the `LocalDeviceSource`s are
+`sample_next()`-produced in `Main._physics_process` (the parent), which Godot runs
+before the child `TickHost._physics_process` that advances the sim — so the current
+frame exists in each source before the host queries `get_input(state.tick)` (no
+future read, input.md).
+**Serves.** TKT-P0-03 seam close / input.md (sources "produce" a frame before the
+sim requests it) — view-side wiring only; the sim (`step`) consumes only the
+already-recorded frame.
+**Alternatives passed over.** Making `TickHost` own device sampling — but the host
+holds the abstract `InputSource` (which has no `sample_next`; only concrete device
+sources do), and sampling inside the host would couple it to a concrete source type,
+violating "nothing in the sim knows which concrete source it holds" (input.md); a
+`Callable`-based sample hook on the host — extra indirection for no P0 benefit.
+**Why.** Tree-order (parent-before-children) is Godot's documented `_physics_process`
+ordering, and separating "produce the device frame" (view/wiring) from "advance the
+sim" (host) keeps the host source-type-agnostic. This is scaffold wiring outside the
+sim, fully reversible, and invisible across the seam. Flagged as a spot to harden if
+a later ticket needs a hard ordering guarantee rather than relying on tree order.

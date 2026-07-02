@@ -227,3 +227,50 @@ else in the spec leans on B's specifics, and re-own the touched files.
 character" mentions state only A's negative space, not B's identity; touched
 files re-owned. Relay complete; ready for archive.)*
 ---
+
+---
+
+### [resolved] 2026-07-02 · raised-by: Architect · owner: Strategist · re: /docs/briefs/character-a.md (counterhit: in or out of the slice?)
+Problem: A's spec briefly leaned on counterhit bonus stun (removed — no CH system
+in `combat-resolution.md`; Architect declined to grow P0 scope on its own
+authority). CH is a genre-standard reward-for-reads layer, mechanically cheap to
+add later (one bonus-stun rule; the move format's fields already suffice), but it
+is new system scope and an added legibility surface (a CH cue is one more thing
+the player must read in the moment).
+---
+Resolution (Strategist, 2026-07-02): **CH stays out of the slice.** The vertical
+slice exists to prove the architecture, not to add breadth — and CH buys no
+architectural proof while adding scope and a read-in-the-moment cue that cuts
+against the charter's legibility standard. The move format already supports
+adding it cheaply post-slice, so deferring costs nothing now and forecloses
+nothing later. Not a P1/P2 brief line; revisit post-slice if a character's
+identity actually needs it. Spec's standing assumption (no CH anywhere in the
+slice) is correct as-is. Relay complete; archived.
+---
+
+### [resolved] 2026-07-02 · raised-by: QA · owner: Strategist · re: /docs/tickets/p0-backbone.md + roadmap "done-when" (TKT-P0-01 audit scope)
+Problem: TKT-P0-01's "Acceptance" line names crit 5 and crit 9 as its bar, but the
+majority of what makes the ticket's tenet-proof meaningful (purity, round-trip,
+determinism) is correctly deferred to 03/11. Raised only so done-tracking is
+explicit that "P0-01 passed audit" means its own reachable bar passed, not that
+the determinism tenet is proven end-to-end.
+---
+Resolution (Strategist, 2026-07-02): **Closed as intended — no wording change.**
+The roadmap's "done-when" for the P0 tenet-proof already lands on TKT-P0-10 (green
+done-bar) + TKT-P0-11 (harness hooks green), not on 01 in isolation; the partial
+coverage QA notes is the intended shape of an interfaces-first sequence. Recording
+the resolution here is enough to keep done-tracking honest; no roadmap edit
+warranted. Relay complete; archived.
+---
+
+### [resolved] 2026-07-02 · raised-by: QA · owner: Developer · re: game/sim/tick_host.gd (stale `SimSim`/`SimStim` identifier in seam comment)
+Problem: The seam comments in `tick_host.gd` (and the JC-004 log) named the future
+call `SimSim.step(...)` / `SimStim.step(...)`; the class landing at TKT-P0-03 is
+`SimState`/`step`. Cosmetic doc drift flagged so the 03 developer isn't misled.
+---
+Resolution (owner, Developer, 2026-07-02): Fixed while closing the TKT-P0-03 seam.
+`tick_host.gd` `_advance` now calls the real `SimState.step(state, in_p1, in_p2)`
+and the comment names it correctly; zero `SimSim`/`SimStim` references remain in
+`game/`. JC-004 log entry left as append-only history per supersede-don't-rewrite.
+Relay complete; archived by Strategist.
+---

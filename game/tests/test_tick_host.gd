@@ -1,24 +1,25 @@
 extends SceneTree
 
-## Headless test for the fixed-tick host (TKT-P0-01, AD-004, simulation.md).
+## Headless test for the fixed-tick host (TKT-P0-01 clock discipline, carried
+## through the TKT-P0-03 seam close). AD-004, simulation.md.
 ##
 ## Run:  godot --headless --path game -s res://tests/test_tick_host.gd
+## Exits non-zero on any failure so a harness/CI can gate on it.
 ##
-## SCOPE / HONESTY NOTE. simulation.md criterion 5 ("Tick authority: sim tick
-## count derives from state.tick, not engine frame count; render rate changes do
-## not change sim outcomes") is only FULLY verifiable once TKT-P0-03 lands a real
-## SimState + pure `step` and a render loop exists to vary. What this test CAN
-## pin now, and does:
-##   (a) The host's clock is read from its state handle, not an engine counter —
-##       set_state / current_tick prove the reads route through state.
+## SCOPE / HONESTY NOTE. simulation.md criterion 5 ("Tick authority: sim tick count
+## derives from state.tick, not engine frame count; render rate changes do not
+## change sim outcomes") is now fully wired: the host advances a real SimState via
+## the pure step, and the clock is read from state.tick. What this test pins:
+##   (a) The host's clock is read from state (`current_tick()` == `state.tick`) —
+##       not from an engine counter. set_state / get_state prove the reads route
+##       through the SimState handle.
 ##   (b) One `_advance` call == exactly one tick of progress, monotonic, never
 ##       scaled by anything (no delta enters the advance path at all).
-##   (c) `_delta` is unused: advancing N times from a known state yields exactly
-##       start+N regardless of any wall-clock between calls.
-## The "render rate changes don't change outcomes" half is asserted by
-## construction (the advance path takes no delta/frame-count input) and becomes
-## an end-to-end check under QA's harness at 03/11. Called out so QA knows the
-## boundary rather than assuming full coverage here.
+##   (c) `_delta` is unused: advancing via _physics_process with wildly different
+##       delta values yields exactly +1 tick each, and a paused host advances 0.
+## The "render rate changes don't change outcomes" half is asserted by construction
+## (the advance path takes no delta/frame-count input) and is an end-to-end check
+## under QA's harness at TKT-P0-11.
 
 var _failures: int = 0
 var _checks: int = 0
@@ -44,18 +45,25 @@ func _eq(actual, expected, msg: String) -> void:
 func _run() -> void:
 	var host := TickHost.new()
 
+	# Wire a real initial state and two neutral sources so _advance can source
+	# input through the InputSource contract, just like the running game.
+	var state := SimState.new_initial()
+	var src1 := LocalDeviceSource.new()   # null sampler -> samples NEUTRAL
+	var src2 := LocalDeviceSource.new()
+	host.setup(state, src1, src2)
+
 	# (a) Clock reads from state, not from any engine counter.
-	host.set_state(0)
-	_eq(host.current_tick(), 0, "current_tick reads state (0 after set_state 0)")
-	host.set_state(500)
-	_eq(host.current_tick(), 500, "current_tick reads state (500 after set_state 500)")
+	_eq(host.current_tick(), 0, "current_tick reads state.tick (0 at start)")
+	_eq(host.get_state().tick, 0, "get_state exposes the SimState handle")
 
 	# (b)/(c) One advance == exactly one tick, monotonic, delta-free.
-	host.set_state(0)
+	# The Local sources must PRODUCE each frame before the host queries it (no
+	# future reads): sample_next() ahead of each advance mirrors the running game,
+	# where the device is sampled for the current frame each tick.
 	var prev: int = host.current_tick()
 	for i in range(120):
-		# Drive the same advance path _physics_process uses, directly, so no
-		# render/wall-clock timing is involved — proving the advance takes none.
+		src1.sample_next()
+		src2.sample_next()
 		host._sim_state = host._advance(host._sim_state)
 		var now: int = host.current_tick()
 		_eq(now, prev + 1, "advance #%d yields exactly +1 tick" % (i + 1))
@@ -70,8 +78,17 @@ func _run() -> void:
 	host._physics_process(1.0)     # even a huge delta must not advance while paused
 	_eq(host.current_tick(), frozen, "paused host does not advance regardless of delta")
 
+	# Resume: one physics_process == one tick. The host must have the current frame
+	# available from its sources; produce it first.
 	host.running = true
+	src1.sample_next()
+	src2.sample_next()
 	host._physics_process(0.016)
 	_eq(host.current_tick(), frozen + 1, "resumed host advances exactly one tick per physics_process")
+	# And a wildly different delta on the next tick still yields exactly +1.
+	src1.sample_next()
+	src2.sample_next()
+	host._physics_process(9.999)
+	_eq(host.current_tick(), frozen + 2, "huge delta still advances exactly one tick")
 
 	host.free()
