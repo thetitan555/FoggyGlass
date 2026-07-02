@@ -23,6 +23,8 @@ The proof surface everything else hangs on. No content; just the contracts.
 - **`inspection-surface.md`** — the concrete read-only `InspectionView` API: the
   systems/content seam that debug mode, QA, and UI all read sim truth through.
 - **`decisions.md`** — the architecture decision record.
+- **`/docs/tickets/p0-backbone.md`** — the P0 ticket decomposition
+  (TKT-P0-01…11, interfaces-first; the Developer starts at TKT-P0-01).
 
 ## P1 — Debug / technical training mode
 
@@ -55,8 +57,10 @@ P0 backbone: **spec drafted; revised once** to adopt fixed-point sim math
 (AD-005/AD-014) and to resolve four Consultant flags — advantage static-vs-live
 (AD-008), the `CancelRule` model + cancel/hitstop timing (AD-015/AD-017),
 non-mutating `step` (AD-004), and multi-hit/throw models (AD-016). See
-`flags-archive.md` for the resolutions. **P0 has no ticket decomposition yet**
-(open flag in `flags.md`) — the Developer's first work is blocked on it. P1
-(debug/technical training mode): **spec + tickets drafted** (`training-mode.md`,
-`inspection-surface.md`, `tickets/p1-training-mode.md`); the Developer picks up
-TKT-P1-01 once the P0 tickets exist and the backbone lands.
+`flags-archive.md` for the resolutions. P0 tickets: **decomposed**
+(`tickets/p0-backbone.md`, TKT-P0-01…11) — **the Developer's first work is
+TKT-P0-01**. P1 (debug/technical training mode): **spec + tickets drafted**
+(`training-mode.md`, `inspection-surface.md`, `tickets/p1-training-mode.md`);
+the Developer picks up TKT-P1-01 once the backbone lands. Character A's numeric
+tables are **provisional until playable** (see `character-a.md` → Tuning status);
+its structural criteria are the binding ones.

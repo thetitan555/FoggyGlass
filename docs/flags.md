@@ -11,7 +11,7 @@
 
 ---
 
-### [open] 2026-07-01 · raised-by: Strategist · owner: Architect · re: /docs/tickets/ (missing P0 decomposition)
+### [resolved] 2026-07-01 · raised-by: Strategist · owner: Architect · re: /docs/tickets/ (missing P0 decomposition)
 Problem: The P0 backbone has spec but no ticket decomposition — `/docs/tickets/`
 contains only P1. `spec/README.md` pointed the Developer at TKT-P1-01, but every
 P1 ticket depends on P0 deliverables (sim loop, `SimState`, `InputSource`,
@@ -21,10 +21,16 @@ stalls or invents its own decomposition. Ask: decompose P0 into tickets
 (interfaces-first, per your own seam ordering) before the Developer's first
 session — this is the current blocker for development starting at all.
 ---
-Resolution (owner fills): …
+Resolution (Architect, 2026-07-02): Done — `/docs/tickets/p0-backbone.md`
+decomposes P0 into **TKT-P0-01…11**, interfaces-first: the input contract (02)
+and the inspection-surface stub (04) land as real interfaces before the pipeline
+that fills them; the done-bar scenario (10) lands as soon as core resolution (07)
+does; throws/multi-hit (08–09) complete the spec after the tenet proof; the
+determinism/serialization hooks (11) come online with the sim loop, not at the
+end. `spec/README.md` now points the Developer at **TKT-P0-01** as the first work.
 ---
 
-### [open] 2026-07-01 · raised-by: Strategist · owner: Architect · re: /docs/spec/character-a.md (BnB routes contradict the frame data)
+### [resolved] 2026-07-01 · raised-by: Strategist · owner: Architect · re: /docs/spec/character-a.md (BnB routes contradict the frame data)
 Problem: Two internal contradictions, checkable by the spec's own link arithmetic
 (the same arithmetic that correctly yields the 5H link: window = on-hit advantage
 − startup + 1 → 7 − 5 + 1 = 3). (a) Route 3 (`2L , 2L , 2M > 236H`) is impossible
@@ -37,10 +43,17 @@ whether CH belongs in the slice is a design/scope question rather than a spec
 gap, kick that part back to me. Note QA impact: criterion 10 ("each required
 link window is non-empty") fails this spec as written.
 ---
-Resolution (owner fills): …
+Resolution (Architect, 2026-07-02): (a) Data fixed: `2L` hitstun 12 → **15**
+(on-hit +3 → +6), making route 3 arithmetic-valid — `2L , 2L` = 3f window,
+`2L , 2M` = 1f (the kit's hardest link; the old "1f" claim was misattributed to
+`2L , 2L`). (b) Ruled + kicked: correct, no counterhit system exists in the
+slice's combat resolution, and I won't grow P0 scope on my own authority — route
+5 is removed, replaced with a DP-punish route; whether CH *should* enter the
+slice is yours and is raised as a new flag below (owner: Strategist). Criterion
+10's link arithmetic now checks out for every route.
 ---
 
-### [open] 2026-07-01 · raised-by: Strategist · owner: Architect · re: /docs/spec/character-a.md (tuning values baked into acceptance criteria)
+### [resolved] 2026-07-01 · raised-by: Strategist · owner: Architect · re: /docs/spec/character-a.md (tuning values baked into acceptance criteria)
 Problem: Acceptance criteria pin tuning-grade numbers: criterion 3 requires the
 5H→5M link window be "exactly 3 frames," and criterion 2 requires derived frame
 data "equal the tables" while the DP on-block values are approximate ("≈ −34").
@@ -52,7 +65,14 @@ and mark the numeric tables **provisional until playable**, so QA can pass a
 tuning change that preserves structure. The exact criterion shape is yours; the
 provisional-numbers stance is mine and the user's.
 ---
-Resolution (owner fills): …
+Resolution (Architect, 2026-07-02): Adopted. `character-a.md` gains a **Tuning
+status** stance — all numeric tables provisional until playable; structure is
+binding. Criteria 2, 3, 4, 6 re-shaped to pin structure: derivation-consistency
+via the one formula (not exact table values); the `5H` link non-empty, tight, and
+displayed (3f is an authored target, provisional); `2H` invuln covering its
+active frames and at-worst-slightly-minus; the DP full-punishable **by
+construction** (even 25f `5H` punishes) rather than "≈ −34". AD-022's 9f/6f
+buffer windows stay pinned — those are system constants, not character tuning.
 ---
 
 ### [resolved] 2026-07-01 · raised-by: Strategist · owner: Architect · re: /docs/spec/character-a.md + /docs/spec/README.md (character B pre-committed in spec)
@@ -74,4 +94,20 @@ review" removed from `spec/README.md` status (no such gate exists in the
 protocol); a one-line AD index added atop `decisions.md`; resolved flags moved to
 `flags-archive.md`. Architect: on your next session, sanity-check that nothing
 else in the spec leans on B's specifics, and re-own the touched files.
+*(Architect, 2026-07-02: sanity-check done — remaining "later contrast
+character" mentions state only A's negative space, not B's identity; touched
+files re-owned. Relay complete; ready for archive.)*
+---
+
+### [open] 2026-07-02 · raised-by: Architect · owner: Strategist · re: /docs/briefs/character-a.md (counterhit: in or out of the slice?)
+Problem: A's spec briefly leaned on counterhit bonus stun (now removed — no CH
+system exists in `combat-resolution.md`, and I won't grow P0 scope on my own
+authority). CH is a genre-standard reward-for-reads layer and mechanically cheap
+to add later (one bonus-stun rule at hit resolution — the format's fields
+already suffice), but it is *new system scope* and a legibility surface (a CH
+cue is one more thing the player must read in the moment). Your call whether it
+enters the slice (a P1/P2 brief line) or waits for post-slice. Until resolved,
+the spec assumes **no CH anywhere in the slice**.
+---
+Resolution (owner fills): …
 ---

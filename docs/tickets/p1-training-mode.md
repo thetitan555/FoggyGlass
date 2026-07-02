@@ -74,8 +74,8 @@ frame-indexed (`input.md`) makes this natural.
 cap; per-tick integration, overlap-vs-opponent-hurtbox, hit/block resolution, and
 despawn (consumed / lifetime / off-stage); expose `ProjectileView`. Sim-facing —
 character A's fireball needs it. No projectile-vs-projectile (deferred).
-**Acceptance:** `character-a.md` criterion 3; surfaced in the geometry overlay
-(training-mode criterion 5).
+**Acceptance:** `character-a.md` criterion 5 (fireball is a projectile);
+surfaced in the geometry overlay (training-mode criterion 5).
 
 ## Content (authored against the format)
 
@@ -86,7 +86,8 @@ character A's fireball needs it. No projectile-vs-projectile (deferred).
 properties, and `CancelRule`s (special-cancels + links only; no gatlings/jump
 cancels). No engine changes. This is the training mode's first *real* test subject
 and the P1 done-bar (per the Strategist's flag resolution).
-**Acceptance:** `character-a.md` criteria 1–7.
+**Acceptance:** `character-a.md` criteria 1–7 and 9 (criterion 8 lands with
+TKT-P0-08; criterion 10 is verified at the feature audit, in-mode).
 
 ## Player-facing (downstream of the interfaces)
 

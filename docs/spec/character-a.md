@@ -33,6 +33,14 @@ Distances/speeds authored in **pixels**, baked to fixed-point (AD-014); frames a
 integer ticks at 60 Hz. **Advantage values are static** (first-active, uncancelled
 — AD-008); the training mode shows live values.
 
+**Tuning status — numbers provisional until playable.** Every number in this spec
+(frame counts, stun, damage, distances) was authored before a playable sim exists;
+once the training mode is live they get tuned by feel. What is **binding** is
+structure: which links exist (non-empty windows), which moves cancel, `5H` plus on
+block and advancing, the DP full-punishable on block, each move's role. The
+acceptance criteria pin structure; a tuning pass that preserves it passes QA
+without a flag round-trip. (Flag-resolved 2026-07-02; see the flag ledger.)
+
 ## System stats
 
 - **Health:** 1000.
@@ -72,7 +80,7 @@ integer ticks at 60 Hz. **Advantage values are static** (first-active, uncancell
 | `5L` | 30 | 9 | 12 | 8 | small pushback |
 | `5M` | 60 | 12 | 16 | 9 | med pushback |
 | `5H` | 80 | 18 | 22 | 11 | forward-advancing; +3 blk / +7 hit |
-| `2L` | 20 | 10 | 12 | 8 | low |
+| `2L` | 20 | 10 | 15 | 8 | low; hitstun juiced so `2L` self-links and confirms into `2M` (see routes) |
 | `2M` | 70 | 14 | 18 | 10 | long range, low pushback (allows the cancel) |
 | `2H` | 60 | 13 | air | 10 | upper-body invuln 1–8; on hit knocks the airborne foe away, **no follow-up** |
 | `j.L`/`j.M`/`j.H` | 30/50/80 | — | scales w/ height | 9/10/11 | air |
@@ -141,11 +149,15 @@ Special-cancels + links only. No gatlings, no jump cancels.
 
 1. **Footsie / whiff-punish:** `2M > 623L` → hard KD → oki (~150).
 2. **Jump-in:** `j.H , 5M > 623M` → hard KD (~250).
-3. **Low confirm:** `2L , 2L , 2M > 236H` — pressure + fireball oki. (`2L,2L` = 1f link.)
+3. **Low confirm:** `2L , 2L , 2M > 236H` — pressure + fireball oki. (`2L , 2L` =
+   3f link; `2L , 2M` = **1f** — the kit's hardest link.)
 4. **The 5H combo (the 3-frame link):** `5H , 5M > 623M` — `5H` on hit (+7) links
    `5M` on a **3-frame window**, cancel into DP for high damage (~270). On block
    `5H` is +3 → forward-advancing pressure reset, your turn continues.
-5. **Counterhit:** `5M (CH) , 2M > 623L`.
+5. **DP punish:** (blocked `623`) → `5H , 5M > 623M` (~270) — a blocked DP is
+   minus enough that even 25f `5H` punishes; the max punish is the same 3f-link
+   route. (No counterhit system exists in the slice — see `flags.md`, kicked to
+   the Strategist as a scope question.)
 6. **Anti-air:** `623` (big reward, full-punishable) **or** `2H` (safe, low reward)
    — the core risk/reward read.
 
@@ -159,21 +171,28 @@ archetypal "knockdown → pressure → read" loop.
 
 1. **Authored as data.** Every move exists purely as `.tres` data against
    `move-format.md` — no character-specific engine code.
-2. **Frame data matches.** Each move's derived startup/active/recovery and on-
-   block/on-hit advantage equal the tables (AD-008 static); the training mode reads
-   them out correctly.
-3. **`5H` pressure reset + 3-frame link.** `5H` is +3 on block and advances
-   forward; on hit (+7) the link into `5M` has a window of **exactly 3 frames**
-   (verifiable), enabling `5H , 5M > 623` for high damage.
-4. **`2H` safe anti-air.** `2H` has upper-body invuln on frames **1–8**, beats a
-   jump-in, gives **no combo** on hit, and is only −2 on block — distinct from the
-   DP's high-risk/high-reward. (No sweep exists in the kit.)
+2. **Frame data derives consistently.** Each move's startup/active/recovery and
+   on-block/on-hit advantage derive from its *authored data* via the one canonical
+   derivation and formula (AD-008 static), and the training mode reads them out
+   correctly. The specific table values are provisional (see Tuning status); QA
+   verifies derivation-consistency plus the structural criteria below, not exact
+   numbers.
+3. **`5H` pressure reset + tight link.** `5H` is plus on block and advances
+   forward; on hit the link into `5M` has a **non-empty, deliberately tight
+   window** (authored target: 3 frames — provisional), enabling `5H , 5M > 623`
+   for high damage; the window is displayed by the training mode.
+4. **`2H` safe anti-air.** `2H` has upper-body strike invuln from frame 1 through
+   the end of its active frames, beats a jump-in, gives **no combo** on hit, and
+   is at worst slightly minus on block (not punishable) — distinct from the DP's
+   high-risk/high-reward. (No sweep exists in the kit.)
 5. **Fireball is a projectile.** Casting spawns one `Projectile` (AD-021); a second
    cast while one is live is suppressed; it travels, hits/blocks once, is consumed,
    and is visible in the geometry overlay.
-6. **DP invuln + punish.** Each DP has the listed invuln on the listed frames; on
-   block it is full-punishable (advantage matches); the training mode shows the
-   punish window.
+6. **DP invuln + punish.** Each DP is strike-invulnerable from frame 1 through at
+   least its first active frame (`623H` also throw-invulnerable); on block every
+   DP is minus enough that **even 25f `5H` punishes before the DP recovers** —
+   full-punishable by construction, exact advantage provisional. The training mode
+   shows the punish window.
 7. **Throw.** Connects through block, techable within 7 frames (AD-016), hard
    knockdown on success.
 8. **Input buffer.** A `623` buffered during blockstun/wakeup executes on the first
