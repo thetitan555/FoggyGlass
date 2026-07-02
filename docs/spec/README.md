@@ -34,7 +34,8 @@ literal, and the team's instrumentation.
   & advantage, live state, input history), with acceptance criteria.
 - **`character-a.md`** — character A's full frame data (the baseline shoto): a
   juiced fundamentals character — links + special-cancels + a scary DP, **no
-  gatlings / no jump cancels** (reserved for B). The training mode's first real
+  gatlings / no jump cancels** (reserved for a later contrast character; that
+  archetype is the Strategist's P2 open question). The training mode's first real
   test subject and the P1 done-bar.
 - **`/docs/tickets/p1-training-mode.md`** — the seam-ordered ticket decomposition
   (TKT-P1-0P projectiles, 01…09 mode, 10 character-A authoring).
@@ -53,7 +54,9 @@ serialization harness comes online *with* the sim loop, not after.
 P0 backbone: **spec drafted; revised once** to adopt fixed-point sim math
 (AD-005/AD-014) and to resolve four Consultant flags — advantage static-vs-live
 (AD-008), the `CancelRule` model + cancel/hitstop timing (AD-015/AD-017),
-non-mutating `step` (AD-004), and multi-hit/throw models (AD-016). See `flags.md`
-for the resolutions. P1 (debug/technical training mode): **spec + tickets drafted**
-(`training-mode.md`, `inspection-surface.md`, `tickets/p1-training-mode.md`) —
-awaiting review, then the Developer can pick up TKT-P1-01.
+non-mutating `step` (AD-004), and multi-hit/throw models (AD-016). See
+`flags-archive.md` for the resolutions. **P0 has no ticket decomposition yet**
+(open flag in `flags.md`) — the Developer's first work is blocked on it. P1
+(debug/technical training mode): **spec + tickets drafted** (`training-mode.md`,
+`inspection-surface.md`, `tickets/p1-training-mode.md`); the Developer picks up
+TKT-P1-01 once the P0 tickets exist and the backbone lands.

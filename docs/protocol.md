@@ -63,7 +63,8 @@ project tree — **`/game`** at repo root (the Architect's call, recorded in
 | Game code + dev tests | `/game` (engine project tree) | **Developer** | all |
 | Judgment-call log | `/docs/judgment-log.md` | **Developer** writes; **Architect** ratifies | QA, Architect |
 | Audit + drift reports | `/docs/audits/*.md` | **QA** | routed to owner |
-| Flag ledger | `/docs/flags.md` | **any role** appends; **owner** resolves | all |
+| Flag ledger (open) | `/docs/flags.md` | **any role** appends; **owner** resolves | all |
+| Flag archive (resolved + relayed) | `/docs/flags-archive.md` | **Strategist** moves entries in | on demand |
 
 One owner per artifact. If you don't own it, you read it and you may *flag* it
 (see below) — you never edit it. The judgment-call log is the single shared-write
@@ -136,8 +137,12 @@ Resolution (owner fills): …
 The raiser writes the flag and tells the user. The user relays it to the owner.
 The owner resolves — edits their artifact if needed, writes the resolution line,
 flips `[open]` to `[resolved]` — and the user relays back. (The change reaches
-GitHub at the next checkpoint, when the user runs a helper.) Keep the ledger
-append-only; resolved entries stay as a record.
+GitHub at the next checkpoint, when the user runs a helper.) Entries are never
+edited after the fact; once a resolution has been relayed, the **Strategist moves
+the entry to `/docs/flags-archive.md`** — the permanent record — so the live
+ledger stays small and cheap to read. **Batch where possible:** flags for the
+same owner should be raised and resolved together in one session; every separate
+session re-pays that role's full reading cost.
 
 **Consultant-originated flags.** The Consultant is outside the pipeline. At the
 user's request and with the user's confirmation, it may *draft* a flag as a
@@ -180,6 +185,27 @@ user pasted into its chat; the owner sanity-checks against live state first.
 - **Commit granularity (set by the message a role proposes):** one logical change
   per checkpoint where practical; the message references the brief, ticket, or
   flag it serves (e.g. `brief: debug-training-mode`).
+- **Direction lives upstream.** A steer given in chat — by the user or anyone —
+  is provisional until the *owning* artifact records it. If a role receives or
+  infers direction that belongs to an upstream artifact (priorities, scope, a
+  future feature's or character's identity), it asks the user to route it to the
+  owner; it never records direction in its own artifacts. (Origin: character B's
+  identity leaked into the Architect's spec exactly this way — the user steered
+  A's tuning in chat, and the steer had nowhere owned to live.)
+- **Rationale lives once.** An architecture decision's what-and-why lives in
+  `decisions.md`; specs, tickets, and status notes cite the AD-ID rather than
+  restating the reasoning. Restated rationale is re-read by every role in every
+  session, forever — reference, don't repeat. The same goes for protocol rules:
+  cite this document, don't paraphrase it in file headers.
+- **Read what the task needs, not the tree.** Every role reads the tenets and its
+  own inputs; beyond that, tickets name the specs/sections they serve and the
+  executing role reads *that set*, not the whole `/docs` tree. Ledgers are kept
+  cheap on purpose: `flags.md` holds open flags only, `decisions.md` is fronted
+  by a one-line index — pull full entries on demand.
+- **Batch per session.** Roles are memory-less; each session re-pays its fixed
+  reading cost before any work. Group same-role work — several flags for one
+  owner, adjacent tickets, a spec revision plus its ticket updates — into one
+  session where practical.
 - **Confirm paths on first run.** Each role confirms this layout with the user at
   the start of its first session; if a path here is wrong, that's a flag to the
   Strategist.

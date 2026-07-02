@@ -8,6 +8,31 @@
 Status legend: **settled** (agreed, build against it) · **provisional** (in
 effect but expect revision) · **superseded** (kept for history).
 
+## Index (read this; pull full entries below on demand)
+
+- **AD-001** State is data; the scene tree is a view — settled
+- **AD-002** Dumb input layer: raw, frame-indexed bitfields — settled
+- **AD-003** Buffering and SOCD resolve sim-side — settled
+- **AD-004** Fixed 60 Hz tick; `step` is pure, non-mutating — settled (revised)
+- **AD-005** Fixed-point sim math from the start — settled (revised)
+- **AD-006** Move data as `.tres` Resources against a schema — settled
+- **AD-007** One state-machine pattern for every character — settled
+- **AD-008** One advantage formula; static + live values — settled (revised)
+- **AD-009** Fixed intra-tick phase order — settled
+- **AD-010** Hitstop is in-state, not a loop pause — settled
+- **AD-011** Read-only inspection surface is the systems/content seam — settled
+- **AD-012** Our own AABB overlap; engine physics owns nothing — settled
+- **AD-013** Engine code lives under `/game` — settled
+- **AD-014** Fixed-point convention: 64-bit, scale 2^16, no transcendentals — settled
+- **AD-015** Cancels are typed `CancelRule` lists — settled
+- **AD-016** Multi-hit and throw resolution models — settled
+- **AD-017** Cancel timing across hitstop; T+1 grant→consume — settled
+- **AD-018** Three attack buttons at input layer; labels above it — settled
+- **AD-019** Inspection surface fixed-point only; px is render-only — settled
+- **AD-020** Reset restores sim state + playback position — settled
+- **AD-021** Projectiles are first-class serialized sim entities — settled
+- **AD-022** Input buffer: 9f motion window, 6f command buffer — settled
+
 ---
 
 ### AD-001 · State is data; the scene tree is a view — settled

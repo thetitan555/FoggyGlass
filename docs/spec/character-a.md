@@ -16,13 +16,14 @@
 - **`>` = cancel** (special-cancel). **`,` = link.** (A has no gatlings, so `>`
   here always means a special-cancel.)
 
-## Design stance (and the B-contrast)
+## Design stance
 
-A is a **clean, powerful fundamentals shoto**. Per the peek ahead — **character B
-will be the test of gatlings and jump cancels** — A deliberately has **neither**:
-no normal→normal chains, no jump cancels. Its depth is *links + special-cancels +
-footsies + a scary DP*. Intentional, not a gap: it reserves chains/jump-cancels
-for B and gives the matchup a real contrast (grounded reads vs. flashy strings).
+A is a **clean, powerful fundamentals shoto**. A deliberately has **no gatlings
+and no jump cancels**: no normal→normal chains, no jump-cancel states. Its depth
+is *links + special-cancels + footsies + a scary DP*. Intentional, not a gap: the
+slice's novelty budget is reserved for the P2 contrast character, whose archetype
+is the Strategist's open question (see `roadmap.md`) — A stays the clean baseline
+the contrast is measured against.
 
 "Simplified, not dumbed down" shows up as **few moves, real ceiling**: small kit,
 but `2M` footsies, DP timing, fireball spacing, and tight links keep mastery high.
@@ -47,7 +48,7 @@ integer ticks at 60 Hz. **Advantage values are static** (first-active, uncancell
 | Forward dash `66` | 20 f, ~95 px | Step dash, fully committed (no cancel). |
 | Back dash `44` | 22 f, ~80 px, **invuln 1–7** (strike+throw) | Escape with a real recovery tail. |
 | Prejump | 4 f | Then airborne. |
-| Jump `7/8/9` | ~45 f airborne | No air dash, no double jump, **no jump cancels** (B's domain). |
+| Jump `7/8/9` | ~45 f airborne | No air dash, no double jump, **no jump cancels** (reserved for a later contrast character). |
 | Crouch / Block | — | Stand- and crouch-block; `2L`/`2M` are lows. |
 
 ## Normals — frame data
@@ -130,8 +131,9 @@ Special-cancels + links only. No gatlings, no jump cancels.
 - Cancellable: `5L`, `5M`, `2L`, `2M` (on contact — blockstrings `> 236` pressure
   work). **Not** cancellable: `5H` (its reward is the link), `2H` (anti-air), the
   sweep-less kit, all air normals.
-- **No `CancelRule` targets another normal** (gatling = B); **no state grants a
-  jump cancel** (also B). A's combos come from **links**.
+- **No `CancelRule` targets another normal** (no gatlings); **no state grants a
+  jump cancel** — both reserved for a later contrast character (the Strategist's
+  P2 call). A's combos come from **links**.
 
 ## Bread-and-butter routes (the intended ceiling)
 
