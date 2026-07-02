@@ -1,0 +1,16 @@
+{
+  "name": "foggyglass-roles",
+  "displayName": "FoggyGlass Roles",
+  "version": "0.1.0",
+  "description": "The FoggyGlass pipeline roles as callable subagents: Strategist, Architect, Developer, and QA.",
+  "author": {
+    "name": "Ryan Studham"
+  },
+  "keywords": ["foggyglass", "fighting-game", "pipeline", "subagents"],
+  "agents": [
+    "./agents/strategist.md",
+    "./agents/architect.md",
+    "./agents/developer.md",
+    "./agents/qa.md"
+  ]
+}

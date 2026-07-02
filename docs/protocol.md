@@ -154,6 +154,11 @@ user pasted into its chat; the owner sanity-checks against live state first.
 
 ## Cadence
 
+- **Per session (Strategist).** At the start of every session, before other
+  work, check `flags.md` for entries the owner has flipped to `[resolved]` and
+  relayed back. Move each to `flags-archive.md`. This is the only place this
+  duty is enforced structurally rather than left to memory — see
+  `roles/strategist.md`.
 - **Per feature.** QA audits each feature against its acceptance criteria, the
   tenets (determinism + serialization especially), and the audit criterion before
   it is "done." This gates the loop — nothing is done un-audited.
