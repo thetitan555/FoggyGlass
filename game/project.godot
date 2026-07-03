@@ -1,6 +1,10 @@
-; Godot project configuration — FoggyGlass engine tree (AD-013).
-; Engine version pinned to 4.x. Config kept minimal for P0: the backbone
-; (fixed-point core + fixed-tick host) needs no rendering/audio/input tuning yet.
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -10,21 +14,6 @@ config/name="FoggyGlass"
 config/description="Deterministic 2D fighting-game slice. See /docs for charter, tenets, and spec."
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.3")
-
-[autoload]
-
-; No autoloads yet. SimState/sources are plain data + explicit wiring (AD-001),
-; not globals — they land with TKT-P0-03.
-
-[physics]
-
-; The sim clock is a tick counter in state (AD-004, simulation.md tick model),
-; NOT this value. physics/common/physics_ticks_per_second is the engine's
-; physics_process cadence; the tick host targets 60 Hz here and advances the
-; sim exactly one tick per intended tick, never delta-scaled. If the engine
-; reports multiple/zero physics steps, sim advancement does not scale with it.
-common/physics_ticks_per_second=60
-common/max_physics_steps_per_frame=8
 
 [rendering]
 
