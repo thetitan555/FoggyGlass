@@ -183,17 +183,45 @@ func _test_special_cancel_on_hit() -> void:
 
 func _test_cancel_requires_tag() -> void:
 	# If the LIGHT does NOT connect (whiff), no tag is granted, so BUTTON_1 must NOT
-	# cancel into SPECIAL (requires_tag gate). P0 attacks into empty air (P1 far away).
+	# special-CANCEL into SPECIAL (requires_tag gate). P0 attacks into empty air (P1 far).
+	#
+	# ISOLATION (JC-026): SPECIAL is ALSO directly reachable from neutral via the BUTTON_1
+	# button_map entry (test_support.gd _map(1,0,0,STATE_SPECIAL)). So we must only feed
+	# BUTTON_1 while LIGHT is still a COMMITTED move — where the sole path to SPECIAL is the
+	# tag-gated cancel. Once LIGHT recovers to idle, a held BUTTON_1 would enter SPECIAL as
+	# an ordinary neutral press (not a cancel), which is correct sim behavior but does NOT
+	# exercise the gate. We therefore assert P0 stays in LIGHT for every committed tick
+	# while BUTTON_1 is held, then stop before recovery hands control back to neutral.
 	var s := _two_char_state(300)   # too far to connect
 	s = SimState.step(s, InputFrame.BUTTON_0, InputFrame.NEUTRAL)
+	# Feed BUTTON_1 every tick, but only INSPECT/ASSERT while LIGHT is still committed
+	# (not yet actionable). The moment LIGHT would become actionable we stop — beyond that
+	# tick SPECIAL is reachable via the neutral BUTTON_1 press, which is not what we gate.
 	var cancelled: bool = false
+	var asserted: int = 0
 	for _k in range(20):
+		# Stop once LIGHT is no longer committed: an actionable LIGHT (last recovery frame)
+		# would take the neutral-press path next, not the cancel path.
+		if s.players[0].state_id != TestSupport.STATE_LIGHT:
+			break
+		if Actionability.is_actionable(s.players[0], _p0_move(s)):
+			break
 		s = SimState.step(s, InputFrame.BUTTON_1, InputFrame.NEUTRAL)
+		asserted += 1
 		if s.players[0].state_id == TestSupport.STATE_SPECIAL:
 			cancelled = true
 			break
+	# We must have actually exercised the whiff-recovery window (so the gate was live).
+	_true(s.players[0].move_contact == PlayerState.CONTACT_WHIFF or asserted >= TestSupport.LIGHT_STARTUP,
+		"the whiffed LIGHT reached its whiff/recovery window (the tag gate was live)")
 	_false(cancelled, "a whiffed LIGHT grants no tag, so BUTTON_1 cannot special-cancel (requires_tag)")
 	MoveRegistry.clear()
+
+
+## The MoveState P0 is currently in (for actionability queries in the tag-gate test).
+func _p0_move(s: SimState) -> MoveState:
+	var c: Character = MoveRegistry.character(s.players[0].character_id)
+	return c.get_state(s.players[0].state_id) if c != null else null
 
 
 func _test_cancel_never_during_hitstop() -> void:

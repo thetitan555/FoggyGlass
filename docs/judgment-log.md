@@ -748,3 +748,37 @@ freezes. Both-throwboxes-connect is the literal reading of AD-016's "simultaneou
 throw attempts." Localized to `_rehit_ready` / phase-5 dispatch; the `active_hit_frames`
 field itself is the flagged contract addition (F-010), not this call. Recorded as latitude:
 it implements AD-016's stated cadence + clash with the minimal serialized shape.
+
+### JC-026 · 2026-07-03 · F-011 (test fix) · `_test_cancel_requires_tag` isolates the tag gate to LIGHT's COMMITTED window; adds a gate-liveness assertion — provisional (test-only latitude)
+**Decided.** Rewrote `test_buffer_cancels._test_cancel_requires_tag` so it only feeds/inspects
+BUTTON_1 while the whiffed LIGHT is still a *committed* move (state == LIGHT AND not
+`Actionability.is_actionable`), stopping before LIGHT recovers to idle. Added one check — a
+liveness assertion that the whiff/recovery window was actually reached (`move_contact ==
+CONTACT_WHIFF` or at least `LIGHT_STARTUP` committed ticks were asserted) — so the isolated
+test cannot vacuously pass by stopping before the gate is live. **Sim code untouched.**
+**Serves.** F-011; combat-resolution.md crit 8 / move-format.md crit 7 / AD-015/017 — a
+whiffed normal grants no cancel tag, so its `requires_tag` special-cancel is correctly gated.
+**Root cause (confirms & refines the Strategist's first candidate).** The `requires_tag` gate
+in `cancel_eval.gd::find_cancel` is correct and was NOT leaking: for a whiffed LIGHT,
+`move_contact == CONTACT_WHIFF`, so the ON_CONTACT `_condition_holds` already returns false,
+AND `_has_tag` fails (no tag granted). The cancel is correctly rejected. The failure was a
+CONTAMINATED SCENARIO: SPECIAL is *also* directly reachable from neutral via the BUTTON_1
+button_map entry (`test_support.gd _map(1,0,0,STATE_SPECIAL)`). The old test fed BUTTON_1 for
+20 ticks; within that span the whiffed LIGHT recovers to idle, and the held BUTTON_1 enters
+SPECIAL through the ordinary neutral-press path (`_buffered_command`, phase-2 step 5) — correct
+sim behavior, but NOT the cancel. The test misread that neutral press as a leaked cancel.
+**Alternatives passed over.** (a) Touch the sim — rejected: the gate is correct, the leak was
+in the test's reachability, not the code; a sim change would break the correct behavior that a
+recovered character can press BUTTON_1 into SPECIAL. (b) Move SPECIAL off the BUTTON_1 neutral
+map / give it a distinct input in `test_support.gd` — rejected: BUTTON_1-in-neutral→SPECIAL is
+load-bearing for the POSITIVE test `_test_special_cancel_on_hit` and mirrors real special
+inputs; changing shared test-support data has wider blast radius than fixing the one scenario.
+(c) Keep the check count at 26 by not adding the liveness assertion — rejected: without it the
+isolated test can false-pass if the committed window is ever empty; the extra check is cheap
+determinism insurance and makes the isolation self-verifying. Check count goes 26 → 27.
+**Why safe.** Test-only; the positive cancel path is exercised by `_test_special_cancel_on_hit`
+(cancel fires DURING committed LIGHT under hitstop, before recovery). This scenario now
+exercises exactly the negative it claims: within LIGHT's committed whiff window, the tag gate
+holds and no cancel occurs. Deterministic (pure over recorded input).
+**Boundary.** F-009/F-010 (Architect-owned) untouched; no P1 work; no refactor beyond this one
+scenario + its helper.

@@ -70,10 +70,3 @@ tests run; provisional until ratified. Non-blocking to the batch; a shape change
 localized edit to PlayerState + the hash.
 ---
 Resolution (owner fills): …
----
-
-### [open] 2026-07-03 · raised-by: Consultant (via user) · owner: Developer · re: game/sim/step_phases.gd + move_data.gd (cancel/requires_tag resolution) + game/tests/test_buffer_cancels.gd
-Problem: test_buffer_cancels fails 1 of 26 checks — a whiffed LIGHT grants no cancel tag, so BUTTON_1's special-cancel should be gated by requires_tag, but the check got true (cancel allowed) where false (gated) was expected. The requires_tag gate is not being enforced: a whiffed normal still permits the special-cancel (cancel-on-whiff) instead of requiring the hit-confirm tag.
-Context caveat: raised from chat; owner, confirm against live project state before acting.
----
-Resolution (owner fills): …
