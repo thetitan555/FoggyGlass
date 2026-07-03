@@ -269,3 +269,241 @@ the sim, not the sources — same ownership AD-020 gives the harness) plus accep
 criterion 7. So tree-order in `main.gd` is ratified as *one valid way to satisfy*
 the invariant, no longer a contract resting on an accident. See flags.md F-001
 (resolved). No code change required; the scaffold already satisfies the invariant.
+
+### JC-010 · 2026-07-02 · TKT-P0-04/05 · Inspection views + serialized-state backing fields packaged as plain-data classes — provisional
+**Decided.** The inspection-surface returns are small `RefCounted` plain-data view
+classes (`PlayerView`, `BoxView`, `ProjectileView`, `FrameData`, `AdvantageView`,
+`HitEvent`) that COPY sim values out at construction, under `game/sim/views/`. The
+sim-side truth backing `last_hit` is a separate plain `HitRecord` in state (the view
+`HitEvent` projects it). The move-format schema types (`Character`, `MoveState`,
+`Keyframe`, `Box`, `HitBox`, `CancelRule`, `ButtonMapEntry`, `CharacterPhysics`) are
+`Resource` subclasses under `game/sim/data/` (AD-006 `.tres`), and the runtime
+`Projectile` entity is a `RefCounted` plain-data object (not the authored resource).
+**Serves.** TKT-P0-04 (full API shape, read-only, snapshot-able plain returns) +
+TKT-P0-05 (`.tres` schema types). inspection-surface.md fixes the API shape and
+"plain serializable data (no live node refs)"; move-format.md fixes the schema.
+*How* each is packaged (RefCounted view vs. Resource, file layout, copy-out
+construction) is left open.
+**Alternatives passed over.** Returning raw `PlayerState`/dicts from the surface
+(leaks live sim internals — violates read-only-by-construction and lets a caller
+mutate state through a returned handle); making the views `Resource`s (heavier, and
+they are transient per-tick projections, not authored assets); one giant view file
+(worse for the seam's file-level clarity).
+**Why.** Copy-out view objects make the surface read-only structurally: a caller
+holds a snapshot, never a path back into `SimState` (inspection-surface.md criterion
+2). Fixed-point-only fields keep them golden-able (criterion 4). Schema types as
+`Resource`s get engine-native `.tres` authoring/serialization for free (AD-006).
+Purely internal packaging; the API shapes themselves are the Architect's (built to
+spec, not invented). **The serialized-state fields these views require
+(`character_id`, `stun_kind`, `combo_damage`, `last_hit`, `neutral_restored_this_tick`)
+are NOT latitude — they change the owned SimState shape and are raised as flag
+F-002.** This entry covers only the packaging of the views/schema classes.
+
+### JC-011 · 2026-07-02 · TKT-P0-05 · "First actionable frame" for derived recovery = duration+1 (recovery = total − last_active) — provisional
+**Decided.** In the one canonical frame-data derivation (MoveData.frame_data),
+recovery = `move.duration − last_active_frame`, i.e. the first actionable frame of a
+once-through move is `duration + 1` (the frame after the state ends). Startup =
+`first_active − 1`, active = `last_active − first_active + 1`, total = `duration`.
+**Serves.** move-format.md "Derived frame data": Startup = frames before first
+active; Active = first→last active; Recovery = end-of-active → first actionable;
+these are named but the exact arithmetic (whether "first actionable" is `duration`
+or `duration+1`) is not spelled out. I filled it the way that makes
+startup+active+recovery == total for the hand-computed test move (3+3+6 == 12).
+**Alternatives passed over.** Recovery = `duration − last_active − 1` (treats the
+last state frame as already actionable — makes the three parts sum to total−1, an
+off-by-one that breaks the "everything after active is recovery" reading);
+first-actionable = last_active+1 with active counted exclusively (inconsistent with
+"first to last active" being inclusive).
+**Why.** With inclusive active [first,last] and duration = frames-to-first-
+actionable, recovery is exactly the frames strictly after last_active up to and
+including the last state frame, = duration − last_active, and the three parts sum to
+total. This is the only reading under which the spec's own definitions are mutually
+consistent and hand-verifiable. If the Architect intends a different actionable-
+edge convention it is a one-line change here — flagging-adjacent, but recorded as
+latitude because it is the unique internally-consistent reading of the stated
+definitions, not a new choice.
+
+### JC-012 · 2026-07-02 · TKT-P0-07(pre-wired at 05) · Live-advantage party identification reads defender = the player in stun — provisional
+**Decided.** The live advantage (Advantage.live) identifies the defender as the
+player with `stun > 0` and the attacker as the other; when neither is stunned there
+is no interaction, so value = 0 / plus_player = none. If BOTH are stunned (a trade),
+the player with the greater remaining stun is taken as the advantage-read defender
+(deterministic tiebreak). Advantage is expressed from the attacker's POV (positive =
+attacker plus), matching AD-008 (positive ⇒ attacker actionable first).
+**Serves.** AD-008 / combat-resolution.md "Advantage": one formula
+`defender_remaining_stun − attacker_remaining_recovery`, live value cancel-aware.
+The formula and the two surfaced values are the contract; *how the live value
+identifies which player is the defender from state* is not spelled out.
+**Alternatives passed over.** Tracking attacker/defender explicitly on `last_hit`
+and reading roles from there (couples the live per-tick advantage to the last
+discrete hit event — wrong for a continuing situation where stun ticks down every
+frame with no new hit; the live value must read the CURRENT situation, AD-008);
+picking defender arbitrarily on a trade (non-deterministic).
+**Why.** AD-008 defines advantage in terms of "defender_remaining_stun" — the
+defender is definitionally the stunned party, so reading it from `stun > 0` is the
+formula's own meaning, not an added rule. The both-stunned tiebreak is a rare P0
+case (no true trades in the slice's single-hit done-bar) made deterministic so the
+hash is stable. If the Architect wants explicit role tracking, it is a localized
+change in Advantage.live. Recorded as latitude; escalate to a flag if role
+identification turns out to be feel-bearing beyond the formula's plain meaning.
+
+### JC-013 · 2026-07-02 · TKT-P0-06 · Phase pipeline packaged as a `StepPhases` static module; each AD-009 phase a named function — provisional
+**Decided.** The intra-tick phase order (AD-009) is implemented as `StepPhases`
+(all-static, `game/sim/step_phases.gd`), one named function per phase
+(`phase1_read_inputs`, `phase2_state_machine`, `phase3_movement`, `phase4_overlap`,
+`phase5_hit_resolution`, `phase6_advantage_neutral`, `phase7_advance_counters`).
+`SimState.step` orchestrates them in the fixed order and holds no phase logic itself.
+**Serves.** TKT-P0-06/07 (the fixed intra-tick phase order inside `step`);
+combat-resolution.md phase order (AD-009). The spec fixes the ORDER and each phase's
+content; how the phases are *packaged in GDScript* (one module vs. inline in `step`
+vs. per-phase files) is left open.
+**Alternatives passed over.** All phases inline in `SimState.step` (one long
+function — worse legibility, and the order becomes implicit control flow rather than
+an explicit, reorderable-to-fail call list QA can point criterion 2 at); a phase per
+file (over-fragmented for seven short cohesive functions that share helpers).
+**Why.** A named-function-per-phase module makes the AD-009 order the literal,
+readable call sequence in `step` (so "reordering changes results" — criterion 2 — is
+a one-line reorder in a test), keeps each phase independently testable, and mirrors
+the FP/MoveData static-namespace packaging already ratified (JC-001). Purely internal
+factoring; the `step(state,in1,in2)` contract signature is unchanged. Reversible.
+
+### JC-014 · 2026-07-02 · TKT-P0-06 · `_enter_state` puts a freshly-entered state ON frame 1 this tick; phase 2 skips the advance for a same-tick entry — provisional
+**Decided.** Entering a state (`_enter_state`) sets `frame_in_state = 1` directly (a
+fresh entry IS on frame 1 the tick it is entered), and phase 2's frame-advance is
+skipped for any state entered THIS tick (`entered_this_tick` guard). A state that was
+already active last tick advances by one.
+**Serves.** move-format.md (`frame_in_state` is 1-indexed; keyframes are 1-indexed
+inclusive ranges); combat-resolution.md phase 2 ("advance `frame_in_state`"). The spec
+fixes 1-indexing and "advance the frame"; the exact edge behavior on the ENTRY tick
+(is a just-entered move on frame 0-then-advanced, or on frame 1 immediately?) is not
+spelled out.
+**Alternatives passed over.** Enter at frame 0, always advance to 1 (breaks when a
+transition happens AFTER the advance in the same phase 2 pass — the new move would
+sit at frame 0, uncovered by any keyframe, silently delaying every move by one tick);
+entering at frame 1 but still advancing (double-counts the entry tick, putting a
+fresh move on frame 2 immediately and skipping frame-1 boxes).
+**Why.** Frame 1 must be a real, box-resolving frame the tick a move starts (its
+startup begins immediately), so a move pressed on tick T has its frame-1 geometry
+active on T. Entering at frame 1 + skipping the same-tick advance is the only reading
+where a move's first authored frame is neither skipped nor doubled, and it makes
+startup/active/recovery hand-math (JC-011) line up with the resolved boxes. Localized
+to `_enter_state` + the phase-2 guard.
+
+### JC-015 · 2026-07-02 · TKT-P0-06 · SOCD default (LR→neutral, UD→up) + facing resolution as one `resolve_intent`; raw stays raw in history — provisional
+**Decided.** SOCD normalization is one function (`socd_normalize`): Left+Right → drop
+both (neutral horizontal), Up+Down → drop Down (Up priority), buttons/reserved
+untouched. `resolve_intent` runs SOCD then maps raw L/R to forward/back by `facing`,
+returning a plain intent dict the state machine reads by MEANING. The RAW frame is
+pushed to `input_history` unchanged (phase 1); only the derived intent is cleaned.
+**Serves.** input.md "SOCD normalization" (the default rule is stated there: LR→
+neutral, UD→Up priority) and AD-002/AD-003 (raw stays raw; forward/back is sim-side).
+The RULE and its being one sim-side source-agnostic function are the contract; where
+the single point lives and the intent-record shape are open.
+**Alternatives passed over.** Cleaning SOCD into `input_history` (destroys raw
+fidelity for replay — AD-003 forbids); resolving forward/back at the input source
+(AD-002 forbids — sources are dumb); separate SOCD and facing functions called at
+scattered call sites (two normalization points — the thing "one function" prevents).
+**Why.** input.md states the default rule explicitly, so implementing it is filling a
+spelled-out mechanism, not choosing feel (the rule is "tunable in that one place" —
+so the one place is `socd_normalize`, exactly here). One `resolve_intent` keeps SOCD
+and facing as a single derivation the whole state machine shares, so no consumer
+re-normalizes. NOTE: the SOCD default itself is a "gameplay-flavored choice the
+Strategist may revisit" (input.md) — if it changes, it changes in `socd_normalize`
+only; recorded as latitude because I implemented the spec's STATED default verbatim,
+not a new choice.
+
+### JC-016 · 2026-07-02 · TKT-P0-07 · Damage scaling as a single `DamageScaling` definition (hit-count table); the done-bar's single hit is unscaled 100% — provisional
+**Decided.** Damage scaling lives in ONE place (`DamageScaling.scaling_for_hit_count`,
+`game/sim/damage_scaling.gd`): hit 1 = 100% (FP.ONE), each further hit −10%, floored
+at 10%, returned as a fixed-point multiplier. Phase 5 applies it BEFORE subtracting
+damage and surfaces the applied percent (HitRecord/PlayerView).
+**Serves.** combat-resolution.md "Combo & damage accounting" ("Damage scaling applies
+from a single scaling definition ... before damage is subtracted — deterministic and
+surfaced"). The spec fixes the MECHANISM (single definition, applied pre-subtract,
+surfaced); the step/floor NUMBERS are not specified.
+**Alternatives passed over.** Inlining scaling in phase 5 (no single source — a second
+scaling site could drift); a per-move scaling field (per-move variant — the drift the
+consistency guard prevents); no scaling at P0 (leaves the "surfaced scaling" criterion
+unbacked).
+**Why.** combat-resolution.md demands a SINGLE scaling definition; a static namespace
+is the one-source packaging (mirrors Advantage/Actionability). The specific
+10%/10%-floor step is placeholder tuning (feel is the Strategist's, via the spec) and
+is flagged in-file as slice-provisional; it does NOT affect the done-bar, whose single
+hit is hit-count 1 → 100% → damage == base exactly (hand-checkable, independent of the
+table). If the Strategist wants specific scaling values that is a spec/data change, a
+one-place edit here — recorded as latitude because the MECHANISM (the contract) is
+built to spec and only unspecified numbers are chosen, with the done-bar deliberately
+insensitive to them.
+
+### JC-017 · 2026-07-02 · TKT-P0-06 · Pushbox mutual separation splits the overlap in half, odd remainder to player 1 (deterministic) — provisional
+**Decided.** When two pushboxes overlap horizontally (phase 3), each is pushed out by
+half the overlap along x; an odd remainder goes to player 1 (`rem = overlap - half`),
+so the split is exact-integer and deterministic. Stage walls are then clamped so each
+pushbox stays inside `[wall_left, wall_right]`.
+**Serves.** combat-resolution.md phase 3 ("resolve pushbox collisions and stage
+bounds"); AD-012 (our own AABB, integer). The spec fixes THAT pushbox/stage resolution
+happens in phase 3 with our own integer overlap; the exact separation split is not
+specified.
+**Alternatives passed over.** Pushing only one player (asymmetric — one character walks
+through the other); floating-point half (violates AD-014 integer math); dropping the
+odd remainder (leaves a 1-subunit residual overlap that could linger, a determinism
+smell). 
+**Why.** Symmetric half-split is the conventional mutual-pushout and keeps neither
+character privileged; the fixed odd-remainder-to-P1 rule makes the integer split total
+and deterministic (the hash stays stable). Pure movement resolution, no feel value
+beyond "characters don't overlap," localized to `_resolve_stage_and_pushboxes`. At the
+FP scale (2^16 sub-units) a 1-subunit remainder is sub-pixel and invisible; the rule
+exists only to keep the math exact.
+
+### JC-018 · 2026-07-02 · TKT-P0-07 · `neutral_restored_this_tick` is a RISING EDGE: both-actionable now AND not both-actionable at the start of this tick — provisional
+**Decided.** Phase 6 sets `neutral_restored_this_tick = both_actionable(post-phase-5
+state) AND NOT both_actionable(input state)`. The pre-step both-actionable condition is
+captured from `step`'s INPUT state before any mutation; the post condition after hit
+resolution. So the flag is true on exactly the tick the pair TRANSITIONS from
+not-both-actionable to both-actionable, and false every other tick (including a tick
+where both were already actionable last tick, e.g. match start).
+**Serves.** combat-resolution.md criterion 5 ("flags neutral restored exactly on the
+tick both players become actionable — not before, not after") and AdvantageView.
+neutral_restored. Criterion 5 pins the SEMANTICS (the exact transition tick); the
+mechanism (rising-edge vs. a stored last-condition) is left to implementation.
+**Alternatives passed over.** Flagging whenever both are actionable (fires every tick
+after neutral returns, not just the transition — violates "not after"); storing a
+separate "was neutral last tick" field in SimState (redundant — the input state already
+IS last tick's state, so the edge is derivable without new serialized state); comparing
+against post-phase-7 counters (would shift the edge by one tick — off by the counter
+decrement).
+**Why.** "Become actionable" is a transition, and a transition is a rising edge; the
+input state passed to `step` is precisely last tick's state, so the edge needs no extra
+serialized field (keeps SimState minimal, AD-001, and the hash small). Match start does
+not spuriously fire because both were already actionable the prior tick. Localized to
+phase 6 + the one `prev_both_actionable` capture in `step`. Recorded as latitude: it
+implements criterion 5's stated semantics exactly; if the Architect intends a different
+edge convention it is a one-line change in phase 6.
+
+### JC-019 · 2026-07-02 · TKT-P0-06 · A looping state wraps `frame_in_state` modulo its duration — provisional
+**Decided.** In phase 2, a LOOPING state (idle/walk, `loop == true`) whose
+`frame_in_state` advances past `duration` wraps back into `[1, duration]`
+(`((f-1) % duration) + 1`). Once-through moves do not wrap (they end and return to idle).
+**Serves.** move-format.md (`MoveState.loop` — "whether `duration` loops (idle/walk) or
+plays once") + AD-001 derived box resolution (boxes resolve from keyframe ranges by
+`frame_in_state`). The spec says a loop state loops; the exact frame arithmetic of the
+wrap (and that it is 1-indexed) is not spelled out.
+**Alternatives passed over.** Letting `frame_in_state` grow unbounded (box resolution
+stops matching once it exceeds the loop's keyframe range — an idle character's hurtbox
+would vanish after `duration` ticks, breaking overlap; also grows the hashed integer
+without bound); resetting to 1 each tick (loses within-loop animation frames for a
+multi-frame loop like a walk cycle).
+**Why.** A loop must keep `frame_in_state` inside the authored keyframe range so the
+derived boxes (and any looped motion) stay correct every tick; modulo wrap is the only
+reading that both loops the animation and keeps box resolution matching. 1-indexed to
+match keyframe indexing (JC-014). Localized to the phase-2 advance. Recorded as
+latitude: it makes `loop` behave as move-format.md names it; a different loop-frame
+convention is a one-line change here.
+**Same-principle sibling.** A STUN-category state's exit is driven by `stun`, not by
+`frame_in_state`, and a tuned stun (hitstun/blockstun frames, move-format.md → HitBox)
+can OUTLAST the reaction state's authored keyframe span. To keep the defender's hurtbox
+resolving through the whole stun (so it stays a valid combo target — TKT-P0-09), a
+stun state CLAMPS `frame_in_state` at `duration` rather than wrapping (a reaction does
+not loop its animation). Same "keep frame_in_state inside the authored keyframe range"
+principle; clamp (not wrap) because a reaction plays once and then holds. Localized to
+the same phase-2 advance; a different convention is a one-line change here.

@@ -26,11 +26,26 @@ extends RefCounted
 var tick: int = 0
 var rng: RngState = null
 var players: Array[PlayerState] = []
-## Projectile entities (AD-021). Each entry is a plain-data object once the
-## projectile type lands (TKT-P0-05/P1); for P0 this stays empty. Typed loosely as
-## Array so the projectile resource can be added without reshaping SimState.
-var projectiles: Array = []
+## Projectile entities (AD-021). Each entry is a Projectile plain-data object; P0
+## spawns none so this stays empty, but the type + clone/serialize are wired so a
+## non-empty list round-trips and hashes canonically the moment spawns land.
+var projectiles: Array[Projectile] = []
 var stage: StageState = null
+
+## The most recently resolved hit, or null if none has resolved this run
+## (inspection-surface.md → InspectionView.last_hit()). Recorded by hit resolution
+## (TKT-P0-07, phase 5) and read out through the inspection surface. It is a plain
+## HitRecord (not a HitEvent view) living IN serialized state so last_hit survives
+## snapshot/restore and is covered by the canonical hash (F-002, AD-023 total
+## coverage). Null until the first hit resolves.
+var last_hit: HitRecord = null
+
+## Set true by phase 6 (advantage/neutral update) EXACTLY on the tick both players
+## transition to actionable (combat-resolution.md criterion 5: "not before, not
+## after"), cleared every other tick. The inspection surface (AdvantageView) reads
+## it so "when neutral returns" is observable. In serialized state so it round-trips
+## and is hashed (total coverage, AD-023). Set at TKT-P0-07.
+var neutral_restored_this_tick: bool = false
 
 
 func _init() -> void:
@@ -84,10 +99,15 @@ func clone() -> SimState:
 	for p in players:
 		cloned_players.append(p.clone())
 	s.players = cloned_players
-	# Projectiles are empty in P0; clone element-wise once a projectile type with
-	# its own clone() lands (AD-021). Duplicate the array so the list reference is
-	# distinct even while empty.
-	s.projectiles = projectiles.duplicate()
+	# Deep-copy projectiles element-wise (AD-004): each is its own plain-data object,
+	# so a shallow array duplicate would alias the entities. Empty in P0.
+	var cloned_projectiles: Array[Projectile] = []
+	for pr in projectiles:
+		cloned_projectiles.append(pr.clone())
+	s.projectiles = cloned_projectiles
+	# last_hit is a plain record; deep-copy so the clone owns its own copy.
+	s.last_hit = last_hit.clone() if last_hit != null else null
+	s.neutral_restored_this_tick = neutral_restored_this_tick
 	return s
 
 
@@ -101,7 +121,6 @@ func to_dict() -> Dictionary:
 	var player_dicts: Array = []
 	for p in players:
 		player_dicts.append(p.to_dict())
-	# Projectiles empty in P0; serialize element dicts once the type lands.
 	var projectile_dicts: Array = []
 	for pr in projectiles:
 		projectile_dicts.append(pr.to_dict())
@@ -111,6 +130,9 @@ func to_dict() -> Dictionary:
 		"players": player_dicts,
 		"projectiles": projectile_dicts,
 		"stage": stage.to_dict(),
+		# null last_hit serializes as an empty dict marker; from_dict restores null.
+		"last_hit": last_hit.to_dict() if last_hit != null else {},
+		"neutral_restored_this_tick": 1 if neutral_restored_this_tick else 0,
 	}
 
 
@@ -123,8 +145,14 @@ static func from_dict(d: Dictionary) -> SimState:
 	for pd in d["players"]:
 		restored_players.append(PlayerState.from_dict(pd))
 	s.players = restored_players
-	# Projectiles empty in P0.
-	s.projectiles = []
+	var restored_projectiles: Array[Projectile] = []
+	for prd in d["projectiles"]:
+		restored_projectiles.append(Projectile.from_dict(prd))
+	s.projectiles = restored_projectiles
+	# An empty last_hit dict means "no hit recorded" -> null.
+	var lhd: Dictionary = d["last_hit"]
+	s.last_hit = HitRecord.from_dict(lhd) if not lhd.is_empty() else null
+	s.neutral_restored_this_tick = int(d["neutral_restored_this_tick"]) != 0
 	return s
 
 
@@ -173,14 +201,23 @@ func hash_state() -> int:
 		h = _fold(h, int(pd["pos_y"]))
 		h = _fold(h, int(pd["vel_x"]))
 		h = _fold(h, int(pd["vel_y"]))
+		h = _fold(h, int(pd["character_id"]))
 		h = _fold(h, int(pd["facing"]))
 		h = _fold(h, int(pd["health"]))
 		h = _fold(h, int(pd["state_id"]))
 		h = _fold(h, int(pd["frame_in_state"]))
 		h = _fold(h, int(pd["hitstop"]))
 		h = _fold(h, int(pd["stun"]))
+		h = _fold(h, int(pd["stun_kind"]))
 		h = _fold(h, int(pd["combo_hits"]))
 		h = _fold(h, int(pd["combo_scaling"]))
+		h = _fold(h, int(pd["combo_damage"]))
+		# Active-hit id_groups: length then each id (order-committing, AD-023). A
+		# variable-length run, so its count is folded before the elements (F-005).
+		var ah: PackedInt32Array = pd["active_hit_ids"]
+		h = _fold(h, ah.size())
+		for gid in ah:
+			h = _fold(h, gid)
 		# Input history: length then each frame, oldest->newest (canonical order).
 		var hist: Dictionary = pd["input_history"]
 		var frames: PackedInt32Array = hist["frames"]
@@ -188,9 +225,27 @@ func hash_state() -> int:
 		for f in frames:
 			h = _fold(h, f)
 
-	# Projectiles: count only in P0 (none present). Folding the count fixes the
-	# shape so a future non-empty list changes the hash.
+	# Projectiles: count then each projectile's fields (order-committing, AD-023).
+	# P0 spawns none, so the loop is empty and only the count (0) is folded.
 	h = _fold(h, projectiles.size())
+	for pr in projectiles:
+		var prd: Dictionary = pr.to_dict()
+		for key in Projectile.HASH_FIELDS:
+			h = _fold(h, int(prd[key]))
+
+	# last_hit record (AD-023 total coverage; F-002). A presence flag (0/1) is folded
+	# first so a state with no hit and a state with a hit can never collide, then the
+	# record's integer fields in fixed order when present.
+	if last_hit == null:
+		h = _fold(h, 0)
+	else:
+		h = _fold(h, 1)
+		var lhd: Dictionary = last_hit.to_dict()
+		for key in HitRecord.HASH_FIELDS:
+			h = _fold(h, int(lhd[key]))
+
+	# neutral-restored edge flag (AD-023 total coverage).
+	h = _fold(h, 1 if neutral_restored_this_tick else 0)
 	return h
 
 
@@ -216,16 +271,20 @@ static func _fold(h: int, value: int) -> int:
 # wall-clock, delta, unseeded RNG, engine input polling, or the scene tree
 # (criterion 4): the RNG is in-state, and inputs arrive as arguments.
 #
-# P0 CONTENT. The full intra-tick phase order (AD-009: inputs -> state machine /
-# buffering / cancels -> movement -> overlap -> hit resolution -> advantage ->
-# advance counters) is filled in by TKT-P0-06/07. What `step` does NOW, and what
-# is load-bearing for the backbone tenet proof:
-#   Phase 1 (inputs): record each player's raw InputFrame into their input_history
-#     (the substrate later buffering reads, AD-003). Inputs are recorded every tick
-#     unconditionally (AD-017: even during hitstop).
-#   Advance counters: tick += 1.
-# Movement/overlap/hit/advantage are intentionally absent until their tickets; the
-# seam here is the fixed structure those phases slot into, in the AD-009 order.
+# AUTHORED DATA (F-004). The phase pipeline resolves each player's Character via
+# MoveRegistry (an immutable roster installed once at wiring, read every tick), so
+# `step` stays a pure function of (state, inputs) GIVEN the fixed content — the same
+# "authored content is a fixed input, not sim state" reasoning that keeps input
+# SOURCES external and out of SimState (AD-001). A snapshot/restore/replay reproduces
+# identically because the same immutable roster is present.
+#
+# PHASE ORDER (AD-009, combat-resolution.md; implemented in StepPhases). The order is
+# LOAD-BEARING and pinned (criterion 2): inputs -> state machine -> movement ->
+# overlap -> hit resolution -> advantage/neutral -> advance counters. Each phase is a
+# named StepPhases function so the order is explicit here and reorderable-to-fail in a
+# test. With an EMPTY roster (no authored data) the pipeline degrades to a pure
+# clock+input advance (no character to move/hit), which the backbone determinism
+# proof still hand-verifies.
 # ---------------------------------------------------------------------------
 
 ## Pure, non-mutating tick advance. `in_p1` / `in_p2` are RAW InputFrame values
@@ -235,20 +294,41 @@ static func step(state: SimState, in_p1: int, in_p2: int) -> SimState:
 	# `state`, so the input snapshot is provably untouched.
 	var next: SimState = state.clone()
 
-	# --- Phase 1: inputs (AD-009) -------------------------------------------
-	# Record raw frames into each player's history. Recorded every tick, including
-	# during hitstop (AD-017): phase 1 always runs. SOCD is NOT applied here — it is
-	# a separate sim-side normalization (AD-003) that lands in phase 1's expansion
-	# at TKT-P0-06; raw bits stay raw in history for replay fidelity.
-	next.players[0].input_history.push(in_p1)
-	next.players[1].input_history.push(in_p2)
+	# Capture the PRE-STEP both-actionable condition from the INPUT state, so phase 6
+	# can detect the rising edge (neutral restored = the tick both BECOME actionable).
+	var prev_both_actionable: bool = StepPhases._both_actionable(state)
 
-	# --- Phases 2..6 (AD-009): state machine / buffering / cancels, movement,
-	# overlap, hit resolution, advantage/neutral. Filled by TKT-P0-06/07. The
-	# fixed phase order is the seam; nothing here yet so the backbone stays a pure
-	# clock+input advance the determinism proof can hand-verify. ---------------
+	# Capture which players were ALREADY in hitstop at tick start (before phase 5 can
+	# set it), so phase 7 does not decrement a hitstop first granted THIS tick — a
+	# freeze of N frames must last N following ticks (AD-010).
+	var was_frozen: Array = [state.players[0].hitstop > 0, state.players[1].hitstop > 0]
 
-	# --- Advance counters ----------------------------------------------------
-	next.tick = state.tick + 1
+	# --- Phase 1: read inputs (AD-009) --------------------------------------
+	# Push raw frames into history (recorded every tick, incl. hitstop — AD-017).
+	StepPhases.phase1_read_inputs(next, in_p1, in_p2)
+	# Resolve each player's SOCD-normalized, facing-relative intent for phase 2 (raw
+	# stays raw in history; only the derived intent is cleaned — AD-003).
+	var intents: Array = [
+		StepPhases.resolve_intent(in_p1, next.players[0].facing),
+		StepPhases.resolve_intent(in_p2, next.players[1].facing),
+	]
+
+	# --- Phase 2: state machine (direct transitions; buffering stubbed for 08) --
+	StepPhases.phase2_state_machine(next, intents)
+
+	# --- Phase 3: movement integration + pushbox/stage resolution -----------
+	StepPhases.phase3_movement(next)
+
+	# --- Phase 4: overlap detection (AABB, strict — F-003) ------------------
+	var contacts: Array = StepPhases.phase4_overlap(next)
+
+	# --- Phase 5: hit resolution (damage/scaling/combo, reactions, stun, hitstop) --
+	StepPhases.phase5_hit_resolution(next, contacts)
+
+	# --- Phase 6: advantage / neutral update --------------------------------
+	StepPhases.phase6_advantage_neutral(next, prev_both_actionable)
+
+	# --- Phase 7: advance counters (decrement stun/hitstop; tick += 1) ------
+	StepPhases.phase7_advance_counters(next, was_frozen)
 
 	return next

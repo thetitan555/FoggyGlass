@@ -3,53 +3,83 @@
 The Godot project (AD-013). Coordination artifacts live in `/docs`; only build
 code lives here.
 
-## Layout (as of TKT-P0-03)
+## Layout (through TKT-P0-10, the P0 done-bar)
 
     game/
       project.godot          Godot 4.x project config. physics_ticks_per_second=60.
+      data/
+        test_character.tres  P0 test character, authored PURELY as .tres data
+                             (TKT-P0-10, NOT character A): idle, walk, LIGHT normal
+                             with hand-computable frame data, hit/block reactions.
+                             All values baked fixed-point (AD-014). The .tres twin of
+                             TestSupport.build_test_character().
       sim/
-        fp.gd                FP fixed-point math (AD-014). 64-bit, scale 2^16,
-                             mul/div as shifts, round-to-nearest ties away from
-                             zero, no transcendentals. Static; owns the convention.
-        input_frame.gd       The 16-bit InputFrame (AD-002/018). Raw dirs +
-                             BUTTON_0..7; reserved bits validated. A frame value
-                             is a plain masked int (JC-006); this class is a
-                             namespace of bit constants + static helpers.
-        input_source.gd      The one InputSource interface (Tenet 2): get_input(
-                             frame) -> int, frame-indexed, reproducible, no future
-                             reads. Shared reserved-bit validation.
-        local_device_source.gd  Samples a device each tick + records into a buffer
-                             so past frames stay answerable. Dumb (buffer only).
-        replay_source.gd     Reads a recorded buffer frame by frame. A "replay" is
-                             a local recording fed back through this — identical
-                             stream (input.md crit 3).
-        input_history.gd     Per-player ring buffer of raw frames (AD-003/022),
-                             CAP=32 (JC-008). The substrate buffering reads.
-        rng_state.gd         Seeded SplitMix64 RNG INSIDE serialized state (Tenet
-                             1). Pure-integer, platform-stable, round-trips.
-        player_state.gd      Per-player state (simulation.md). All fixed-point /
-                             int, no floats. clone/to_dict/from_dict.
+        fp.gd                FP fixed-point math (AD-014). 64-bit, scale 2^16.
+        input_frame.gd       The 16-bit InputFrame (AD-002/018). Namespace of bit
+                             constants + static helpers over a plain masked int.
+        input_source.gd      The one InputSource interface (Tenet 2).
+        local_device_source.gd / replay_source.gd  Concrete sources (input.md).
+        input_history.gd     Per-player raw-frame ring buffer (AD-003/022), CAP=32.
+        rng_state.gd         Seeded SplitMix64 RNG inside serialized state (Tenet 1).
+        player_state.gd      Per-player state (simulation.md). Fixed-point/int only.
         stage_state.gd       Stage bounds (walls/ground), fixed-point.
+        hit_record.gd        Serialized last-hit record (F-002); the sim-side truth
+                             HitEvent projects.
         sim_state.gd         The serializable root + pure non-mutating step(state,
-                             in1, in2) (AD-004) + canonical FNV-1a hash (JC-007).
-        tick_host.gd         Fixed 60 Hz tick host (AD-004). Advances the sim
-                             exactly one tick per physics_process via SimState.step,
-                             sourcing inputs through the InputSource contract, off a
-                             state-owned tick counter, never delta-scaled.
+                             in1, in2) (AD-004), orchestrating the AD-009 phase order
+                             + canonical FNV-1a hash (AD-023).
+        step_phases.gd       The intra-tick phase pipeline (AD-009), one static
+                             function per phase (inputs/SOCD/facing -> state machine
+                             -> movement/pushbox -> overlap -> hit resolution ->
+                             advantage/neutral -> advance counters). TKT-P0-06/07.
+        damage_scaling.gd    The ONE damage-scaling definition (combat-resolution.md).
+        move_registry.gd     Immutable authored-move-data roster the pure step reads
+                             (F-004): installed once at wiring, character_id ->
+                             Character. Authored data is a fixed input, not sim state.
+        move_data.gd         The ONE box-resolution + frame-data derivation (AD-001/
+                             008). resolve_boxes (facing flip + position offset),
+                             frame_data (startup/active/recovery/total).
+        actionability.gd     The ONE actionability definition (stun/hitstop/recovery).
+        advantage.gd         The ONE advantage function (AD-008): static pinned +
+                             live cancel-aware; two surfaced values, one formula.
+        resolved_box.gd      World-space AABB + STRICT overlap (F-003).
+        projectile.gd        Runtime projectile entity (AD-021). Empty at P0.
+        inspection_view.gd   The read-only inspection surface (the seam, AD-011).
+        sim_harness.gd       Determinism/serialization harness HOOKS (TKT-P0-11):
+                             snapshot dump/load, headless replay runner, golden
+                             fixed-point-only inspection truth dump. QA owns verdicts.
+        data/                .tres schema Resource types (Character, MoveState,
+                             Keyframe, Box, HitBox, CancelRule, ButtonMapEntry,
+                             CharacterPhysics) — TKT-P0-05.
+        views/               Plain-data inspection view classes (PlayerView, BoxView,
+                             ProjectileView, FrameData, AdvantageView, HitEvent).
+        tick_host.gd         Fixed 60 Hz tick host (AD-004).
       scenes/
         main.tscn/.gd        Runtime root; wires the host + local sources, renders
                              the sim clock from state (never advances it).
       tests/
-        test_fp.gd           Headless FP checks.
-        test_tick_host.gd    Headless tick-authority checks (scope note inside).
-        test_input.gd        Headless input-contract checks (input.md 1,2,3,4,6).
-        test_sim_state.gd    Headless determinism/round-trip/hash/no-float checks
-                             (simulation.md 1,3,4,8,9).
+        test_support.gd      Programmatic test-character builder (twin of the .tres).
+        test_fp.gd / test_tick_host.gd / test_input.gd / test_sim_state.gd
+                             Backbone checks (FP, tick authority, input contract,
+                             determinism/round-trip/hash/no-float).
+        test_inspection_view.gd  Read-only seam checks (inspection-surface.md 2/4).
+        test_move_format.gd  Derivation / per-frame boxes / facing / single id_group
+                             / categories / no-float (move-format.md 1,2,3,6,9).
+        test_harness.gd      Harness-hook checks (round-trip, replay determinism,
+                             snapshot-resume, float/px-free truth dump).
+        test_combat.gd       Phase-pipeline checks (SOCD, facing, movement, direct
+                             transitions, single-hit, hit/block advantage, hitstop
+                             freeze, neutral edge, phase-order structure).
+        test_done_bar.gd     THE P0 DONE-BAR (TKT-P0-10): the .tres character resolves
+                             a hit, advantage/frame-data read back through the
+                             inspection surface and match hand-computed values; the
+                             scenario replays deterministically and snapshot/resumes.
 
-The inspection surface (the read-only seam) is TKT-P0-04; the move format + state
-machine, phase pipeline, and hit resolution are TKT-P0-05/06/07. `SimState.step`
-currently runs phase 1 (record inputs) + advance-tick; the AD-009 phase order is
-the seam those tickets fill in.
+`SimState.step` now runs the full AD-009 phase order (StepPhases). With no roster
+installed it degrades to a pure clock+input advance (no character to move/hit), so
+the backbone determinism tests remain valid. Input buffer + cancels (TKT-P0-08) and
+throws + multi-hit (TKT-P0-09) are deliberately deferred to batch 2 (after the
+done-bar, which needs neither).
 
 ## Running the tests (headless, no editor needed)
 
@@ -57,8 +87,13 @@ the seam those tickets fill in.
     godot --headless --path game -s res://tests/test_tick_host.gd
     godot --headless --path game -s res://tests/test_input.gd
     godot --headless --path game -s res://tests/test_sim_state.gd
+    godot --headless --path game -s res://tests/test_inspection_view.gd
+    godot --headless --path game -s res://tests/test_move_format.gd
+    godot --headless --path game -s res://tests/test_harness.gd
+    godot --headless --path game -s res://tests/test_combat.gd
+    godot --headless --path game -s res://tests/test_done_bar.gd
 
 Each prints a one-line OK/FAIL summary and exits non-zero on failure, so a
-harness/CI can gate on the exit code. (These were authored without a Godot
-binary available in the dev sandbox — see the TKT-P0-01 report; they should be
-run once Godot is present to confirm they execute clean.)
+harness/CI can gate on the exit code. (Authored without a Godot binary in the dev
+sandbox; run once Godot is present to confirm they execute clean — QA owns the
+verdicts.)

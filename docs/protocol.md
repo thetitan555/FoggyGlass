@@ -228,7 +228,10 @@ touch several cold-start sessions — build, ratify, audit — each re-reading
 overlapping artifacts. Where two passes read the same artifact for compatible
 purposes, look for a way to collapse them *without* breaking one-owner-per-artifact
 or the upstream-correction rule. (The judgment-call review path is the first
-candidate — under discussion, not yet adopted; see the Strategist.)
+candidate — considered and **deferred**, not adopted on P0 evidence: P0 is
+foundational/contract-dense, so its impl:contract ratio is not the steady-state
+signal. Adoption gate: measure the [impl]:[contract] ratio on a *completed
+non-foundational (P1) feature* first. See flags-archive.md, 2026-07-02.)
 
 ## Working agreements
 

@@ -1,0 +1,233 @@
+; P0 test character, authored PURELY as .tres data (TKT-P0-10 done-bar artifact).
+; NOT character A — this is the tenet proof: a trivial, hand-computable character
+; (idle, walk, one normal "LIGHT", hit/block reactions) so frame data and advantage
+; are checkable by hand and read back through the inspection surface.
+;
+; All spatial/physics values are BAKED FIXED-POINT integers (AD-014): 1 game unit =
+; 65536 sub-units. So FP.from_int(n) == n*65536; e.g. 30 units == 1966080.
+; These values are IDENTICAL to TestSupport.build_test_character() (the programmatic
+; twin the unit tests use), so the .tres and the code builder agree by construction.
+;
+; Hand-computed frame data for LIGHT (state 10):
+;   timeline: 1..3 startup (hurt only), 4..6 active (two overlapping hitboxes, one
+;   id_group), 7..12 recovery. duration 12.
+;   startup = first_active-1 = 3; active = 6-4+1 = 3; recovery = 12-6 = 6; total = 12.
+;   on_hit_adv  = hitstun 16  - (recovery 6 + active 3 - 1) = 16 - 8 = +8
+;   on_block_adv= blockstun 10 - 8                                    = +2
+
+[gd_resource type="Resource" script_class="Character" load_steps=25 format=3 uid="uid://bfg0testchar0res"]
+
+[ext_resource type="Script" path="res://sim/data/character.gd" id="1_char"]
+[ext_resource type="Script" path="res://sim/data/move_state.gd" id="2_move"]
+[ext_resource type="Script" path="res://sim/data/keyframe.gd" id="3_kf"]
+[ext_resource type="Script" path="res://sim/data/box.gd" id="4_box"]
+[ext_resource type="Script" path="res://sim/data/hit_box.gd" id="5_hit"]
+[ext_resource type="Script" path="res://sim/data/button_map_entry.gd" id="6_btn"]
+[ext_resource type="Script" path="res://sim/data/character_physics.gd" id="7_phys"]
+
+; --- Shared standing hurtbox: local (-15,0,30,80) -> (-983040,0,1966080,5242880) ---
+[sub_resource type="Resource" id="hurt_stand"]
+script = ExtResource("4_box")
+x = -983040
+y = 0
+w = 1966080
+h = 5242880
+
+; --- Default pushbox: local (-10,0,20,40) -> (-655360,0,1310720,2621440) ---
+[sub_resource type="Resource" id="pushbox_default"]
+script = ExtResource("4_box")
+x = -655360
+y = 0
+w = 1310720
+h = 2621440
+
+; --- LIGHT hitbox 1: local (30,40,30,20) -> (1966080,2621440,1966080,1310720) ---
+[sub_resource type="Resource" id="light_hit_box1_geo"]
+script = ExtResource("4_box")
+x = 1966080
+y = 2621440
+w = 1966080
+h = 1310720
+
+[sub_resource type="Resource" id="light_hit1"]
+script = ExtResource("5_hit")
+box = SubResource("light_hit_box1_geo")
+damage = 40
+hitstun = 16
+blockstun = 10
+hitstop = 8
+pushback_hit = 196608
+pushback_block = 131072
+launch = 0
+hit_reaction = 20
+block_reaction = 21
+cancel_tags = PackedInt32Array()
+id_group = 1
+rehit_interval = 0
+is_throw = false
+
+; --- LIGHT hitbox 2: overlaps hitbox 1, same id_group (single-hit test). ---
+; local (40,40,30,20) -> (2621440,2621440,1966080,1310720)
+[sub_resource type="Resource" id="light_hit_box2_geo"]
+script = ExtResource("4_box")
+x = 2621440
+y = 2621440
+w = 1966080
+h = 1310720
+
+[sub_resource type="Resource" id="light_hit2"]
+script = ExtResource("5_hit")
+box = SubResource("light_hit_box2_geo")
+damage = 40
+hitstun = 16
+blockstun = 10
+hitstop = 8
+pushback_hit = 196608
+pushback_block = 131072
+launch = 0
+hit_reaction = 20
+block_reaction = 21
+cancel_tags = PackedInt32Array()
+id_group = 1
+rehit_interval = 0
+is_throw = false
+
+; --- IDLE (state 0): looping, 1 frame, hurtbox only. ---
+[sub_resource type="Resource" id="idle_kf"]
+script = ExtResource("3_kf")
+frame_start = 1
+frame_end = 1
+hurtboxes = Array[Box]([SubResource("hurt_stand")])
+hitboxes = Array[HitBox]([])
+throwboxes = Array[Box]([])
+has_motion = false
+
+[sub_resource type="Resource" id="idle_state"]
+script = ExtResource("2_move")
+id = 0
+category = 0
+duration = 1
+timeline = Array[Keyframe]([SubResource("idle_kf")])
+cancels = Array[CancelRule]([])
+loop = true
+
+; --- WALK (state 1): looping, 1 frame, hurtbox + forward motion 2 units/tick. ---
+; motion_vel_x = FP.from_units(2.0) = 131072
+[sub_resource type="Resource" id="walk_kf"]
+script = ExtResource("3_kf")
+frame_start = 1
+frame_end = 1
+hurtboxes = Array[Box]([SubResource("hurt_stand")])
+hitboxes = Array[HitBox]([])
+throwboxes = Array[Box]([])
+has_motion = true
+motion_vel_x = 131072
+motion_vel_y = 0
+
+[sub_resource type="Resource" id="walk_state"]
+script = ExtResource("2_move")
+id = 1
+category = 0
+duration = 1
+timeline = Array[Keyframe]([SubResource("walk_kf")])
+cancels = Array[CancelRule]([])
+loop = true
+
+; --- LIGHT (state 10): startup/active/recovery keyframes. ---
+[sub_resource type="Resource" id="light_kf_startup"]
+script = ExtResource("3_kf")
+frame_start = 1
+frame_end = 3
+hurtboxes = Array[Box]([SubResource("hurt_stand")])
+hitboxes = Array[HitBox]([])
+throwboxes = Array[Box]([])
+has_motion = false
+
+[sub_resource type="Resource" id="light_kf_active"]
+script = ExtResource("3_kf")
+frame_start = 4
+frame_end = 6
+hurtboxes = Array[Box]([SubResource("hurt_stand")])
+hitboxes = Array[HitBox]([SubResource("light_hit1"), SubResource("light_hit2")])
+throwboxes = Array[Box]([])
+has_motion = false
+
+[sub_resource type="Resource" id="light_kf_recovery"]
+script = ExtResource("3_kf")
+frame_start = 7
+frame_end = 12
+hurtboxes = Array[Box]([SubResource("hurt_stand")])
+hitboxes = Array[HitBox]([])
+throwboxes = Array[Box]([])
+has_motion = false
+
+[sub_resource type="Resource" id="light_state"]
+script = ExtResource("2_move")
+id = 10
+category = 0
+duration = 12
+timeline = Array[Keyframe]([SubResource("light_kf_startup"), SubResource("light_kf_active"), SubResource("light_kf_recovery")])
+cancels = Array[CancelRule]([])
+loop = false
+
+; --- HITSTUN (state 20): forced hit reaction, 16 frames. ---
+[sub_resource type="Resource" id="hitstun_kf"]
+script = ExtResource("3_kf")
+frame_start = 1
+frame_end = 16
+hurtboxes = Array[Box]([SubResource("hurt_stand")])
+hitboxes = Array[HitBox]([])
+throwboxes = Array[Box]([])
+has_motion = false
+
+[sub_resource type="Resource" id="hitstun_state"]
+script = ExtResource("2_move")
+id = 20
+category = 2
+duration = 16
+timeline = Array[Keyframe]([SubResource("hitstun_kf")])
+cancels = Array[CancelRule]([])
+loop = false
+
+; --- BLOCKSTUN (state 21): forced block reaction, 10 frames. ---
+[sub_resource type="Resource" id="blockstun_kf"]
+script = ExtResource("3_kf")
+frame_start = 1
+frame_end = 10
+hurtboxes = Array[Box]([SubResource("hurt_stand")])
+hitboxes = Array[HitBox]([])
+throwboxes = Array[Box]([])
+has_motion = false
+
+[sub_resource type="Resource" id="blockstun_state"]
+script = ExtResource("2_move")
+id = 21
+category = 3
+duration = 10
+timeline = Array[Keyframe]([SubResource("blockstun_kf")])
+cancels = Array[CancelRule]([])
+loop = false
+
+; --- button_map: BUTTON_0 -> LIGHT (state 10), direction-agnostic. ---
+[sub_resource type="Resource" id="btn_light"]
+script = ExtResource("6_btn")
+button_index = 0
+required_direction = 0
+motion = 0
+target_state_id = 10
+
+; --- physics: walk 2 units/tick baked fixed-point (131072). ---
+[sub_resource type="Resource" id="phys"]
+script = ExtResource("7_phys")
+walk_speed = 131072
+gravity = 0
+jump_velocity = 0
+
+[resource]
+script = ExtResource("1_char")
+id = 1
+states = Array[MoveState]([SubResource("idle_state"), SubResource("walk_state"), SubResource("light_state"), SubResource("hitstun_state"), SubResource("blockstun_state")])
+button_map = Array[ButtonMapEntry]([SubResource("btn_light")])
+physics = SubResource("phys")
+default_pushbox = SubResource("pushbox_default")
+idle_state_id = 0
