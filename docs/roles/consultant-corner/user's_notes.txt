@@ -1,7 +1,6 @@
 These are my notes. You can read, but don't touch!
 
-This process is getting pretty token-intensive. 
-
 The file directories are getting pretty messy. Each leg of the project should probably have its own folder containing brief(s), and a subfolder with each spec, and... no, that's just exchanging horizontal mess for vertical mess.
 Probably just file naming conventions have to get better.
 
+It's much better token-wise to run in batches of tickets. Should think about making the Architect plan that out explicitly. 
