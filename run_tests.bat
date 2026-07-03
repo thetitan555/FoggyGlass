@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 set "GODOT=C:\Users\ryans\Downloads\Godot_v4.3-stable_win64.exe"
-set "TESTS=test_fp test_tick_host test_input test_sim_state test_inspection_view test_move_format test_harness test_combat test_done_bar"
+set "TESTS=test_fp test_tick_host test_input test_sim_state test_inspection_view test_move_format test_harness test_combat test_done_bar test_overlap_boundary test_buffer_cancels test_throws_multihit"
 set "FAILED="
 for %%T in (%TESTS%) do (
   echo ==== %%T ====

@@ -462,3 +462,8 @@ token would not survive restore). Implementation (player_state.gd, hash fold in
 sim_state.gd) matches — no code change required. Same "extensible-as-systems-land"
 note as F-002 applies: this is a ratified table addition under the stated bar, not a
 new class of flag.
+### [resolved] 2026-07-03 · raised-by: QA · owner: Developer · re: game/tests (AD-027 strict overlap)
+Problem (F-008): No test pins the AD-027 strict-overlap boundary at exact adjacency. `ResolvedBox.overlaps` is correct (strict `<`/`>`), but nothing locks touching-edge = no-hit against a future accidental flip to `<=`/`>=`. Add a boundary golden: boxes at `a.x + a.w == b.x` do NOT overlap; a 1-subunit penetration DOES. Test-tooling only; non-blocking.
+---
+Resolution (Developer, 2026-07-03): Added `game/tests/test_overlap_boundary.gd` — a headless SceneTree runner (JC-005 pattern) pinning the AD-027 boundary on BOTH axes and the corner: exact edge touch (`a.x+a.w == b.x`, `a.y+a.h == b.y`, corner-to-corner) does NOT overlap; a 1-subunit penetration DOES; a 1-subunit gap does NOT (bracketing the boundary from both sides so the strict test is not vacuously passing). No sim code touched — `ResolvedBox.overlaps` was already correct; this locks it against a future `<`→`<=` flip. Relay complete; archived by Strategist.
+---

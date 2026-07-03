@@ -86,22 +86,38 @@ static func resolve_intent(raw_frame: int, facing: int) -> Dictionary:
 
 
 # ---------------------------------------------------------------------------
-# Phase 2: State machine (combat-resolution.md phase 2). Advance frame_in_state;
-# apply DIRECT button->state transitions from the character's button_map. Buffering,
-# motion recognition, and CancelRule execution are STUBBED until TKT-P0-08 (the
-# ticket: "direct button->state transitions are enough for the test character").
+# Phase 2: State machine + buffering + cancels (combat-resolution.md phase 2;
+# AD-015/017/022). Advance frame_in_state; run the input buffer / motion & command
+# recognition over input_history (InputBuffer, a PURE function of history — AD-003);
+# apply legal transitions and CancelRules (CancelEval) per condition/window/requires_tag.
 #
 # A character under hitstop is FROZEN here (AD-010/AD-017): frame_in_state does not
-# advance and no transition executes. Inputs are still recorded (phase 1 always ran),
-# so a command may buffer during hitstop and execute on the first unfrozen tick —
-# but buffered execution is TKT-P0-08; at P0 a frozen character simply takes no
-# transition this tick.
+# advance and NO transition or cancel executes. Inputs are still recorded (phase 1
+# always ran), so a command BUFFERS during hitstop and executes on the first unfrozen
+# tick — the buffer window (InputBuffer.COMMAND_BUFFER = 6) carries it across the freeze.
+#
+# TRANSITION PRIORITY, each tick (all buffered, deterministic):
+#   1. Frozen under hitstop -> nothing (buffered command waits).
+#   2. Stun expiry -> return to idle (become actionable).
+#   3. Advance frame; mark a whiffed attack (last active frame passed, no connect).
+#   4. Once-through move ended -> return to idle.
+#   5. If ACTIONABLE (idle/looping or just-recovered): execute the first BUFFERED
+#      button_map command. This is the reversal-on-wakeup / after-blockstun / after-
+#      hitstop path (a 623 held through blockstun comes out frame-1) AND the ordinary
+#      "press a button in neutral" path — unified: an actionable character runs a
+#      buffered command (AD-022).
+#   6. Else (committed move, not frozen): evaluate CancelRules; a legal cancel whose
+#      input is buffered and whose window is open executes (special-cancel / gatling /
+#      whiff-cancel — AD-015). Cancels buffer during hitstop but execute only here,
+#      unfrozen (AD-017).
 # ---------------------------------------------------------------------------
 
-static func phase2_state_machine(next: SimState, intents: Array) -> void:
+static func phase2_state_machine(next: SimState) -> void:
 	for i in range(2):
 		var p: PlayerState = next.players[i]
-		# Frozen under hitstop: no frame advance, no transition (AD-010).
+		# Frozen under hitstop: no frame advance, no transition/cancel (AD-010/AD-017).
+		# A command still buffers (phase 1 recorded it); it fires on the first unfrozen
+		# tick because InputBuffer reads the last COMMAND_BUFFER frames of history.
 		if p.hitstop > 0:
 			continue
 		var character: Character = MoveRegistry.character(p.character_id)
@@ -109,6 +125,14 @@ static func phase2_state_machine(next: SimState, intents: Array) -> void:
 			# No authored data: nothing to advance (empty-roster backbone case).
 			continue
 		var move: MoveState = character.get_state(p.state_id)
+
+		# --- Throw tech (AD-016) ---------------------------------------------
+		# A thrown defender with an open tech window who inputs a throw TECHS it: both
+		# players return to neutral, no damage. Checked before the ordinary advance so
+		# the tech pre-empts the throw reaction. Runs only while the window is open.
+		if p.throw_tech_window > 0 and p.thrown_by >= 0:
+			if _try_throw_tech(next, i, character):
+				continue
 
 		# --- Stun-driven state exit ------------------------------------------
 		# A player in a stun category returns to idle the moment stun reaches 0 (stun
@@ -153,6 +177,16 @@ static func phase2_state_machine(next: SimState, intents: Array) -> void:
 					and p.frame_in_state > move.duration:
 				p.frame_in_state = move.duration
 
+		# --- Mark a whiffed attack (for on_whiff cancels, AD-015) ------------
+		# If an attacking move passes its last active frame with no connect recorded
+		# (move_contact still NONE), it has whiffed — set the contact so an on_whiff
+		# cancel can fire in the recovery window. Only meaningful for a move with
+		# hitboxes that hasn't hit or been blocked.
+		if move != null and p.move_contact == PlayerState.CONTACT_NONE:
+			var last_active: int = _last_active_frame_local(move)
+			if last_active > 0 and p.frame_in_state > last_active:
+				p.move_contact = PlayerState.CONTACT_WHIFF
+
 		# --- A once-through move that has run its course returns to idle ------
 		# When a non-looping, non-stun move passes its duration, the character becomes
 		# actionable and returns to the neutral state (idle) for THIS tick so it can
@@ -164,43 +198,51 @@ static func phase2_state_machine(next: SimState, intents: Array) -> void:
 			move = character.get_state(p.state_id)
 			entered_this_tick = true
 
-		# --- Direct input->state transitions (TKT-P0-06 stub for TKT-P0-08) --
-		# Only an ACTIONABLE character may start a new move (stun==0, not in committed
-		# recovery). A looping/idle actionable character reads its button_map; a
-		# committed once-through move ignores new inputs until it ends (handled above).
-		if not Actionability.is_actionable(p, move):
+		# --- Buffered command on the first actionable frame (AD-022) ---------
+		# An ACTIONABLE character (idle/looping, or just recovered) executes the first
+		# BUFFERED button_map command. This is BOTH the ordinary "press a button in
+		# neutral" transition AND the reversal-on-wakeup: a command pressed up to
+		# COMMAND_BUFFER frames early (e.g. a 623 held through blockstun) fires on this
+		# first actionable frame as a frame-1 reversal (AD-022).
+		if Actionability.is_actionable(p, move):
+			var target_state: int = _buffered_command(character, p)
+			if target_state != -1 and target_state != p.state_id:
+				_enter_state(p, character, target_state)
 			continue
-		var intent: Dictionary = intents[i]
-		var target_state: int = _match_button_map(character, intent)
-		if target_state != -1 and target_state != p.state_id:
-			# Start the new move THIS tick, on its frame 1 (a fresh entry).
-			_enter_state(p, character, target_state)
+
+		# --- Cancels in a committed move (AD-015/017) ------------------------
+		# A committed (not actionable) but UNFROZEN move may cancel: a legal CancelRule
+		# whose input is buffered and window is open executes (special-cancel, gatling,
+		# whiff-cancel). Cancels never execute during hitstop (handled by the freeze
+		# guard at the top) — they buffer and fire here on the first unfrozen tick.
+		var cancel_target: int = CancelEval.find_cancel(p, move, character)
+		if cancel_target != -1:
+			_enter_state(p, character, cancel_target)
 
 
-## Match the character's button_map against the resolved intent, returning the target
-## state_id or -1 if no entry matches. P0: button + optional raw-direction match only
-## (motion recognition is TKT-P0-08). required_direction is compared against the RAW
-## direction bits via the intent's up/down/forward/back (forward/back already
-## facing-resolved; up/down are absolute).
-static func _match_button_map(character: Character, intent: Dictionary) -> int:
+## The target state of the first BUFFERED button_map command, or -1 if none. Reads each
+## button_map entry through the ONE buffering recognizer (InputBuffer.entry_satisfied),
+## so a motion (recognized within the 9-frame window) or a button (within the 6-frame
+## command buffer) both trigger — this is what makes buffered/reversal inputs work,
+## replacing the TKT-P0-06 direct this-frame-only match. Entries are evaluated in
+## authored order (deterministic); the first satisfied wins.
+static func _buffered_command(character: Character, p: PlayerState) -> int:
 	for entry in character.button_map:
-		if entry.button_index >= 0:
-			var bit: int = 1 << (4 + entry.button_index)
-			if (int(intent["buttons"]) & bit) == 0:
-				continue
-		# Motion commands are sim-side recognition (TKT-P0-08); a nonzero motion entry
-		# is not matched at P0 (direct transitions only).
-		if entry.motion != 0:
-			continue
-		# Optional required direction (raw). 0 = none. We match DOWN as the common
-		# crouch-normal case; other directions extend the same way at TKT-P0-08.
-		if entry.required_direction != 0:
-			if (entry.required_direction & InputFrame.DOWN) != 0 and not bool(intent["down"]):
-				continue
-			if (entry.required_direction & InputFrame.UP) != 0 and not bool(intent["up"]):
-				continue
-		return entry.target_state_id
+		if InputBuffer.entry_satisfied(p.input_history, entry, p.facing):
+			return entry.target_state_id
 	return -1
+
+
+## Last frame any hitbox is active in this move (1-indexed), or 0 if none. Local mirror
+## of MoveData's derivation for the whiff-edge check (avoids a cross-call for one int).
+static func _last_active_frame_local(move: MoveState) -> int:
+	var last: int = 0
+	for kf in move.timeline:
+		if kf.hitboxes.is_empty():
+			continue
+		if kf.frame_end > last:
+			last = kf.frame_end
+	return last
 
 
 # ---------------------------------------------------------------------------
@@ -378,41 +420,74 @@ static func _resolved_boxes_for(p: PlayerState) -> Array:
 
 # ---------------------------------------------------------------------------
 # Phase 5: Hit resolution (combat-resolution.md phase 5; AD-008/010/016). For each
-# confirmed contact (respecting id_group single-hit), determine hit vs block, apply
-# damage after scaling, set the defender's reaction state + stun, set hitstop on BOTH
-# parties, apply pushback, grant the attacker's cancel_tags, update combo, and record
-# last_hit. Throwbox connects take the throw path (TKT-P0-09; not at P0 done-bar).
+# confirmed contact (respecting id_group single-hit + rehit cadence), determine hit vs
+# block, apply damage after scaling, set the defender's reaction state + stun, set
+# hitstop on BOTH parties, apply pushback, grant cancel_tags, update combo, record
+# last_hit. THROWBOX connects take the throw path (_resolve_throw): bypass blockstun,
+# open a tech window (TKT-P0-09).
 # ---------------------------------------------------------------------------
 
 static func phase5_hit_resolution(next: SimState, contacts: Array) -> void:
 	if contacts.is_empty():
 		return
+	# Throw clash-to-tech (AD-016): if BOTH players' throwboxes connect this tick
+	# (simultaneous ground throws within the window), resolve as a tech (clash) — no
+	# throw, both pushed to neutral — instead of one throwing the other.
+	if _both_throwboxes_connect(contacts):
+		_resolve_throw_clash(next, contacts)
+		return
+
 	# Single-hit integrity (AD-016, move-format.md criterion 5). Collapse to ONE hit per
 	# (attacker, id_group):
 	#   - WITHIN this tick: overlapping boxes sharing an id_group register one hit
 	#     (`seen`; first occurrence wins — deterministic, phase 4 emits in fixed order).
-	#   - ACROSS active frames: an id_group already in the attacker's `active_hit_ids`
-	#     (it connected on an earlier frame of THIS move) does not re-hit — so a
-	#     multi-frame active window lands ONE hit, not one per active frame. Cadenced
-	#     re-hit via rehit_interval is TKT-P0-09; at P0 (unset) it is one hit per move.
+	#   - ACROSS active frames: an id_group already connected during THIS move
+	#     (active_hit_ids) does not re-hit — a multi-frame active window lands ONE hit,
+	#     not one per active frame. A rehit_interval hitbox re-hits only once the interval
+	#     has elapsed since its last connect (active_hit_frames); no hit between (AD-016).
 	var seen: Dictionary = {}   # key "attacker:id_group" -> true (this tick)
 	for c in contacts:
 		var hb: HitBox = c["hitbox"]
 		if hb == null:
 			continue
-		# Throws (TKT-P0-09) are not resolved at P0; skip throwbox contacts.
-		if hb.is_throw:
-			continue
 		var attacker: int = int(c["attacker"])
+		var defender: int = int(c["defender"])
+		# THROWBOX connect (AD-016): take the throw path (bypasses block; opens a tech
+		# window). A throw is single-per-contact by id_group like any hit.
+		if hb.is_throw:
+			var tkey: String = "%d:%d" % [attacker, hb.id_group]
+			if seen.has(tkey):
+				continue
+			if _has_active_hit_id(next.players[attacker], hb.id_group):
+				continue
+			seen[tkey] = true
+			_resolve_throw(next, attacker, defender, hb)
+			continue
 		var key: String = "%d:%d" % [attacker, hb.id_group]
 		if seen.has(key):
 			continue
-		# Already hit this target with this id_group earlier in the move? Skip (single
-		# hit per contact — rehit_interval == 0 means never re-hit).
-		if hb.rehit_interval == 0 and _has_active_hit_id(next.players[attacker], hb.id_group):
+		# Already connected this id_group during the current move? For a plain hitbox
+		# (rehit_interval == 0) never re-hit. For a cadenced hitbox, re-hit only if the
+		# interval has elapsed since the last connect (else skip — no hit between).
+		if not _rehit_ready(next.players[attacker], hb, next.tick + 1):
 			continue
 		seen[key] = true
 		_resolve_one_hit(next, attacker, int(c["defender"]), hb)
+
+
+## Whether a hitbox may connect given the attacker's per-move single-hit / rehit memory.
+## A NEW id_group (never connected this move) may always hit. An already-connected group:
+##   - rehit_interval == 0: never again (single hit per contact — AD-016).
+##   - rehit_interval  > 0: only once `rehit_interval` frames have elapsed since its last
+##     connect (candidate_tick - last_connect >= rehit_interval), and no hit in between.
+static func _rehit_ready(atk: PlayerState, hb: HitBox, candidate_tick: int) -> bool:
+	var idx: int = _active_hit_index(atk, hb.id_group)
+	if idx == -1:
+		return true
+	if hb.rehit_interval <= 0:
+		return false
+	var last_connect: int = atk.active_hit_frames[idx]
+	return candidate_tick - last_connect >= hb.rehit_interval
 
 
 ## Resolve a single confirmed, deduplicated hit.
@@ -481,19 +556,36 @@ static func _resolve_one_hit(next: SimState, attacker: int, defender: int, hb: H
 	if hb.launch != 0 and not blocking:
 		def.vel_y = hb.launch
 
+	# --- Attacker's move-contact outcome (for CancelRule.condition, AD-015) --
+	# The attacker's current move now HAS connected: hit or block. An on_hit / on_block
+	# / on_contact cancel becomes legal from here (in its window). This is set on the
+	# ATTACKER (per-attacker, not the global last_hit — AD-026's reasoning: two attackers
+	# have independent contact outcomes).
+	atk.move_contact = PlayerState.CONTACT_BLOCK if blocking else PlayerState.CONTACT_HIT
+
 	# --- Cancel-tag grant (AD-017: granted phase 5 tick T, usable T+1) -------
-	# The attacker records the granted tags; consumption (T+1) is TKT-P0-08. At P0 we
-	# store them so the grant->consume latency is structurally present.
-	if hb.cancel_tags.size() > 0:
-		# P0: no cancel execution, so tags are recorded transiently via combo state.
-		# (No serialized cancel-tag field until TKT-P0-08; a no-op store keeps P0 clean.)
-		pass
+	# The attacker records the granted tags in serialized state. Because phase 2 (the
+	# cancel phase) precedes phase 5, a tag granted here on tick T is first visible to
+	# the cancel evaluation on tick T+1 — the uniform one-tick grant->consume latency
+	# (AD-017) falls out of the fixed phase order, no explicit delay needed.
+	for tag in hb.cancel_tags:
+		if not _has_cancel_tag(atk, tag):
+			atk.cancel_tags.append(tag)
 
 	# --- Mark this id_group as connected for the attacker's current move -----
-	# (single-hit across active frames — F-005). A rehit_interval hitbox would instead
-	# schedule a re-hit after the interval (TKT-P0-09); at P0 the id simply stays marked.
-	if not _has_active_hit_id(atk, hb.id_group):
+	# (single-hit across active frames — F-005/AD-026). Record BOTH the id_group and the
+	# tick it connected (active_hit_frames, parallel), so a rehit_interval hitbox can
+	# cadence off the last connect (TKT-P0-09). next.tick is still this tick's pre-phase-7
+	# value; +1 makes the recorded connect tick the tick this step PRODUCES, matching how
+	# last_hit.tick and the rehit-interval comparison are expressed.
+	var connect_tick: int = next.tick + 1
+	var existing: int = _active_hit_index(atk, hb.id_group)
+	if existing == -1:
 		atk.active_hit_ids.append(hb.id_group)
+		atk.active_hit_frames.append(connect_tick)
+	else:
+		# Re-hit (rehit_interval elapsed): refresh the last-connect tick in place.
+		atk.active_hit_frames[existing] = connect_tick
 
 	# --- Record last_hit (F-002; inspection surface) ------------------------
 	var rec := HitRecord.new()
@@ -524,6 +616,172 @@ static func _defender_is_blocking(def: PlayerState, attacker: int, next: SimStat
 	# defender faces the attacker (P0 characters always face each other), holding back
 	# = away from the attacker = the block direction.
 	return bool(intent["back"])
+
+
+# ---------------------------------------------------------------------------
+# Throws (combat-resolution.md "Throws"; AD-016). A throwbox overlapping a throwable
+# hurtbox CONNECTS and BYPASSES BLOCKSTUN — throws are not blocked (block state is
+# ignored). On connect the defender enters the throw's reaction state and a TECH WINDOW
+# opens: if the defender inputs a throw within the window, the throw is teched (both
+# pushed to neutral, no damage). Simultaneous ground throws within the window resolve
+# as a tech (clash). Air throws / formal throw-vs-throw priority stay deferred (AD-016).
+# ---------------------------------------------------------------------------
+
+## True iff BOTH players have a throwbox contact this tick (simultaneous throws) — the
+## clash-to-tech case (AD-016). Reads the phase-4 contact list for a throw contact from
+## each attacker.
+static func _both_throwboxes_connect(contacts: Array) -> bool:
+	var atk0_throws: bool = false
+	var atk1_throws: bool = false
+	for c in contacts:
+		var hb: HitBox = c["hitbox"]
+		if hb == null or not hb.is_throw:
+			continue
+		if int(c["attacker"]) == 0:
+			atk0_throws = true
+		else:
+			atk1_throws = true
+	return atk0_throws and atk1_throws
+
+
+## Resolve a simultaneous-throw CLASH as a tech (AD-016): neither throw lands, both
+## players are pushed apart to neutral, no damage, no stun. Deterministic (symmetric
+## separation; the pushout constant is the throw's own tech pushback).
+static func _resolve_throw_clash(next: SimState, contacts: Array) -> void:
+	# Use the first throw hitbox's tech pushback for a symmetric separation (both are
+	# grounded throws in the slice; either's constant is fine — deterministic first).
+	var push: int = 0
+	for c in contacts:
+		var hb: HitBox = c["hitbox"]
+		if hb != null and hb.is_throw:
+			push = hb.pushback_hit
+			break
+	var p0: PlayerState = next.players[0]
+	var p1: PlayerState = next.players[1]
+	# Push each away from the other along x (P0 left of P1 by convention; if equal,
+	# P0 goes left — deterministic tiebreak).
+	var p0_left: bool = p0.pos_x <= p1.pos_x
+	p0.pos_x += (-push if p0_left else push)
+	p1.pos_x += (push if p0_left else -push)
+	# No damage, no stun, no throw reaction — both stay actionable (a clean tech/clash).
+
+
+## Resolve a single throw connect (AD-016). Bypasses blockstun (block state ignored):
+## the defender ALWAYS enters the throw's reaction (hit_reaction) and takes the throw's
+## hitstun. A TECH WINDOW opens on the defender: `throw_tech_window` frames in which a
+## defender throw input techs the throw to neutral (handled in phase 2). Damage is
+## applied on the throw connect (a throw is a hit that can't be blocked); the tech, if
+## it fires next tick(s), reverses to neutral before the reaction commits meaningfully.
+static func _resolve_throw(next: SimState, attacker: int, defender: int, hb: HitBox) -> void:
+	var atk: PlayerState = next.players[attacker]
+	var def: PlayerState = next.players[defender]
+	var character_def: Character = MoveRegistry.character(def.character_id)
+
+	# Throw bypasses block: the defender enters the throw reaction (hit_reaction) and
+	# takes throw hitstun regardless of holding back.
+	if character_def != null and hb.hit_reaction != 0:
+		_enter_state(def, character_def, hb.hit_reaction)
+	def.stun = hb.hitstun
+	def.stun_kind = PlayerView.STUN_HIT
+
+	# Open the defender's tech window (AD-016). The window length is authored on the
+	# throw hitbox via blockstun (reused as the tech-window frame count for the slice —
+	# no separate field yet; a throw has no block reaction). Record who threw.
+	def.throw_tech_window = hb.blockstun
+	def.thrown_by = attacker
+
+	# Damage (throws deal damage on connect; single-sourced scaling like any hit — a
+	# throw normally starts a combo so hit-count 1 => unscaled at P0).
+	def.combo_hits = 1
+	def.combo_damage = 0
+	def.combo_scaling = DamageScaling.scaling_for_hit_count(def.combo_hits)
+	var applied_damage: int = FP.round_to_int(FP.mul(FP.from_int(hb.damage), def.combo_scaling))
+	def.health -= applied_damage
+	def.combo_damage += applied_damage
+
+	# Attacker's move contact (throws register as a hit for cancels/combo attribution).
+	atk.move_contact = PlayerState.CONTACT_HIT
+
+	# Single-hit memory (a throw connects once per contact, like any id_group).
+	var connect_tick: int = next.tick + 1
+	if _active_hit_index(atk, hb.id_group) == -1:
+		atk.active_hit_ids.append(hb.id_group)
+		atk.active_hit_frames.append(connect_tick)
+
+	# Record last_hit (inspection surface). A throw is a hit that bypassed block.
+	var rec := HitRecord.new()
+	rec.attacker = attacker
+	rec.defender = defender
+	rec.damage_dealt = applied_damage
+	rec.was_block = false
+	rec.scaling_applied_pct = FP.round_to_int(FP.mul(def.combo_scaling, FP.from_int(100)))
+	rec.combo_count_after = def.combo_hits
+	rec.tick = connect_tick
+	next.last_hit = rec
+
+
+## Apply a defender's throw TECH (AD-016): if the thrown defender inputs a throw within
+## the tech window, the throw is teched — both players pushed to neutral, damage undone,
+## stun cleared, tech state closed. Called from phase 2 for a defender with an open
+## tech window who has a buffered throw command. Returns true iff a tech fired.
+static func _try_throw_tech(next: SimState, defender: int, character: Character) -> bool:
+	var def: PlayerState = next.players[defender]
+	if def.throw_tech_window <= 0 or def.thrown_by < 0:
+		return false
+	# Did the defender input a throw command within the buffer? A throw is a button_map
+	# entry whose target is a throw move; recognize any such buffered command.
+	if not _has_buffered_throw(character, def):
+		return false
+	var attacker: int = def.thrown_by
+	var atk: PlayerState = next.players[attacker]
+	# Undo the throw damage taken this exchange (tech = no damage), reset combo.
+	def.health += def.combo_damage
+	def.combo_hits = 0
+	def.combo_damage = 0
+	def.combo_scaling = FP.ONE
+	# Clear stun / reaction: both return to neutral (idle).
+	def.stun = 0
+	def.stun_kind = PlayerView.STUN_NONE
+	if character != null:
+		_enter_state(def, character, character.idle_state_id)
+	var atk_char: Character = MoveRegistry.character(atk.character_id)
+	if atk_char != null:
+		_enter_state(atk, atk_char, atk_char.idle_state_id)
+	# Push apart to neutral (symmetric); use the throw's authored tech pushback if any.
+	var push: int = FP.from_int(20)
+	var def_left: bool = def.pos_x <= atk.pos_x
+	def.pos_x += (-push if def_left else push)
+	atk.pos_x += (push if def_left else -push)
+	# Close the tech window.
+	def.throw_tech_window = 0
+	def.thrown_by = -1
+	return true
+
+
+## Whether the defender has a buffered throw command (a button_map entry whose target is
+## a MoveState carrying a throwbox). Recognized through the same buffering (InputBuffer).
+static func _has_buffered_throw(character: Character, p: PlayerState) -> bool:
+	if character == null:
+		return false
+	for entry in character.button_map:
+		var target: MoveState = character.get_state(entry.target_state_id)
+		if target == null or not _move_has_throwbox(target):
+			continue
+		if InputBuffer.entry_satisfied(p.input_history, entry, p.facing):
+			return true
+	return false
+
+
+## True iff any keyframe of the move carries a throw hitbox (a throwbox in hitboxes) or
+## a throwbox entry. Used to identify a "throw command" for teching.
+static func _move_has_throwbox(move: MoveState) -> bool:
+	for kf in move.timeline:
+		if not kf.throwboxes.is_empty():
+			return true
+		for hb in kf.hitboxes:
+			if hb.is_throw:
+				return true
+	return false
 
 
 # ---------------------------------------------------------------------------
@@ -590,6 +848,13 @@ static func phase7_advance_counters(next: SimState, was_frozen: Array) -> void:
 					# transition happens in phase 2 of the NEXT tick (so the defender
 					# becomes actionable and can act on the frame stun hits 0 + 1).
 					p.stun_kind = PlayerView.STUN_NONE
+		# Throw tech window counts down independently of stun/hitstop (AD-016). A throw
+		# connect applies no mutual hitstop at P0, so the window is not frozen. When it
+		# closes, clear who threw (the tech is no longer possible).
+		if p.throw_tech_window > 0:
+			p.throw_tech_window -= 1
+			if p.throw_tech_window == 0:
+				p.thrown_by = -1
 	next.tick = next.tick + 1
 
 
@@ -607,12 +872,35 @@ static func _enter_state(p: PlayerState, character: Character, state_id: int) ->
 	p.frame_in_state = 1
 	p.vel_x = 0
 	p.active_hit_ids = PackedInt32Array()
+	# A new move is a new contact: reset its single-hit / rehit memory, its contact
+	# outcome (for on_hit/on_block/on_whiff cancels), and its granted cancel tags — a
+	# new move's tags are its own (AD-015/017/026).
+	p.active_hit_frames = PackedInt32Array()
+	p.move_contact = PlayerState.CONTACT_NONE
+	p.cancel_tags = PackedInt32Array()
 
 
 ## True iff the player has already connected `id_group` during its current move.
 static func _has_active_hit_id(p: PlayerState, id_group: int) -> bool:
 	for gid in p.active_hit_ids:
 		if gid == id_group:
+			return true
+	return false
+
+
+## Index of `id_group` in the attacker's active_hit_ids (parallel to active_hit_frames),
+## or -1 if it has not connected this move. Used for rehit cadence (last-connect tick).
+static func _active_hit_index(p: PlayerState, id_group: int) -> int:
+	for i in range(p.active_hit_ids.size()):
+		if p.active_hit_ids[i] == id_group:
+			return i
+	return -1
+
+
+## True iff the granted cancel tag is present in the attacker's cancel_tags (AD-017).
+static func _has_cancel_tag(p: PlayerState, tag: int) -> bool:
+	for t in p.cancel_tags:
+		if t == tag:
 			return true
 	return false
 

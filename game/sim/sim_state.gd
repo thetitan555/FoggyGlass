@@ -218,6 +218,20 @@ func hash_state() -> int:
 		h = _fold(h, ah.size())
 		for gid in ah:
 			h = _fold(h, gid)
+		# Active-hit frames (rehit cadence, F-010): parallel run, count-then-frames.
+		var ahf: PackedInt32Array = pd["active_hit_frames"]
+		h = _fold(h, ahf.size())
+		for hf in ahf:
+			h = _fold(h, hf)
+		# Cancel tags granted this move (F-010): variable-length run, count-then-tags.
+		var ct: PackedInt32Array = pd["cancel_tags"]
+		h = _fold(h, ct.size())
+		for tag in ct:
+			h = _fold(h, tag)
+		# Move contact outcome + throw state (F-010): plain ints in fixed order.
+		h = _fold(h, int(pd["move_contact"]))
+		h = _fold(h, int(pd["throw_tech_window"]))
+		h = _fold(h, int(pd["thrown_by"]))
 		# Input history: length then each frame, oldest->newest (canonical order).
 		var hist: Dictionary = pd["input_history"]
 		var frames: PackedInt32Array = hist["frames"]
@@ -305,16 +319,14 @@ static func step(state: SimState, in_p1: int, in_p2: int) -> SimState:
 
 	# --- Phase 1: read inputs (AD-009) --------------------------------------
 	# Push raw frames into history (recorded every tick, incl. hitstop — AD-017).
+	# Raw stays raw in history; buffering/SOCD/facing are derived sim-side from history
+	# in phase 2 (AD-003), so no pre-resolved intent needs threading through step now.
 	StepPhases.phase1_read_inputs(next, in_p1, in_p2)
-	# Resolve each player's SOCD-normalized, facing-relative intent for phase 2 (raw
-	# stays raw in history; only the derived intent is cleaned — AD-003).
-	var intents: Array = [
-		StepPhases.resolve_intent(in_p1, next.players[0].facing),
-		StepPhases.resolve_intent(in_p2, next.players[1].facing),
-	]
 
-	# --- Phase 2: state machine (direct transitions; buffering stubbed for 08) --
-	StepPhases.phase2_state_machine(next, intents)
+	# --- Phase 2: state machine + buffering + cancels (TKT-P0-08; AD-015/017/022) --
+	# Reads input_history directly (buffering is a pure function of it — AD-003), so it
+	# takes no pre-resolved intent argument.
+	StepPhases.phase2_state_machine(next)
 
 	# --- Phase 3: movement integration + pushbox/stage resolution -----------
 	StepPhases.phase3_movement(next)

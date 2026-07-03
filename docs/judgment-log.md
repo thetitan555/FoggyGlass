@@ -634,3 +634,117 @@ reference is rejected), and it restored the whole file's phase-pipeline checks t
 parse failure had blocked. Tests exactly criterion 2's "each phase is a named function"
 intent, matches an existing codebase idiom, no sim code touched. Note for QA: F-007 is
 Developer-owned; this covers only the JC latitude. No spec change.
+
+### JC-022 · 2026-07-03 · TKT-P0-08 · Motion recognition = greedy ordered-token scan over the 9-frame window; a motion-id→token-sequence table — provisional
+**Decided.** `InputBuffer.motion_recognized` recognizes a motion by scanning the last
+`MOTION_WINDOW` (= 9, AD-022) frames of `input_history` oldest→newest, greedily advancing
+a cursor through the motion's ordered direction-token list each time a frame satisfies the
+next token; recognized iff all tokens are consumed within the window. The motion-id →
+token-sequence mapping lives in one place (`_motion_tokens`): `236` = down, down-forward,
+forward; `623` = forward, down, down-forward. Each token is facing-resolved (raw L/R →
+forward/back) before matching; intermediate frames between tokens are allowed (leniency).
+**Serves.** AD-022 / combat-resolution.md crit 11: "a motion is recognized if its
+directions occur IN ORDER within the last 9 frames." The 9-frame WINDOW is the feel value
+(AD-022, cited not chosen); *how* the ordered-in-window recognition is computed, and which
+concrete motions exist + their token sequences, is left to implementation.
+**Alternatives passed over.** Exact-consecutive-frame matching (no leniency — off-genre and
+contradicts "occur in order within the window," which permits gaps); a per-character motion
+table (drift — the recognizer must be uniform, AD-003/AD-022); storing partial-motion
+progress in SimState (unnecessary — buffering is a PURE function of `input_history`, AD-003,
+so it is re-derived each tick with no serialized recognizer state).
+**Why.** A greedy oldest→newest cursor scan is the minimal computation of "these directions
+occurred in this order inside the window," is a pure function of history (so replays/netcode
+reproduce it for free), and keeps the leniency the window implies. The token table is the
+one place motions are defined, mirroring the single-source packaging (FP/MoveData). If the
+Architect wants specific canonical motions or a different leniency model, it is a localized
+change in `_motion_tokens` / the scan. Recorded as latitude: it implements AD-022's stated
+window semantics; no new serialized state, no contract surface (the buffer output feeds
+phase 2 transitions, whose contract — 9f/6f windows — is AD-022's).
+
+### JC-023 · 2026-07-03 · TKT-P0-08 · A CancelRule's `input` command is resolved via the button_map entry whose target == the rule target (raw-button fallback); group targets deferred — provisional
+**Decided.** `CancelEval._input_buffered` resolves a cancel rule's required `input` command
+by finding the character's `button_map` entry whose `target_state_id` equals the rule's
+`target`, then checking that entry's command is buffered through the ONE recognizer
+(`InputBuffer.entry_satisfied`) — so a cancel's input is recognized by exactly the same
+buffering a neutral transition uses. If no matching entry exists, `input` is treated as a
+raw button bitmask (BUTTON_0..7) and checked against the command buffer directly. A
+`target_is_group` cancel (rule target names a SET of states) is skipped at P0 (the slice
+authors no cancel groups).
+**Serves.** move-format.md → CancelRule (`input` = "required command (button/motion)") +
+crit 7 (cancels resolve per condition/window/input); AD-015. The format fixes that a cancel
+HAS a required input command; *how the command id is matched against the recognizer* is not
+spelled out (a `CancelRule.input` is an int; nothing pins whether it is a button bit, a
+motion id, or a button_map key).
+**Alternatives passed over.** Duplicating button/motion decode logic inside CancelEval
+(a second recognition path that could drift from InputBuffer — the thing single-sourcing
+prevents); requiring `input` to always be a raw button bit (loses motion-cancel inputs,
+which the button_map already knows how to recognize); resolving groups now (no group
+targets are authored in the slice, so it would be untested speculative code — Tenet 3 says
+build for extension, not build unused).
+**Why.** Routing the cancel's input through the button_map entry that already names how to
+reach `target` means one recognizer decides "is this command buffered," so a cancel and a
+neutral transition into the same state agree. The raw-button fallback keeps a bare-button
+cancel authorable without a button_map round-trip. Deferring groups matches AD-016's
+"deferred, explicitly" discipline (leave the field, don't build the unused path). Localized
+to `_input_buffered`; if the Architect wants a distinct `input`-id namespace or group
+resolution, it is a one-function change. Recorded as latitude: it fills the unspecified
+command-matching mechanism with the single-recognizer reading; the CancelRule fields
+(condition/window/input/requires_tag) are consumed exactly as move-format.md names them.
+
+### JC-024 · 2026-07-03 · TKT-P0-09 · Throw tech-window length authored via the throwbox's (otherwise-unused) `blockstun` field; tech = undo-damage-both-to-idle — provisional (FORMAT-FIELD question for Architect)
+**Decided.** The throw tech-window length (frames the defender may tech, AD-016) is read
+from the throw `HitBox.blockstun` field, which is otherwise unused on a throwbox (a throw
+is never blocked, so it has no blockstun semantics). The tech itself (`_try_throw_tech`)
+restores the throw's damage to the defender, clears combo/stun, returns BOTH players to
+idle, and pushes them apart by a placeholder constant. The clash (`_resolve_throw_clash`)
+does the same push with no damage/stun and no throw at all.
+**Serves.** combat-resolution.md "Throws" / AD-016: "a defined window after the throw
+connects." The MECHANISM (a tech window opens on connect; a defender throw within it techs
+to neutral, no damage; simultaneous throws clash) is the contract and is built to spec.
+The window's *length source* is not specified, and the HitBox schema (move-format.md,
+Architect-owned) has **no dedicated tech-window field** — so I did NOT add one (a format
+change is the Architect's), and instead reused the throwbox's spare `blockstun`.
+**Alternatives passed over.** Adding a `HitBox.tech_window` field (the cleanest long-term
+shape — but a move-format *contract* change I don't own; raising it here as a question
+rather than editing the schema); a sim-wide tech-window constant (uniform like the buffer
+windows, but the tech window is not stated to be character-invariant, and a constant can't
+be authored/tested per-throw); no tech window (leaves crit 10 unbacked).
+**Why.** Reusing the spare `blockstun` keeps the tech window DATA-DRIVEN and testable
+without inventing a schema field I don't own or hardcoding a feel value. The tech/clash
+resolution (both-to-neutral, damage undone) is AD-016's stated outcome. **FLAG-ADJACENT —
+for the Architect:** if throws should carry a dedicated `tech_window` field (clearer than
+overloading `blockstun`, and the natural home for this feel value), that is a move-format
+addition to decide at ratification; until then the `blockstun` reuse is the localized,
+reversible P0 stand-in. The specific window length (8f in the test char) and push constant
+are placeholder tuning (Strategist's, like JC-016's scaling numbers), not a golden to lock.
+
+### JC-025 · 2026-07-03 · TKT-P0-09 · Rehit cadence via a parallel `active_hit_frames` run + produced-tick comparison; clash detected when both throwboxes connect the same tick — provisional
+**Decided.** Cadenced re-hit (`HitBox.rehit_interval`, AD-016) is tracked with an
+`active_hit_frames` PackedInt32Array kept PARALLEL to `active_hit_ids` (AD-026): index i is
+the tick `active_hit_ids[i]` last connected. `_rehit_ready` allows a re-hit only when
+`candidate_tick − last_connect ≥ rehit_interval` (no hit on the frames between); both the
+recorded connect tick and the candidate use the tick the step PRODUCES (`next.tick + 1`),
+so the comparison is on one consistent timeline. Simultaneous-throw clash is detected by
+scanning the phase-4 contact list for a throw contact from BOTH attackers on the same tick
+(`_both_throwboxes_connect`), resolved before any single throw so a mutual throw is a clash,
+not one throwing the other.
+**Serves.** combat-resolution.md "Multi-hit / rehit" + crit 9 (a rehit hitbox hits on its
+cadence and not between) / AD-016; and "Throws" clash-to-tech / crit 10. AD-026 fixes that
+single-hit uses per-attacker `active_hit_ids`; the CADENCE (how the interval is measured)
+and the clash DETECTION are the implementation of AD-016's stated forms.
+**Alternatives passed over.** Storing a single last-hit tick per attacker rather than
+per-id_group (wrong for a move with several cadenced groups — each needs its own last-hit,
+mirroring why AD-026 rejected keying on the global last_hit); measuring the interval in
+`frame_in_state` rather than absolute tick (breaks across hitstop, which freezes
+frame_in_state but not the intended cadence — absolute produced-tick is freeze-correct);
+detecting a clash by checking both players are in a throw *state* rather than both
+throwboxes *connecting* (a throw whose box misses shouldn't clash). The parallel-array shape
+(vs. a dict) keeps the hash a simple order-committing run alongside `active_hit_ids`, and
+the two stay length-synced (appended/cleared together).
+**Why.** A parallel per-id_group last-connect tick is the minimal state that makes the
+interval measurable per group and survives snapshot/restore (it is serialized/hashed with
+`active_hit_frames`, F-010). Produced-tick comparison keeps cadence correct across hitstop
+freezes. Both-throwboxes-connect is the literal reading of AD-016's "simultaneous ground
+throw attempts." Localized to `_rehit_ready` / phase-5 dispatch; the `active_hit_frames`
+field itself is the flagged contract addition (F-010), not this call. Recorded as latitude:
+it implements AD-016's stated cadence + clash with the minimal serialized shape.

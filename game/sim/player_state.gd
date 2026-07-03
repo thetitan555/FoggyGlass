@@ -91,6 +91,51 @@ var combo_damage: int = 0
 ## deterministic. Raised as flag F-005 (a SimState shape addition, Architect-owned).
 var active_hit_ids: PackedInt32Array = PackedInt32Array()
 
+## PARALLEL to active_hit_ids (index i is the tick active_hit_ids[i] last connected).
+## Backs cadenced re-hit (HitBox.rehit_interval, AD-016): a rehit_interval hitbox may
+## re-hit the same target only once `rehit_interval` frames have elapsed since that
+## id_group last connected. Kept length-synced with active_hit_ids (appended/cleared
+## together). Serialized/cloned/hashed as a variable-length run like active_hit_ids.
+## Raised in flag F-010 (a SimState shape addition, Architect-owned; TKT-P0-09).
+var active_hit_frames: PackedInt32Array = PackedInt32Array()
+
+# --- Cancels / buffered commands (TKT-P0-08; AD-015/017/022) -----------------
+
+## Cancel tags granted to this player (AS ATTACKER) by a connecting hitbox in phase 5
+## of tick T (HitBox.cancel_tags). Available to the cancel phase (phase 2) starting
+## tick T+1 — the AD-017 grant->consume latency, which falls out for free because phase
+## 2 precedes phase 5 in the fixed order. Cleared on every state entry (a new move's
+## tags are its own). Serialized/cloned/hashed as a variable-length run. Raised in flag
+## F-010 (a SimState shape addition, Architect-owned; TKT-P0-08).
+var cancel_tags: PackedInt32Array = PackedInt32Array()
+
+## Outcome of this player's CURRENT move, for CancelRule.condition evaluation (AD-015):
+## 0 none / 1 hit / 2 block / 3 whiff-resolved. Set on the ATTACKER in phase 5 on
+## connect (hit or block), and set to whiff once the move's last active frame passes
+## with no connect (so `on_whiff` cancels can fire). Cleared on state entry. Plain int.
+## Raised in flag F-010 (a SimState shape addition, Architect-owned; TKT-P0-08).
+var move_contact: int = 0
+
+## move_contact values (CancelRule.condition maps onto these).
+const CONTACT_NONE: int = 0
+const CONTACT_HIT: int = 1
+const CONTACT_BLOCK: int = 2
+const CONTACT_WHIFF: int = 3
+
+# --- Throws (TKT-P0-09; AD-016) ---------------------------------------------
+
+## Frames remaining in which this player (as the thrown DEFENDER) may TECH the throw
+## (input a throw to escape to neutral with no damage — AD-016). Set on throw connect,
+## decremented in phase 7 (a throw connect applies no mutual hitstop at P0, so the
+## window is not frozen). 0 = not in a tech window. Raised in flag F-010 (Architect-
+## owned; TKT-P0-09).
+var throw_tech_window: int = 0
+
+## The attacker index that threw this player, or -1 if not thrown. Used for tech
+## resolution and combo attribution. Cleared when the tech window closes / the throw
+## resolves. Raised in flag F-010 (Architect-owned; TKT-P0-09).
+var thrown_by: int = -1
+
 # --- Input substrate --------------------------------------------------------
 
 ## Ring buffer of recent RAW InputFrame values — the substrate buffering / motion
@@ -125,6 +170,11 @@ func clone() -> PlayerState:
 	p.combo_scaling = combo_scaling
 	p.combo_damage = combo_damage
 	p.active_hit_ids = active_hit_ids.duplicate()
+	p.active_hit_frames = active_hit_frames.duplicate()
+	p.cancel_tags = cancel_tags.duplicate()
+	p.move_contact = move_contact
+	p.throw_tech_window = throw_tech_window
+	p.thrown_by = thrown_by
 	p.input_history = input_history.clone()
 	return p
 
@@ -149,6 +199,11 @@ func to_dict() -> Dictionary:
 		"combo_scaling": combo_scaling,
 		"combo_damage": combo_damage,
 		"active_hit_ids": active_hit_ids.duplicate(),
+		"active_hit_frames": active_hit_frames.duplicate(),
+		"cancel_tags": cancel_tags.duplicate(),
+		"move_contact": move_contact,
+		"throw_tech_window": throw_tech_window,
+		"thrown_by": thrown_by,
 		"input_history": input_history.to_dict(),
 	}
 
@@ -173,5 +228,12 @@ static func from_dict(d: Dictionary) -> PlayerState:
 	p.combo_damage = int(d["combo_damage"])
 	var ids: PackedInt32Array = d["active_hit_ids"]
 	p.active_hit_ids = ids.duplicate()
+	var ahf: PackedInt32Array = d["active_hit_frames"]
+	p.active_hit_frames = ahf.duplicate()
+	var ct: PackedInt32Array = d["cancel_tags"]
+	p.cancel_tags = ct.duplicate()
+	p.move_contact = int(d["move_contact"])
+	p.throw_tech_window = int(d["throw_tech_window"])
+	p.thrown_by = int(d["thrown_by"])
 	p.input_history = InputHistory.from_dict(d["input_history"])
 	return p
