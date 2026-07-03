@@ -347,7 +347,7 @@ hash is stable. If the Architect wants explicit role tracking, it is a localized
 change in Advantage.live. Recorded as latitude; escalate to a flag if role
 identification turns out to be feel-bearing beyond the formula's plain meaning.
 
-### JC-013 · 2026-07-02 · TKT-P0-06 · Phase pipeline packaged as a `StepPhases` static module; each AD-009 phase a named function — provisional
+### JC-013 · 2026-07-02 · TKT-P0-06 · Phase pipeline packaged as a `StepPhases` static module; each AD-009 phase a named function — ratified
 **Decided.** The intra-tick phase order (AD-009) is implemented as `StepPhases`
 (all-static, `game/sim/step_phases.gd`), one named function per phase
 (`phase1_read_inputs`, `phase2_state_machine`, `phase3_movement`, `phase4_overlap`,
@@ -366,8 +366,16 @@ readable call sequence in `step` (so "reordering changes results" — criterion 
 a one-line reorder in a test), keeps each phase independently testable, and mirrors
 the FP/MoveData static-namespace packaging already ratified (JC-001). Purely internal
 factoring; the `step(state,in1,in2)` contract signature is unchanged. Reversible.
+**Ratified as latitude** (Architect, 2026-07-03). Pure GDScript packaging of the
+AD-009 phase order (which fixes the ORDER and each phase's content, not the
+factoring), mirroring the already-ratified FP/MoveData/`StepPhases` static-namespace
+pattern (JC-001). The `step` signature is unchanged, so no contract surface moves.
+The one consequence worth pinning — that the named-function call sequence in `step`
+IS the load-bearing order criterion 2's reorder-to-fail test points at — is inherent
+to the packaging and already stated in the entry. Disposition noted in decisions.md
+(JC-013..021 ratifications block). No spec change, no code change.
 
-### JC-014 · 2026-07-02 · TKT-P0-06 · `_enter_state` puts a freshly-entered state ON frame 1 this tick; phase 2 skips the advance for a same-tick entry — provisional
+### JC-014 · 2026-07-02 · TKT-P0-06 · `_enter_state` puts a freshly-entered state ON frame 1 this tick; phase 2 skips the advance for a same-tick entry — ratified
 **Decided.** Entering a state (`_enter_state`) sets `frame_in_state = 1` directly (a
 fresh entry IS on frame 1 the tick it is entered), and phase 2's frame-advance is
 skipped for any state entered THIS tick (`entered_this_tick` guard). A state that was
@@ -388,8 +396,17 @@ active on T. Entering at frame 1 + skipping the same-tick advance is the only re
 where a move's first authored frame is neither skipped nor doubled, and it makes
 startup/active/recovery hand-math (JC-011) line up with the resolved boxes. Localized
 to `_enter_state` + the phase-2 guard.
+**Ratified as latitude** (Architect, 2026-07-03). This is the unique reading under
+which a move's first authored frame (frame 1) is neither skipped nor doubled the tick
+it starts, and it makes the JC-011 startup/active/recovery hand-math and the JC-019
+loop/clamp indexing mutually consistent (all 1-indexed inclusive). move-format.md
+already fixes 1-indexed inclusive keyframes and phase 2 "advance the frame"; the
+entry-tick edge is filling a spelled-out mechanism, not choosing new behavior. The
+three (JC-011 / JC-014 / JC-019) form one coherent 1-indexed frame model — verified
+against the executed done-bar (frame-1 geometry active the tick a move starts).
+Localized; reversible. No new contract surface. Disposition noted in decisions.md.
 
-### JC-015 · 2026-07-02 · TKT-P0-06 · SOCD default (LR→neutral, UD→up) + facing resolution as one `resolve_intent`; raw stays raw in history — provisional
+### JC-015 · 2026-07-02 · TKT-P0-06 · SOCD default (LR→neutral, UD→up) + facing resolution as one `resolve_intent`; raw stays raw in history — ratified into spec
 **Decided.** SOCD normalization is one function (`socd_normalize`): Left+Right → drop
 both (neutral horizontal), Up+Down → drop Down (Up priority), buttons/reserved
 untouched. `resolve_intent` runs SOCD then maps raw L/R to forward/back by `facing`,
@@ -411,8 +428,19 @@ re-normalizes. NOTE: the SOCD default itself is a "gameplay-flavored choice the
 Strategist may revisit" (input.md) — if it changes, it changes in `socd_normalize`
 only; recorded as latitude because I implemented the spec's STATED default verbatim,
 not a new choice.
+**Ratified INTO the spec, not as bare latitude** (Architect, 2026-07-03). The
+Developer flagged the right seam: this touches a rule multiple roles build against
+(the scrutiny note called it out). But the SOCD default rule and its "one sim-side
+source-agnostic function" mechanism were ALREADY owned in input.md + AD-003, and the
+raw-L/R → forward/back facing conversion is ALREADY owned sim-side (AD-002/AD-003).
+The Developer implemented those verbatim. The one thing not yet named — that SOCD and
+facing are the SAME single `resolve_intent` derivation, with raw staying raw in
+history and only the derived intent cleaned — I folded into input.md ("One derivation
+for SOCD + facing"), so the single-normalization-point is an owned name, not an
+implementation accident. No NEW decision was made (no AD needed); the default itself
+stays the Strategist's to revisit in that one place. Code as written matches.
 
-### JC-016 · 2026-07-02 · TKT-P0-07 · Damage scaling as a single `DamageScaling` definition (hit-count table); the done-bar's single hit is unscaled 100% — provisional
+### JC-016 · 2026-07-02 · TKT-P0-07 · Damage scaling as a single `DamageScaling` definition (hit-count table); the done-bar's single hit is unscaled 100% — ratified
 **Decided.** Damage scaling lives in ONE place (`DamageScaling.scaling_for_hit_count`,
 `game/sim/damage_scaling.gd`): hit 1 = 100% (FP.ONE), each further hit −10%, floored
 at 10%, returned as a fixed-point multiplier. Phase 5 applies it BEFORE subtracting
@@ -434,8 +462,18 @@ table). If the Strategist wants specific scaling values that is a spec/data chan
 one-place edit here — recorded as latitude because the MECHANISM (the contract) is
 built to spec and only unspecified numbers are chosen, with the done-bar deliberately
 insensitive to them.
+**Ratified as latitude, with the number/mechanism split named** (Architect,
+2026-07-03). combat-resolution.md demands a SINGLE scaling definition applied
+pre-subtract and surfaced — that MECHANISM is the contract and is built to spec. The
+specific 10%-step / 10%-floor NUMBERS are unspecified placeholder tuning: they are
+feel, the Strategist's to set via the spec, and are correctly flagged slice-provisional
+in-file. The done-bar is deliberately insensitive (hit-count 1 ⇒ 100% ⇒ unscaled), so
+no P0 verdict rests on the numbers. **For QA:** treat the 10%/10%-floor values as
+placeholder, not a golden to lock — golden the mechanism (single source, pre-subtract,
+surfaced), not the specific curve. Disposition + the number/mechanism split noted in
+decisions.md. No new AD (mechanism already AD-008/combat-resolution); no code change.
 
-### JC-017 · 2026-07-02 · TKT-P0-06 · Pushbox mutual separation splits the overlap in half, odd remainder to player 1 (deterministic) — provisional
+### JC-017 · 2026-07-02 · TKT-P0-06 · Pushbox mutual separation splits the overlap in half, odd remainder to player 1 (deterministic) — ratified
 **Decided.** When two pushboxes overlap horizontally (phase 3), each is pushed out by
 half the overlap along x; an odd remainder goes to player 1 (`rem = overlap - half`),
 so the split is exact-integer and deterministic. Stage walls are then clamped so each
@@ -454,8 +492,18 @@ and deterministic (the hash stays stable). Pure movement resolution, no feel val
 beyond "characters don't overlap," localized to `_resolve_stage_and_pushboxes`. At the
 FP scale (2^16 sub-units) a 1-subunit remainder is sub-pixel and invisible; the rule
 exists only to keep the math exact.
+**Ratified as latitude — with one caveat for QA** (Architect, 2026-07-03). Scrutinized
+as a possible owned rule: the split touches `position`, which is hashed, so any
+re-implementation that splits differently changes the hash. But there is no feel value
+beyond "characters don't overlap," and the odd-remainder-to-P1 is a 1-sub-unit
+(sub-pixel) tiebreak that exists only to keep the integer split exact and deterministic.
+That is genuine movement-resolution latitude, not a contract multiple roles design
+against. The one consequence: **QA determinism goldens will lock this specific
+deterministic split** (it feeds the hash), so it must not drift silently — a later
+different pushout is a conscious change with a golden update, not a quiet edit.
+Recorded in decisions.md (JC-013..021 block). No new AD, no code change.
 
-### JC-018 · 2026-07-02 · TKT-P0-07 · `neutral_restored_this_tick` is a RISING EDGE: both-actionable now AND not both-actionable at the start of this tick — provisional
+### JC-018 · 2026-07-02 · TKT-P0-07 · `neutral_restored_this_tick` is a RISING EDGE: both-actionable now AND not both-actionable at the start of this tick — ratified into spec (AD-025)
 **Decided.** Phase 6 sets `neutral_restored_this_tick = both_actionable(post-phase-5
 state) AND NOT both_actionable(input state)`. The pre-step both-actionable condition is
 captured from `step`'s INPUT state before any mutation; the post condition after hit
@@ -479,8 +527,18 @@ not spuriously fire because both were already actionable the prior tick. Localiz
 phase 6 + the one `prev_both_actionable` capture in `step`. Recorded as latitude: it
 implements criterion 5's stated semantics exactly; if the Architect intends a different
 edge convention it is a one-line change in phase 6.
+**Ratified INTO the spec (AD-025)** (Architect, 2026-07-03). This was correctly
+scrutinized as contract-adjacent, not pure latitude: multiple roles read
+`neutral_restored` (debug mode, QA harness, player-facing UI), and "become actionable"
+is a semantics call the whole legibility surface depends on. The rising-edge reading is
+the only one that satisfies combat-resolution.md criterion 5's "not before, not after,"
+so it is now an OWNED rule in **AD-025** and stated in combat-resolution.md's neutral
+bullet. The "no extra serialized field — the input state IS last tick's state" insight
+is folded in too (keeps SimState minimal, AD-001). Implementation as written matches.
+This is the history-of-under-classification pattern (JC-007 → AD-023) caught correctly
+this time: contract-adjacent → owned rule, not a standing dev call.
 
-### JC-019 · 2026-07-02 · TKT-P0-06 · A looping state wraps `frame_in_state` modulo its duration — provisional
+### JC-019 · 2026-07-02 · TKT-P0-06 · A looping state wraps `frame_in_state` modulo its duration — ratified
 **Decided.** In phase 2, a LOOPING state (idle/walk, `loop == true`) whose
 `frame_in_state` advances past `duration` wraps back into `[1, duration]`
 (`((f-1) % duration) + 1`). Once-through moves do not wrap (they end and return to idle).
@@ -507,8 +565,19 @@ stun state CLAMPS `frame_in_state` at `duration` rather than wrapping (a reactio
 not loop its animation). Same "keep frame_in_state inside the authored keyframe range"
 principle; clamp (not wrap) because a reaction plays once and then holds. Localized to
 the same phase-2 advance; a different convention is a one-line change here.
+**Ratified as latitude** (Architect, 2026-07-03). Scrutinized as a possible owned rule
+(it is a frame-model behavior content and QA build against). But both halves are the
+unique reading that keeps `frame_in_state` inside the authored keyframe range so
+derived box resolution stays correct every tick — a loop that grew unbounded would lose
+its hurtbox after `duration`; a stun that outlasts its reaction's authored span needs
+the hurtbox held so the defender stays a valid combo target (TKT-P0-09). move-format.md
+already fixes `loop` ("duration loops or plays once"); wrap-for-loop / clamp-for-stun is
+filling that named mechanism, not a new choice, and is 1-indexed consistent with
+JC-011/JC-014. This completes the coherent 1-indexed frame model (JC-011/14/19). No new
+contract surface beyond move-format.md's existing `loop`; disposition in decisions.md.
+No code change.
 
-### JC-020 · 2026-07-03 · F-006 (test fix) · `test_inspection_view` reads hitstop_remaining against the sim's own post-step value, and pins the corrected constant (3→2) — provisional
+### JC-020 · 2026-07-03 · F-006 (test fix) · `test_inspection_view` reads hitstop_remaining against the sim's own post-step value, and pins the corrected constant (3→2) — ratified (test-only latitude)
 **Decided.** In `test_inspection_view.gd` `_test_core_reads`, the "PlayerView.
 hitstop_remaining reads state" check now asserts `pv.hitstop_remaining ==
 s.players[0].hitstop` (the view equals the sim's own post-step value — the test's
@@ -530,8 +599,16 @@ one per tick — and satisfy a stale test at the cost of correctness; rejected).
 equality to the sim's own field tests exactly that without duplicating countdown logic;
 the added literal `2` keeps the number legible and pinned to the traced spec value.
 **Boundary.** TEST-ONLY. No sim code touched; the sim was already spec-correct.
+**Ratified as test-only latitude** (Architect, 2026-07-03). No sim code touched; the
+sim was already spec-correct (hitstop counts down one per tick, AD-010/criterion 4).
+Asserting the view against the sim's own post-step field tests the intended
+single-source property without re-encoding the countdown, and the pinned literal `2`
+is the correctly-traced value (pre-set 3, `was_frozen` gate decrements once). This is
+QA-territory test correctness but the fix is unambiguous and contract-neutral — nothing
+to fold. Note for QA: the underlying F-006 is Developer-owned; this ruling covers only
+the JC latitude, not that flag's resolution. No spec change.
 
-### JC-021 · 2026-07-03 · F-007 (test fix) · `test_combat` phase-presence check uses `Callable(StepPhases, name).is_valid()` instead of instance `has_method` on the class — provisional
+### JC-021 · 2026-07-03 · F-007 (test fix) · `test_combat` phase-presence check uses `Callable(StepPhases, name).is_valid()` instead of instance `has_method` on the class — ratified (test-only latitude)
 **Decided.** In `test_combat.gd` `_test_phase_order_is_load_bearing`, the four
 "phase N is a named function" structural checks now bind each phase name as
 `Callable(StepPhases, "phaseN").is_valid()` instead of `StepPhases.has_method("phaseN")`.
@@ -550,3 +627,10 @@ criterion 2 points at); reflect via `get_method_list()` (more code, same result)
 function of the pipeline — while parsing under Godot 4's static/instance rules, and it
 matches an idiom already in the codebase (consistency).
 **Boundary.** TEST-ONLY. No sim code touched.
+**Ratified as test-only latitude** (Architect, 2026-07-03). Consistent with JC-013's
+`StepPhases` all-static never-instantiated module: `Callable(cls, name).is_valid()` is
+the correct static-presence idiom under Godot 4 (instance `has_method` on the class
+reference is rejected), and it restored the whole file's phase-pipeline checks that the
+parse failure had blocked. Tests exactly criterion 2's "each phase is a named function"
+intent, matches an existing codebase idiom, no sim code touched. Note for QA: F-007 is
+Developer-owned; this covers only the JC latitude. No spec change.

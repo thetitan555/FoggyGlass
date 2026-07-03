@@ -33,6 +33,38 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-021** Projectiles are first-class serialized sim entities — settled
 - **AD-022** Input buffer: 9f motion window, 6f command buffer — settled
 - **AD-023** Canonical state hash: ordered FNV-1a over an integer value stream — settled
+- **AD-024** Inspection-backing SimState fields + `MoveRegistry` authored-data model — settled
+- **AD-025** `neutral_restored_this_tick` is a rising edge — settled
+- **AD-026** Single-hit across active frames via per-attacker `active_hit_ids` — settled
+- **AD-027** AABB overlap is strict (touching edges do not overlap) — settled
+
+## Phase-pipeline latitude ratifications (JC-013..021)
+
+These P0-06/07 judgment calls were ratified as *internal latitude* — correct
+builds of what the spec already decided, folded here (or ruled test-only) rather
+than adding contract surface. Full reasoning lives in `judgment-log.md`; this note
+records the disposition so future work inherits it. **JC-013** phase pipeline as a
+`StepPhases` all-static module, one named function per AD-009 phase (packaging;
+`step`'s signature unchanged; the named-function order is what criterion 2's
+reorder-to-fail test points at). **JC-014** a freshly-entered state sits on
+`frame_in_state = 1` the entry tick and phase 2 skips the advance for a same-tick
+entry (the unique 1-indexed reading where a move's first authored frame is neither
+skipped nor doubled; ties to JC-011/JC-019). **JC-016** damage scaling is one
+`DamageScaling` definition; the specific 10%-step/10%-floor numbers are
+slice-provisional placeholder tuning (the *mechanism* is AD-008/combat-resolution
+contract; the numbers are the Strategist's to set via the spec — the done-bar's
+single hit is hit-count-1 ⇒ 100% ⇒ unscaled, insensitive to the table). **JC-017**
+pushbox mutual separation splits the overlap in half with the odd remainder to P1
+(deterministic exact-integer pushout; sub-pixel at FP scale; movement-only, no feel
+value beyond "characters don't overlap"). **JC-019** a looping state wraps
+`frame_in_state` modulo duration; a stun-category state *clamps* at duration (keeps
+the resolved keyframe range valid through a stun that outlasts the reaction's
+authored span — needed for the defender to stay a valid combo target, TKT-P0-09).
+**JC-020 / JC-021** test-only fixes (hitstop countdown expectation 3→2 against the
+sim's own post-step value; `Callable(StepPhases, name).is_valid()` for static-module
+phase-presence checks) — no sim code touched, pure test latitude. **JC-015** and
+**JC-018** were contract-adjacent and are ratified into owned rules — see AD-015
+note / AD-025 respectively.
 
 ---
 
@@ -407,3 +439,108 @@ Godot `hash()` (order/stability-dependent, per Prohibited above).
 **Note.** If QA (TKT-P0-11) needs to revise the algorithm for harness reasons, that
 is a revision to *this AD*, not a silent code change — the canonical hash is one
 owned definition both sides read.
+
+### AD-024 · Inspection-backing SimState fields + `MoveRegistry` authored-data model — settled (2026-07-03, ratified from F-002 + F-004)
+**Decision.** Two related contract questions the P0 batch-1 build surfaced —
+*what serialized state backs the inspection surface*, and *how the pure `step`
+reaches authored move data* — are settled together because they share one
+principle (mutable sim truth lives in `SimState`; fixed authored content does not).
+
+- **Inspection-backing fields (F-002).** The reads the inspection surface requires
+  are backed by serialized `SimState` fields, ratified into the tables in
+  `simulation.md`: `players[i].character_id` (int), `players[i].stun_kind`
+  (int 0/1/2), the combo triple `combo_hits` / `combo_scaling` (FP multiplier) /
+  `combo_damage` (whole units, backs `PlayerView.combo.damage_total`),
+  `SimState.last_hit` (a plain `HitRecord` or null — the sim-side truth the
+  `HitEvent` view projects), and `SimState.neutral_restored_this_tick` (bool —
+  see AD-025). All are serialized (`to_dict`/`from_dict`, `last_hit` null ⇒
+  empty-dict marker), deep-cloned, and covered by the canonical hash: `last_hit`
+  is folded behind a presence flag (0/1) so no-hit vs. hit states cannot collide,
+  and its integer fields fold in a fixed `HASH_FIELDS` order — this is `last_hit`'s
+  canonical-hash treatment under AD-023's total-coverage requirement.
+- **Authored-data model (F-004).** `step` resolves authored move data through a
+  **process-wide immutable roster** (`MoveRegistry`), installed once at
+  match/scenario/test wiring and never mutated mid-run — model (a). `step`'s
+  signature stays exactly `(state, in_p1, in_p2)`; the roster is *not* threaded
+  through it. `players[i].character_id` is the resolution key.
+
+**Why.** The inspection contract already *implied* these reads; naming their
+serialized shape in the owned table (not leaving them an implementation accident)
+is what lets QA golden them and future systems build against them. The registry
+model keeps `step`'s signature the `simulation.md` contract, matches AD-001
+("SimState is the minimal *mutable* graph — authored content is not sim state"),
+and mirrors how input *sources* live outside `SimState` (Tenet 2): authored
+content is a fixed input to the whole sim, carries no per-tick state, so
+snapshot/restore/replay reproduces identically. Settling both together records the
+shared bar — *mutable* truth in state, *fixed* content out of it — that governs
+future table additions (see `simulation.md`, "extensible-as-systems-land").
+**Rejected.** Threading the roster through `step` as a parameter (model (b) — makes
+the data dependency visible in the signature, but changes the `simulation.md`
+contract signature for no determinism gain; the immutable-roster invariant gives
+the same guarantee). Re-deriving inspection reads on the fly without backing state
+(the values — combo totals, last hit, stun kind, neutral edge — are genuine
+mutable sim truth that must survive snapshot/restore and be hashed; deriving them
+would either lose them across restore or duplicate logic).
+**Risk (recorded).** A process-wide static roster is global state: a mis-wired or
+mid-run-mutated roster is a determinism hazard the type system does not prevent.
+Mitigated by contract — `install` is documented once-at-wiring, `clear` is
+test-only isolation. QA should assert the roster is installed before the first
+`step` and unchanged across a run.
+
+### AD-025 · `neutral_restored_this_tick` is a rising edge — settled (2026-07-03, ratified from JC-018)
+**Decision.** `SimState.neutral_restored_this_tick` is set true by phase 6 on
+exactly the tick the pair *transitions* to both-actionable:
+`both_actionable(post-phase-5 state) AND NOT both_actionable(step's input state)`.
+The pre-step condition is read from `step`'s **input** state — which *is* last
+tick's state — so the edge needs no extra serialized field. The flag is true on
+exactly the transition tick and false every other tick, including match start
+(both were already actionable the prior tick, so no rising edge fires).
+**Why.** `combat-resolution.md` criterion 5 requires the flag "exactly on the tick
+both players become actionable — not before, not after." "Become actionable" *is*
+a rising edge; flagging whenever both are actionable would fire every tick after
+neutral returns (violates "not after"). Using the input state as the prior
+condition keeps `SimState` minimal (AD-001) — no stored "was-neutral-last-tick"
+field — since the input state already carries last tick's actionability.
+**Rejected.** Flagging on the level (both-actionable), not the edge (fires every
+subsequent tick); storing a separate prior-condition field (redundant — the input
+state already is last tick's state); comparing against post-phase-7 counters
+(shifts the edge by one tick, off by the counter decrement).
+
+### AD-026 · Single-hit across active frames via per-attacker `active_hit_ids` — settled (2026-07-03, ratified from F-005)
+**Decision.** "One hit per `id_group` per contact" (AD-016) across a multi-frame
+active window is enforced by per-attacker memory of the `id_group`s that have
+already connected during the *current* move: `players[i].active_hit_ids`
+(`PackedInt32Array`), serialized/cloned/hashed as a variable-length run
+(count-then-ids, order-committing per AD-023). A hitbox whose `id_group` is present
+does not re-hit. The set is **cleared on every state entry** — a new move is a new
+contact. Cadenced re-hit (`rehit_interval` > 0, AD-016) consults this same memory
+with an interval (TKT-P0-09); with `rehit_interval` unset it stays populated for
+the move's life ⇒ one hit per contact.
+**Why.** A hitbox is active for its whole active window (and every frozen hitstop
+tick); without per-attacker memory the same hitbox re-connects every active frame,
+registering 2–3 hits and inflating the combo — which would break the done-bar's
+"one hit" assertion. The memory must be *serialized state* so the single-hit
+decision survives snapshot/restore and is deterministic (hashed). Per-attacker and
+cleared-on-state-entry is the minimal correct scope: the group identity is
+per-attack, and a fresh move is definitionally a fresh contact.
+**Rejected.** Keying single-hit on the `last_hit` record (couples per-target
+tracking to one global last-hit; wrong for simultaneous/multiple groups); a
+per-move-instance token not in serialized state (would not survive restore — a
+determinism hole); no memory (re-hits every active frame — the defect above).
+
+### AD-027 · AABB overlap is strict; touching edges do not overlap — settled (2026-07-03, ratified from F-003)
+**Decision.** The AABB overlap test (AD-012, our own integer box test) is
+**strict**: boxes that merely *touch* — share an edge, e.g. `a.x + a.w == b.x` —
+do **not** overlap. `ResolvedBox.overlaps` uses strict `<` / `>` on all four
+edges. A hitbox exactly adjacent to a hurtbox does not register a hit.
+**Why.** This is the common fighting-game convention and a hit/no-hit resolution
+rule multiple roles build against (content authoring, QA goldens on hitbox
+geometry). Left unpinned it is determinism- and feel-relevant and could read
+materially differently between implementations, so it is an owned rule, not an
+implementation accident. Strict adjacency keeps exact-touch from counting as a
+connect, matching how box geometry is authored (a hitbox reaching *to* a hurtbox's
+edge has not yet reached *into* it).
+**Rejected.** Inclusive overlap (touching counts as a hit) — a legitimate
+alternative for feel, but off-convention and would make exact-adjacency author
+into surprise connects; if feel ever wants it, it is a one-line change in
+`ResolvedBox.overlaps` and a revision to this AD, not a silent code change.

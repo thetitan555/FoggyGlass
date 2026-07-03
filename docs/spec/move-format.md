@@ -134,7 +134,9 @@ way, so two characters can't disagree about what "startup" or "advantage" means.
    different but correctly-derived frame data through the same code path (the
    format is not "character-A-shaped").
 5. **Single-hit integrity.** Overlapping hitboxes sharing an `id_group` register
-   one hit, not several.
+   one hit, not several — including across a multi-frame active window, enforced by
+   per-attacker `active_hit_ids` memory cleared on state entry (AD-026). AABB
+   overlap is strict (touching edges do not overlap, AD-027).
 6. **One pattern.** Every character's states declare a valid engine-level
    `category`; no character introduces a state machine outside this pattern.
 7. **Typed cancels.** A `MoveState`'s cancels are a list of `CancelRule`s; a

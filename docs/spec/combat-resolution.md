@@ -23,7 +23,9 @@
    and process any `spawn` actions firing this tick (subject to the per-owner cap).
 4. **Overlap detection.** Resolve each character's active hitboxes/hurtboxes/
    throwboxes from move data (derived, not stored) and test AABB overlaps. Include
-   live projectile hitboxes vs. the opponent's hurtbox (AD-021).
+   live projectile hitboxes vs. the opponent's hurtbox (AD-021). Overlap is
+   **strict**: boxes that merely *touch* (share an edge, `a.x + a.w == b.x`) do
+   **not** overlap — a box exactly adjacent to a hurtbox does not register (AD-027).
 5. **Hit resolution.** For each confirmed hit (respecting `id_group` single-hit,
    or `rehit_interval` for cadenced multi-hit), apply damage (after scaling), set
    the defender's `hit_reaction`/`block_reaction` state, set stun, set hitstop on
@@ -108,8 +110,13 @@ the pressure/combo cases legibility most depends on. The static value answers
 
 - Positive ⇒ attacker is actionable first (plus); negative ⇒ defender acts first
   (the punish window).
-- **Neutral restored** = the tick at which *both* players are actionable; the
-  inspection surface flags this so "when neutral returns" is observable.
+- **Neutral restored** = the *rising edge* — the tick at which *both* players
+  *become* actionable (both-actionable now AND not both-actionable at the start of
+  this tick), not merely any tick both happen to be actionable (AD-025). The
+  pre-step condition is read from `step`'s input state (which *is* last tick's
+  state), so no extra serialized field is needed. `neutral_restored_this_tick` is
+  false on every other tick, including match start (both were already actionable).
+  The inspection surface flags this so "when neutral returns" is observable.
 - One function, no per-move or per-character variant — the consistency guard.
 
 ## Combo & damage accounting
@@ -135,6 +142,13 @@ the pressure/combo cases legibility most depends on. The static value answers
 
 - **Sequential** multi-hits are authored as distinct hitboxes in distinct
   `id_group`s across timeline keyframes; each lands once by the single-hit rule.
+- **Single-hit across active frames.** "One hit per group per contact" (AD-016) is
+  enforced by per-attacker memory of the `id_group`s already connected during the
+  *current* move — `players[i].active_hit_ids` (AD-026), cleared on every state
+  entry (a new move is a new contact). A hitbox whose `id_group` is present does
+  not re-hit, so a multi-frame active window (and every frozen hitstop tick) lands
+  one hit, not one per active frame. Cadenced re-hit (`rehit_interval` > 0)
+  consults this same memory with an interval (TKT-P0-09).
 - **Cadenced** rehits use a hitbox's `rehit_interval`: after it hits a target,
   the same `id_group` may hit that target again only once `rehit_interval` frames
   have elapsed — no hit on the frames between.

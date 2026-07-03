@@ -125,6 +125,15 @@ The default is a gameplay-flavored choice the Strategist may revisit; the
 *mechanism* (single sim-side function, source-agnostic) is the architectural
 commitment.
 
+**One derivation for SOCD + facing (ratified, JC-015).** SOCD normalization and
+the raw-L/R → forward/back facing conversion (AD-002/AD-003, sim-side) are the
+*same* single derivation: one function cleans the raw frame and maps it to a
+facing-relative intent the state machine reads by meaning. The **raw** frame is
+still pushed to `input_history` unchanged (only the derived intent is cleaned), so
+replay fidelity holds (AD-003). No consumer re-normalizes; there is exactly one
+normalization point, as required above. This is the ratified home for the rule —
+if the default changes, it changes only here.
+
 ## Acceptance criteria (QA-checkable)
 
 1. **Round-trip.** An `InputFrame` serialized and restored is bit-identical.

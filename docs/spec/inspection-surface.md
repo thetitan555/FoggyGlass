@@ -85,6 +85,9 @@ InspectionView (read-only over the current SimState):
 | `neutral_restored` | True on the tick both players become actionable. |
 
 ### `HitEvent`
+The seam-side projection of `SimState.last_hit` (a plain `HitRecord`, AD-024). The
+sim owns the record; this view is read-only over it.
+
 | Field | Meaning |
 |---|---|
 | `attacker`, `defender` | Player indices. |

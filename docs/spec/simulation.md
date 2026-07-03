@@ -33,6 +33,20 @@ Contract:
 - The internal phase order `step` runs is fixed and specified in
   `combat-resolution.md` (AD-009).
 
+**Authored move data is a fixed input, not a `step` parameter (AD-024).** The
+phase pipeline resolves each player's `Character` (boxes, transitions, frame
+data) through a process-wide **immutable roster** (`MoveRegistry`), installed
+once at match/scenario/test wiring and never mutated mid-run — *not* threaded
+through `step`'s signature, which stays exactly `(state, in_p1, in_p2)`. This is
+the same reasoning that keeps input *sources* external and out of `SimState`
+(AD-001): authored content is a fixed input to the whole simulation, carries no
+per-tick state, and so a snapshot/restore/replay reproduces identically because
+the same immutable roster is present. The `character_id` in each `players[i]` is
+the key the pipeline resolves against. `step` therefore remains a pure function
+of `(state, inputs)` *given the installed roster*; the roster is a determinism
+precondition, and mutating it mid-run is a determinism hazard the wiring layer
+must not commit (AD-024).
+
 ## `SimState` — the serializable root
 
 A single plain-data graph (Dictionaries / typed Resources / packed arrays — no
@@ -45,23 +59,42 @@ live node references). Top-level fields:
 | `players[2]` | Per-player state (below). |
 | `projectiles` | List of live projectile entities (AD-021) — owner, fixed-point position/velocity, hit data, lifetime. Capped at one per owner for the slice. Empty when none are out. |
 | `stage` | Bounds / wall positions / any stage state affecting the sim. |
+| `last_hit` | The most recently resolved hit as a plain serialized `HitRecord`, or null if none has resolved this run (AD-024). Backs `InspectionView.last_hit()`; distinct from the seam-side `HitEvent` view it projects to. Serialized (null ⇒ empty-dict marker), deep-cloned, hashed with a presence flag (AD-023, AD-024). |
+| `neutral_restored_this_tick` | Bool. Set by phase 6 exactly on the tick both players *transition* to actionable (rising edge — AD-025), cleared every other tick. Backs `AdvantageView.neutral_restored`. Serialized (as 0/1), cloned, hashed. |
 
 Per-player state (`players[i]`):
 
 | Field | Notes |
 |---|---|
 | `position`, `velocity` | Fixed-point integers (AD-005, AD-014) — never floats. |
+| `character_id` | Which `Character` this player is (`move-format.md` → `Character.id`); the sim and inspection surface resolve this player's move data / boxes / frame data against it. Plain int. Sim-side authored-data resolution goes through `MoveRegistry` (AD-024); `character_id` is the key. |
 | `facing` | Which way the character faces; the raw→forward/back conversion uses this. |
 | `health` | Current health. |
 | `state_id`, `frame_in_state` | Current state-machine state and the frame within it (see `move-format.md`). |
 | `hitstop` | Remaining hitstop frames (AD-010). |
 | `stun` | Remaining hitstun/blockstun frames; `0` = actionable. |
-| `combo` | Hit count + current damage-scaling state. |
+| `stun_kind` | Which kind of stun: `0` none / `1` hit / `2` block (backs `PlayerView.stun_kind`). Set by hit resolution (phase 5), cleared when stun expires. Plain int (AD-024). |
+| `combo` | Hit count + current damage-scaling state + cumulative combo damage. Carried as three plain ints: `combo_hits`, `combo_scaling` (FP-scaled multiplier, AD-014 — starts `FP.ONE`), `combo_damage` (whole units, backs `PlayerView.combo.damage_total`). (AD-024.) |
+| `active_hit_ids` | Per-attacker single-hit memory: the hitbox `id_group`s that have already connected during this player's *current* move (`PackedInt32Array`). A hitbox whose `id_group` is present does not re-hit, so a multi-frame active window lands one hit — not one per active frame (AD-016, "one hit per group per contact"). Cleared on every state entry. Serialized as a variable-length run (count-then-ids, order-committing per AD-023), cloned, hashed. Cadenced re-hit (`rehit_interval` > 0) is TKT-P0-09 and consults this same set with an interval. (AD-026.) |
 | `input_history` | Ring buffer of recent raw `InputFrame`s — the substrate buffering/motion recognition reads (AD-003). |
 
 **Derived, not stored (AD-001 / AD-005).** Active hitbox/hurtbox geometry is
 *computed each tick* from move data + `(state_id, frame_in_state, facing,
 position)` — not persisted. State stays minimal and single-sourced.
+
+**The SimState table is extensible-as-systems-land, not presumed-complete.**
+This table enumerates the fields P0 batch 1 established; it is *not* frozen. As a
+new system lands (buffer/cancels, throws, meter, later mechanics) it may require
+new *mutable, per-tick* state, and the defined home for that state is this table
+— added here with name/type/serialization/hash treatment, under an AD, at the
+ratification pass for the ticket that introduces it. The bar for adding a field
+is unchanged and strict: a value belongs in `SimState` only if it is **mutable
+sim truth that must survive snapshot/restore and be covered by the canonical
+hash** (AD-023). Anything derivable each tick stays derived (AD-001); anything
+that is fixed authored content stays out of state (AD-024, `MoveRegistry`);
+anything owned by an input *source* stays external (Tenet 2). A field that clears
+this bar is a ratified table addition, not a flag — flag only when the *shape* or
+hash treatment is genuinely in question.
 
 ## Serialization
 
