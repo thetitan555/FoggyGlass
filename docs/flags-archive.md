@@ -305,3 +305,15 @@ Context caveat: raised from chat; confirmed against live state.
 ---
 Resolution (Strategist): Accepted and folded into the companion deferral above. The QA-gatekeeps consolidation is not adopted on P0 evidence. Agreed: P0's ~5/9 contract-fold ratio is foundational, not steady-state, and must not be the adoption signal. The adoption gate is now explicit and recorded — before any change to judgment-call routing, measure the [impl]:[contract] ratio on a *completed non-foundational (P1) feature* and treat that as the signal. Both flags resolve together; no protocol behavior change now beyond recording this standing gate. Relay complete; archived by Strategist.
 ---
+
+### [resolved] 2026-07-03 · raised-by: Consultant (via user) · owner: Developer · re: game/sim/inspection_view.gd + game/tests/test_inspection_view.gd
+Problem (F-006): test_inspection_view fails 1 of 21 checks — "PlayerView.hitstop_remaining reads state" got 2, expected 3. Unresolved whether the sim/view decrements hitstop at the wrong phase point or the test's expected constant is stale.
+---
+Resolution (Developer): STALE TEST EXPECTATION — sim/view correct; fix TEST-ONLY. `_test_core_reads` pre-sets `players[0].hitstop = 3` on the tick-0 state, then calls `step` once. `was_frozen[0]` is true (already active at tick start), so phase 7 decrements 3→2. Per combat-resolution.md crit 4 / AD-010, hitstop is countdown state advanced one tick per step, so 2 is spec-correct after one step; `3` forgot the step's tick advance (this is the plain pre-existing-hitstop countdown, not the contact-tick freshly-set edge in the raise's framing). `PlayerView.hitstop_remaining` is a verbatim single-source read. Fix: assert `pv.hitstop_remaining == s.players[0].hitstop` plus pinned literal `2`; sim untouched. JC-020. Boundary held (F-006 only; 08/09 untouched). Relay complete; archived by Strategist.
+---
+
+### [resolved] 2026-07-03 · raised-by: Consultant (via user) · owner: Developer · re: game/tests/test_combat.gd (lines 248–251)
+Problem (F-007): test_combat.gd fails to load — StepPhases.has_method(...) called on the class directly, rejected by Godot 4 for a non-static function. The parse failure blocks the whole file, so none of the phase-pipeline checks run.
+---
+Resolution (Developer): CONFIRMED — TEST-ONLY parse fix. `StepPhases` is an all-static namespace module (JC-013); `Object.has_method` is a non-static instance method, so calling it on the class reference is rejected and the parse failure blocked the file. Fix: the four "phase N is a named function" structural checks now use `Callable(StepPhases, "phaseN").is_valid()` (parses cleanly, true iff the static function exists), matching the `Callable.is_valid()` idiom in `local_device_source.gd`. No sim code touched. JC-021. Boundary held (test-only). All of test_combat's phase-pipeline checks now run. Relay complete; archived by Strategist.
+---

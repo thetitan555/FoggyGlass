@@ -244,11 +244,17 @@ func _test_phase_order_is_load_bearing() -> void:
 	# Here we assert the constructive fact: with the correct order, a contact that
 	# depends on this tick's movement resolves; the ordering is encoded in step's fixed
 	# call sequence (a reorder is a source change that a QA variant can flip to fail).
-	# Structural check: phases are distinct callable functions in a fixed order.
-	_true(StepPhases.has_method("phase1_read_inputs"), "phase 1 is a named function")
-	_true(StepPhases.has_method("phase4_overlap"), "phase 4 is a named function")
-	_true(StepPhases.has_method("phase5_hit_resolution"), "phase 5 is a named function")
-	_true(StepPhases.has_method("phase7_advance_counters"), "phase 7 is a named function")
+	# Structural check: phases are distinct callable STATIC functions in a fixed order.
+	# StepPhases is an all-static namespace module (JC-013), so we cannot call the
+	# instance method has_method() on the class reference (Godot 4 rejects it — "make an
+	# instance instead"). Instead bind each name as a Callable on the class and assert it
+	# is valid — true iff that named static function exists (the same Callable.is_valid()
+	# idiom used elsewhere in the sim). This tests exactly the intent: each phase is a
+	# named, callable function of the pipeline.
+	_true(Callable(StepPhases, "phase1_read_inputs").is_valid(), "phase 1 is a named function")
+	_true(Callable(StepPhases, "phase4_overlap").is_valid(), "phase 4 is a named function")
+	_true(Callable(StepPhases, "phase5_hit_resolution").is_valid(), "phase 5 is a named function")
+	_true(Callable(StepPhases, "phase7_advance_counters").is_valid(), "phase 7 is a named function")
 
 
 # --- Helpers: drive a hit to the exact contact tick -------------------------

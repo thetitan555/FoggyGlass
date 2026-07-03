@@ -88,8 +88,15 @@ func _test_core_reads() -> void:
 	_eq(view.tick(), 1, "tick() reads state.tick")
 	var pv: PlayerView = view.player(0)
 	_eq(pv.health, 777, "PlayerView.health reads state")
-	_eq(pv.stun_remaining, 12, "PlayerView.stun_remaining reads state")
-	_eq(pv.hitstop_remaining, 3, "PlayerView.hitstop_remaining reads state")
+	# stun holds at 12: hitstop was positive at tick start, so phase 7 freezes stun
+	# (combat-resolution.md criterion 4 — stun does not advance while hitstop > 0).
+	_eq(pv.stun_remaining, 12, "PlayerView.stun_remaining reads state (frozen under hitstop)")
+	# hitstop of 3 was ALREADY active at tick start (was_frozen), so the one step counts
+	# it down by one to 2 (combat-resolution.md criterion 4: hitstop is countdown state the
+	# loop advances one tick per step; AD-010). The view reads whatever the sim holds — the
+	# single-source check is that the view equals the sim's own post-step value, below.
+	_eq(pv.hitstop_remaining, s.players[0].hitstop, "PlayerView.hitstop_remaining reads state (single source)")
+	_eq(pv.hitstop_remaining, 2, "hitstop counted down one tick (pre-set 3 -> 2 after one step)")
 	_eq(pv.position["x"], FP.from_int(-50), "PlayerView.position.x reads state (fixed-point)")
 	_eq(pv.state_id, 4, "PlayerView.state_id reads state")
 	_eq(pv.frame_in_state, 6, "PlayerView.frame_in_state reads state")

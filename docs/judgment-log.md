@@ -507,3 +507,46 @@ stun state CLAMPS `frame_in_state` at `duration` rather than wrapping (a reactio
 not loop its animation). Same "keep frame_in_state inside the authored keyframe range"
 principle; clamp (not wrap) because a reaction plays once and then holds. Localized to
 the same phase-2 advance; a different convention is a one-line change here.
+
+### JC-020 · 2026-07-03 · F-006 (test fix) · `test_inspection_view` reads hitstop_remaining against the sim's own post-step value, and pins the corrected constant (3→2) — provisional
+**Decided.** In `test_inspection_view.gd` `_test_core_reads`, the "PlayerView.
+hitstop_remaining reads state" check now asserts `pv.hitstop_remaining ==
+s.players[0].hitstop` (the view equals the sim's own post-step value — the test's
+stated single-source intent) plus a pinned literal check that the value is `2`. The
+old expectation of `3` was stale.
+**Serves.** F-006 (owner: Developer); combat-resolution.md criterion 4 + AD-010
+(hitstop is countdown state the loop advances one tick per step). Verified against live
+code: the test pre-sets `hitstop = 3` on the tick-0 state, so `was_frozen[0]` is true in
+`step`, and phase 7 decrements the already-active hitstop by one — 3→2 after one step.
+Two is the spec-correct value; 3 forgot that `step` advances one tick. (This is NOT the
+contact-tick freshly-set-hitstop edge the Strategist described — it is the plainer
+pre-existing-hitstop countdown; the `was_frozen` gate correctly decrements it.)
+**Alternatives passed over.** Just flip the literal 3→2 (works, but a bare hand-computed
+constant re-encodes the decrement and drifts again if the read point moves — the
+`== s.players[0].hitstop` form makes the single-source check immune to it); change the
+sim to leave a pre-set hitstop at 3 (would violate criterion 4 — hitstop must count down
+one per tick — and satisfy a stale test at the cost of correctness; rejected).
+**Why.** The check's purpose is "the view reads the sim's own value," so asserting
+equality to the sim's own field tests exactly that without duplicating countdown logic;
+the added literal `2` keeps the number legible and pinned to the traced spec value.
+**Boundary.** TEST-ONLY. No sim code touched; the sim was already spec-correct.
+
+### JC-021 · 2026-07-03 · F-007 (test fix) · `test_combat` phase-presence check uses `Callable(StepPhases, name).is_valid()` instead of instance `has_method` on the class — provisional
+**Decided.** In `test_combat.gd` `_test_phase_order_is_load_bearing`, the four
+"phase N is a named function" structural checks now bind each phase name as
+`Callable(StepPhases, "phaseN").is_valid()` instead of `StepPhases.has_method("phaseN")`.
+**Serves.** F-007 (owner: Developer); JC-013 (`StepPhases` is an all-static namespace
+module). `has_method` is a non-static `Object` method; calling it on the `StepPhases`
+class reference is rejected by Godot 4 ("make an instance instead"), and the parse
+failure blocked the ENTIRE file so none of its phase-pipeline checks ran. `Callable(cls,
+name).is_valid()` parses cleanly and is true iff the named static function exists — the
+same `Callable.is_valid()` idiom already used in `local_device_source.gd`.
+**Alternatives passed over.** Instantiate `StepPhases` and call `has_method` on the
+instance (contradicts JC-013's never-instantiated static module, and the phases are
+static so an instance is meaningless); drop the structural checks and rely only on the
+behavioral phase tests (loses the explicit "each phase is a named function" assertion
+criterion 2 points at); reflect via `get_method_list()` (more code, same result).
+**Why.** The idiom tests exactly the original intent — each phase is a named, callable
+function of the pipeline — while parsing under Godot 4's static/instance rules, and it
+matches an idiom already in the codebase (consistency).
+**Boundary.** TEST-ONLY. No sim code touched.
