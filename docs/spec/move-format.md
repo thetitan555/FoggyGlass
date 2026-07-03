@@ -107,6 +107,7 @@ per-keyframe unless a move overrides it.
 | `id_group` | Groups hitboxes of one attack so a single attack hits once (no multi-count from overlapping boxes). |
 | `rehit_interval` | Optional (AD-016). If set, this `id_group` may hit the same target again after this many frames — the cadenced multi-hit form. Unset ⇒ one hit per contact. |
 | `throwbox` flag | A `HitBox`/`Box` may be marked a throw (AD-016): on connect it bypasses blockstun and enters the throw resolution path (see `combat-resolution.md`). |
+| `tech_window` | Throw-only (AD-029). Frames the thrown defender may tech after this throwbox connects (AD-016 tech window). Meaningful only when the throwbox flag is set — a throw is never blocked, so it carries no `blockstun`; the tech window is its own authored feel value, **not** `blockstun` reuse. `0` on a non-throw box. |
 
 ## Derived frame data (one canonical definition — AD-008)
 

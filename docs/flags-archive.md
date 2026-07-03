@@ -473,3 +473,87 @@ Problem: test_buffer_cancels fails 1 of 26 checks — a whiffed LIGHT grants no 
 ---
 Resolution (Developer, 2026-07-03): NOT a sim bug — "gate not enforced" premise corrected. `cancel_eval.gd::find_cancel` enforces requires_tag correctly, and for a whiffed LIGHT the ON_CONTACT condition ALSO rejects the cancel (`move_contact == CONTACT_WHIFF`, set step_phases phase 2). The cancel never leaked. Real cause: a CONTAMINATED TEST SCENARIO — SPECIAL is directly reachable from neutral via the BUTTON_1 button_map entry (`test_support.gd _map(1,0,0,STATE_SPECIAL)`), so feeding BUTTON_1 for 20 ticks let the whiffed LIGHT recover to idle and then enter SPECIAL via the ordinary neutral-press path — correct behavior, misread as a leaked cancel. Fix (test-only, sim untouched): `_test_cancel_requires_tag` now feeds/asserts BUTTON_1 only while LIGHT is a COMMITTED move (the sole path to SPECIAL there is the tag-gated cancel), plus a liveness assertion so it can't pass vacuously. JC-026 (provisional). Check count 26→27. Boundary held (F-009/F-010 untouched, no P1). Relay complete; archived by Strategist.
 ---
+
+### [resolved] 2026-07-03 · raised-by: QA · owner: Architect · re: /docs/spec/simulation.md (AD-024)
+Problem: AD-024 states the immutable-roster / install-once determinism precondition
+(MoveRegistry), but no acceptance criterion gives QA something to *assert* it
+against — it rests on wiring discipline (the code is compliant) plus a QA harness
+watch item. The type system does not prevent a mid-run `install()`/`clear()`, which
+would be a silent determinism break. Ask: should install-once / immutable-across-a-
+run be a stated, checkable invariant (as F-001 did for produce-before-query ordering
+→ input.md crit 7), so the precondition is verifiable rather than only conventional?
+Spec-observability question, not an implementation bug; non-blocking (F-009).
+---
+Resolution (Architect, 2026-07-03): **Made a stated, checkable invariant** — the F-001
+precedent, applied. The `MoveRegistry` exposes an **install-generation token** (a monotonic
+counter bumped on every `install`/`clear`); the owned invariant is *the token observed at a
+run's first `step` is identical at every subsequent `step` of that run*, so a mid-run
+mutation is detectable, not silent. Folded into **AD-024** (Risk paragraph, now
+"checkable invariant") and surfaced as **simulation.md acceptance criterion 11** so QA
+asserts it rather than only watching for it. The token is wiring/precondition state, NOT
+`SimState` — deliberately not serialized/hashed (it is the fixed-content precondition
+AD-024 keeps out of state, Tenet 2/AD-001), but observable. Per-run, not per-process: a
+test's `clear`+`install` starts a fresh run whose token is re-captured. **For the
+Developer:** if the `MoveRegistry` does not yet expose an install-generation token, add
+one (monotonic, bumped on install/clear) — a localized addition; the invariant text and
+crit 11 name the observable QA needs. Non-blocking to batch-2 landing.
+
+### [resolved] 2026-07-03 · raised-by: Developer · owner: Architect · re: /docs/spec/simulation.md (SimState table — TKT-P0-08/09 fields)
+Problem (raise-only — a SimState *shape* addition, so a contract change I flag, not
+latitude — per AD-024 "extensible-as-systems-land … added here under an AD at the
+ratification pass" and the F-002/F-005 precedent). TKT-P0-08 (input buffer + cancels)
+and TKT-P0-09 (throws + multi-hit/rehit) each need new MUTABLE, per-tick sim truth
+that must survive snapshot/restore and be canonically hashed (AD-023). All are
+serialized (`to_dict`/`from_dict`), deep-cloned (`clone`), and covered by the hash in
+fixed field order; variable-length runs fold a count separator first (AD-023). Five
+new `players[i]` fields, grouped by the ticket that introduces each:
+
+TKT-P0-08 (cancels; AD-015/017/022):
+  - `cancel_tags: PackedInt32Array` — cancel tags granted to THIS player (as attacker)
+    by a connecting hitbox in phase 5 of tick T, consumable by the cancel phase (phase 2)
+    starting T+1 (AD-017 grant→consume latency — because phase 2 precedes phase 5, a tag
+    set in phase 5 of T is first visible to phase 2 of T+1 for free). Cleared on every
+    state entry (a new move's tags are its own). Hashed as a variable-length run
+    (count-then-tags, order-committing).
+  - `move_contact: int` — the outcome of this player's CURRENT move for CancelRule
+    `condition` evaluation: 0 none / 1 hit / 2 block / 3 whiff-resolved. Set on the
+    ATTACKER in phase 5 on connect (hit/block); set to whiff once the move's last active
+    frame passes with no connect (so `on_whiff` cancels can fire). Cleared on state entry.
+    Plain int. (An `on_contact` cancel matches contact == hit OR block.)
+
+TKT-P0-09 (throws + rehit; AD-016):
+  - `active_hit_frames: PackedInt32Array` — PARALLEL to `active_hit_ids` (AD-026): index
+    i holds the tick `active_hit_ids[i]` last connected, so a `rehit_interval` hitbox can
+    cadence (re-hit only once `rehit_interval` frames have elapsed since the last connect
+    of that id_group). Same variable-length-run hash treatment as `active_hit_ids`;
+    cleared on state entry alongside it (they stay length-synced).
+  - `throw_tech_window: int` — frames remaining in which the thrown DEFENDER may tech
+    (input a throw to escape to neutral, no damage — AD-016). Set on throw connect,
+    decremented in phase 7 (not frozen by hitstop — a throw connect sets no mutual
+    hitstop at P0). 0 = not in a tech window. Plain int.
+  - `thrown_by: int` — the attacker index that threw this player (for tech resolution /
+    combo attribution), or -1 if not thrown. Set on throw connect, cleared when the tech
+    window closes or the throw resolves. Plain int.
+
+Ask: ratify these five into the simulation.md SimState per-player table under an AD
+(as AD-024 folded F-002 and AD-026 folded F-005), or prefer a different shape (e.g.
+throw state on a nested record, or deriving `move_contact` from `last_hit` rather than
+a per-attacker field — I chose a per-attacker field because `last_hit` is a single
+global record and cannot express two attackers' independent contact outcomes, mirroring
+why AD-026 rejected keying single-hit on `last_hit`). Implemented now so 08/09 land and
+tests run; provisional until ratified. Non-blocking to the batch; a shape change is a
+localized edit to PlayerState + the hash.
+---
+Resolution (Architect, 2026-07-03): **Ratified all five into the simulation.md per-player
+table under AD-028**, in the exact shape built and validated on Godot (all 12 test files
+pass; verified against `player_state.gd` serialize/clone + `sim_state.gd` hash walk — the
+three PackedInt32Arrays fold count-first, order-committing per AD-023; the two plain ints
+fold in fixed order). The Developer's shape reasoning is accepted verbatim: `move_contact`
+is per-attacker (not derived from the single global `last_hit`) and `active_hit_frames` is a
+per-`id_group` parallel run (not a single last-hit tick), each mirroring AD-026's reason a
+global record can't express two attackers' independent outcomes. No alternate shape preferred
+— the flat per-attacker fields + parallel run are the minimal correct home and keep the hash
+a simple order-committing run. This is the F-002/F-005 precedent at the batch-2 pass: a
+SimState *shape* addition is a flag ratified under an AD, never dev latitude. The cadence
+logic (JC-025) and clash detection that consume these fields are ratified separately as
+latitude. No code change required — implementation already matches AD-028.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        

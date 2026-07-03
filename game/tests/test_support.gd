@@ -32,7 +32,7 @@ const TAG_SPECIAL: int = 100       # LIGHT's hitbox grants this; SPECIAL require
 # --- Throw / multi-hit tuning -----------------------------------------------
 const THROW_DAMAGE: int = 80
 const THROW_HITSTUN: int = 20
-const THROW_TECH_WINDOW: int = 8   # frames the defender may tech (authored via blockstun)
+const THROW_TECH_WINDOW: int = 8   # frames the defender may tech (authored via HitBox.tech_window, AD-029)
 const THROW_ID_GROUP: int = 5
 const MULTI_DAMAGE: int = 20
 const REHIT_DAMAGE: int = 15
@@ -308,7 +308,7 @@ static func _build_reversal() -> MoveState:
 
 
 ## THROW: throwbox active frames 1..3; connect enters STATE_THROWN on the defender and
-## opens a tech window (blockstun reused as the window length). id_group THROW_ID_GROUP.
+## opens a tech window (authored via the dedicated HitBox.tech_window, AD-029). id_group THROW_ID_GROUP.
 static func _build_throw() -> MoveState:
 	var m := MoveState.new()
 	m.id = STATE_THROW
@@ -319,7 +319,7 @@ static func _build_throw() -> MoveState:
 	tb.box = Box.make(FP.from_int(20), FP.from_int(0), FP.from_int(40), FP.from_int(60))
 	tb.damage = THROW_DAMAGE
 	tb.hitstun = THROW_HITSTUN
-	tb.blockstun = THROW_TECH_WINDOW   # reused as the tech-window frame count (F-010)
+	tb.tech_window = THROW_TECH_WINDOW   # dedicated tech-window frame count (AD-029)
 	tb.hitstop = 0
 	tb.hit_reaction = STATE_THROWN
 	tb.block_reaction = STATE_THROWN

@@ -685,9 +685,9 @@ static func _resolve_throw(next: SimState, attacker: int, defender: int, hb: Hit
 	def.stun_kind = PlayerView.STUN_HIT
 
 	# Open the defender's tech window (AD-016). The window length is authored on the
-	# throw hitbox via blockstun (reused as the tech-window frame count for the slice —
-	# no separate field yet; a throw has no block reaction). Record who threw.
-	def.throw_tech_window = hb.blockstun
+	# throw hitbox via its dedicated `tech_window` field (AD-029; no longer a reuse of
+	# `blockstun` — a throw is never blocked). Record who threw.
+	def.throw_tech_window = hb.tech_window
 	def.thrown_by = attacker
 
 	# Damage (throws deal damage on connect; single-sourced scaling like any hit — a

@@ -49,3 +49,11 @@ extends Resource
 ## Throw flag (AD-016). If true this box is a throwbox: on connect it bypasses
 ## blockstun and enters the throw resolution path (combat-resolution.md).
 @export var is_throw: bool = false
+
+## Throw tech-window length, in frames (AD-029; AD-016 tech window). The number of
+## frames after this throw connects during which the thrown defender may tech it
+## (both to neutral, no damage). Meaningful ONLY on a throwbox (`is_throw`); a throw
+## is never blocked, so this is its own dedicated field, NOT a reuse of `blockstun`.
+## 0 = none / not a throw window. Read on connect by the throw path (step_phases.gd
+## `_resolve_throw`), which copies it into the defender's `throw_tech_window`.
+@export var tech_window: int = 0

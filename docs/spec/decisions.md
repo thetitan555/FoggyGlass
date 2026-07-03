@@ -37,6 +37,8 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-025** `neutral_restored_this_tick` is a rising edge — settled
 - **AD-026** Single-hit across active frames via per-attacker `active_hit_ids` — settled
 - **AD-027** AABB overlap is strict (touching edges do not overlap) — settled
+- **AD-028** Buffer/cancel + throw/rehit mutable SimState fields (TKT-P0-08/09) — settled
+- **AD-029** Dedicated `HitBox.tech_window` field; throw tech-window is not `blockstun` reuse — settled
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -65,6 +67,36 @@ sim's own post-step value; `Callable(StepPhases, name).is_valid()` for static-mo
 phase-presence checks) — no sim code touched, pure test latitude. **JC-015** and
 **JC-018** were contract-adjacent and are ratified into owned rules — see AD-015
 note / AD-025 respectively.
+
+## Buffer/cancel + throw/rehit latitude ratifications (JC-022..027)
+
+The P0-08/09 judgment calls, disposed at the batch-2 ratification pass (2026-07-03).
+Full reasoning is in `judgment-log.md`; this records the disposition. **JC-022**
+motion recognition = greedy ordered-token scan over the 9-frame window (AD-022) with a
+one-place motion-id→token-sequence table — ratified as *latitude*: implements AD-022's
+stated in-order-within-window semantics, no serialized recognizer state (buffering is a
+pure function of `input_history`, AD-003), no contract surface. The 9-frame *window* is
+the owned feel value (AD-022); the scan and token table are implementation. **JC-023** a
+`CancelRule.input` resolved via the `button_map` entry whose target == the rule target
+(raw-button fallback), through the one `InputBuffer` recognizer; group targets deferred —
+ratified as *latitude*: single-recognizer routing so a cancel and a neutral transition
+into the same state agree, no new namespace or contract; deferring group targets matches
+AD-016's "leave the field, don't build the unused path." **JC-025** rehit cadence via the
+parallel `active_hit_frames` run + produced-tick comparison, clash on both-throwboxes-
+connect-same-tick — ratified as *latitude*: implements AD-016's stated cadence/clash with
+the minimal serialized shape; the `active_hit_frames` *field* is the owned contract
+addition (AD-028), this call is the logic that consumes it. Produced-tick (not
+`frame_in_state`) comparison is the freeze-correct reading across hitstop. **JC-026 /
+JC-027** the cancel-gate test fix — JC-026 was insufficient (its committed-window
+isolation still let the 6-frame command buffer carry a held BUTTON_1 across LIGHT's
+recovery boundary into SPECIAL via the *neutral* path, misread as a leaked cancel) and is
+**superseded** by JC-027, which proves the tag gate by a whiff-vs-hit *contrast* asserted
+at a fixed non-actionable frame (never reaching the actionable frame, so the neutral-press
+path is provably unreachable) plus a positive control — ratified as *test-only latitude*
+(no sim code touched; the gate was spec-correct throughout). **JC-024** the throw
+tech-window schema — **overturned** as the durable shape and folded into an owned format
+decision: the `blockstun` reuse is replaced by a dedicated `HitBox.tech_window` field
+(AD-029); the Developer migrates authoring + the read off `blockstun`.
 
 ---
 
@@ -481,11 +513,22 @@ the same guarantee). Re-deriving inspection reads on the fly without backing sta
 (the values — combo totals, last hit, stun kind, neutral edge — are genuine
 mutable sim truth that must survive snapshot/restore and be hashed; deriving them
 would either lose them across restore or duplicate logic).
-**Risk (recorded).** A process-wide static roster is global state: a mis-wired or
-mid-run-mutated roster is a determinism hazard the type system does not prevent.
-Mitigated by contract — `install` is documented once-at-wiring, `clear` is
-test-only isolation. QA should assert the roster is installed before the first
-`step` and unchanged across a run.
+**Risk, now a checkable invariant (recorded; F-009 resolution 2026-07-03).** A
+process-wide static roster is global state: a mis-wired or mid-run-mutated roster is
+a determinism hazard the type system does not prevent. The earlier mitigation rested
+on wiring discipline plus a QA watch-item — no criterion to *assert*. That gap is now
+closed the way F-001 closed produce-before-query ordering: the `MoveRegistry` exposes
+an **install-generation token** (a monotonic counter bumped on every `install`/`clear`).
+The owned invariant is *the token observed at a run's first `step` is identical at every
+subsequent `step` of that run*; a mid-run mutation bumps it and is detectable, not
+silent. Surfaced as **simulation.md acceptance criterion 11** so QA asserts the
+precondition rather than only watching for it. The token is wiring/precondition state,
+**not** `SimState` — it is deliberately *not* serialized or hashed (it is not mutable sim
+truth; it is the fixed-content precondition AD-024 keeps *out* of state, Tenet 2 / AD-001),
+but it is observable so the invariant is verifiable. `install` remains
+documented-once-at-wiring; `clear` remains test-only isolation (a test that installs a
+fresh roster starts a fresh run, so the per-run token capture is re-taken — the invariant
+is per-run, not per-process).
 
 ### AD-025 · `neutral_restored_this_tick` is a rising edge — settled (2026-07-03, ratified from JC-018)
 **Decision.** `SimState.neutral_restored_this_tick` is set true by phase 6 on
@@ -544,3 +587,79 @@ edge has not yet reached *into* it).
 alternative for feel, but off-convention and would make exact-adjacency author
 into surprise connects; if feel ever wants it, it is a one-line change in
 `ResolvedBox.overlaps` and a revision to this AD, not a silent code change.
+
+### AD-028 · Buffer/cancel + throw/rehit mutable SimState fields (TKT-P0-08/09) — settled (2026-07-03, ratified from F-010)
+**Decision.** Five new *mutable, per-tick* `players[i]` fields — the sim truth the
+input-buffer/cancels (TKT-P0-08) and throws/multi-hit (TKT-P0-09) systems need to
+survive snapshot/restore and be canonically hashed (AD-023) — are ratified into the
+`simulation.md` per-player table, in the exact shape built and validated on Godot
+(all 12 test files pass):
+- `cancel_tags` (`PackedInt32Array`) — cancel tags granted to this player *as
+  attacker* by a connecting hitbox in phase 5 of tick T (`HitBox.cancel_tags`),
+  consumable by phase 2 starting T+1 (AD-017 grant→consume latency, free because
+  phase 2 precedes phase 5). Cleared on state entry.
+- `move_contact` (int) — this player's current-move outcome for `CancelRule.condition`
+  (AD-015): 0 none / 1 hit / 2 block / 3 whiff. Set on the attacker in phase 5; set to
+  whiff once the last active frame passes with no connect. `on_contact` matches hit OR
+  block. Cleared on state entry.
+- `active_hit_frames` (`PackedInt32Array`) — *parallel* to `active_hit_ids` (AD-026):
+  index i is the tick `active_hit_ids[i]` last connected, so `rehit_interval` cadence is
+  measurable per `id_group`. Length-synced with `active_hit_ids` (appended/cleared
+  together).
+- `throw_tech_window` (int) — frames the thrown *defender* may still tech (AD-016). Set
+  on throw connect, decremented in phase 7; not frozen (a P0 throw sets no mutual
+  hitstop). 0 = not teching.
+- `thrown_by` (int) — attacker index that threw this player, or -1 if not thrown. Set on
+  throw connect, cleared when the window closes / the throw resolves.
+
+All five are serialized (`to_dict`/`from_dict`), deep-cloned (`clone`), and covered by
+the canonical hash (AD-023): the three `PackedInt32Array`s each fold **count-first**
+(order-committing variable-length runs, exactly like `active_hit_ids`); the two plain
+ints fold in fixed field order. Verified against the implemented `player_state.gd` /
+`sim_state.gd` hash walk.
+**Why.** Each clears the strict `SimState` bar (simulation.md, "extensible-as-systems-
+land"): it is *mutable* sim truth that must survive snapshot/restore and be hashed —
+not derivable each tick (AD-001) and not fixed authored content (AD-024). The two
+per-attacker choices mirror AD-026's reasoning that a single global `last_hit` cannot
+express two attackers' independent outcomes: `move_contact` is per-attacker (not derived
+from `last_hit`), and `active_hit_frames` is a per-`id_group` parallel run (not a single
+last-hit tick), each so a move with two contact outcomes or several cadenced groups is
+represented correctly. The parallel-array (vs. dict) shape keeps the hash a simple
+order-committing run alongside `active_hit_ids`.
+**Rejected.** Deriving `move_contact` from `last_hit` (a single global record — cannot
+express two attackers' independent contact, mirroring AD-026); a per-attacker single
+last-hit tick instead of the per-`id_group` `active_hit_frames` run (wrong for a move
+with several cadenced groups); a nested throw-state record (a flat pair of plain ints is
+simpler to serialize/hash and adds no nesting the hash walk must special-case).
+**Note.** This is the F-002/F-005 precedent applied at the batch-2 ratification pass:
+a SimState *shape* addition is a flag the Architect ratifies under an AD, never dev
+latitude. The rehit *cadence logic* and the throw *clash detection* that consume these
+fields are JC-025 (ratified latitude); this AD owns only the field shapes.
+
+### AD-029 · Dedicated `HitBox.tech_window` field; the throw tech window is not `blockstun` reuse — settled (2026-07-03, ruling JC-024)
+**Decision.** A throw's tech-window length (AD-016) is authored in a **dedicated
+`HitBox.tech_window` field**, *not* by overloading the throwbox's otherwise-unused
+`blockstun`. The Developer's P0 stand-in (reading the window from `blockstun` on a
+throwbox, JC-024) is **overturned** as the durable shape: field-overloading is exactly
+the kind of implicit, undocumented reuse that makes the move format harder to author
+against and harder for QA to golden (a `blockstun` value on a throwbox would mean two
+unrelated things depending on the `is_throw` flag). `tech_window` is meaningful only on
+a throwbox (a throw is never blocked); `0` on a non-throw box. The tech/clash *resolution*
+(both-to-neutral, damage undone, simultaneous throws clash) is AD-016's stated outcome and
+is unchanged — this AD settles only *where the window length is authored*.
+**Why.** This is a move-format *contract* question the Architect owns (settled: the
+Architect owns the move/frame-data format). The window length is a genuine per-throw feel
+value and deserves a named home in the schema, both so authors read one clear field and so
+QA can golden throw frame data without decoding an overloaded field's meaning from a sibling
+flag. Adding the field is the build-for-extension choice (Tenet 3): later throw variants
+(air throws, throw-vs-throw, deferred in AD-016) read the same explicit field.
+**Rejected.** Reusing `blockstun` (the P0 stand-in — implicit, dual-meaning, a golden
+hazard; overturned); a sim-wide tech-window constant (not stated to be character-invariant,
+and un-authorable/testable per-throw); no field (leaves crit 10's tech window unbacked in
+the format).
+**Consequence (for the Developer, via the ticket).** `test_support.gd` currently authors
+the window through `tb.blockstun = THROW_TECH_WINDOW`; the throw resolution reads it from
+`blockstun`. Migrate both to the new `tech_window` field: add it to `hit_box.gd`, author it
+on the test throwbox, and read it in the throw path — a localized, reversible change. The
+specific window length (8f in the test char) stays placeholder tuning (Strategist's, like
+JC-016's scaling numbers), not a golden to lock.

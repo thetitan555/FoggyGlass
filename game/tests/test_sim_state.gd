@@ -17,6 +17,10 @@ extends SceneTree
 ##   8 No floats       — every field the hash walks is an int; a scan asserts the
 ##                       serialized graph contains no float.
 ##   9 Immutable input — after next = step(prev,a,b), hash(prev) is unchanged.
+##  11 Roster install-generation stable across a run (AD-024, F-009) — the
+##                       MoveRegistry install-generation token captured at a run's
+##                       first step is identical at every subsequent step; install/
+##                       clear each bump it; the token is NOT in the state hash.
 
 var _failures: int = 0
 var _checks: int = 0
@@ -24,6 +28,7 @@ var _checks: int = 0
 
 func _init() -> void:
 	_run()
+	MoveRegistry.clear()   # test isolation: leave no roster installed (matches test_done_bar)
 	if _failures == 0:
 		print("[test_sim_state] OK — %d checks passed" % _checks)
 		quit(0)
@@ -49,6 +54,7 @@ func _run() -> void:
 	_test_full_round_trip()
 	_test_snapshot_restore_resume()
 	_test_no_floats()
+	_test_roster_install_generation_stable()
 
 
 # A short deterministic input stream for both players, distinct per player.
@@ -167,6 +173,44 @@ func _test_no_floats() -> void:
 		s = SimState.step(s, _in_p1(f), _in_p2(f))
 	var d: Dictionary = s.to_dict()
 	_true(not _has_float(d), "serialized SimState contains no float value anywhere")
+
+
+func _test_roster_install_generation_stable() -> void:
+	# Criterion 11 (AD-024, F-009): the MoveRegistry install-generation token is stable
+	# across a run's steps and bumps on install/clear; it is NOT part of the state hash.
+	MoveRegistry.install(TestSupport.build_roster())
+
+	# Capture at the run's first step (as a run would). step() must not touch it.
+	var s := SimState.new_initial(2024)
+	var gen_at_first: int = MoveRegistry.install_generation()
+
+	# Run several steps; the token stays identical at every subsequent step (no mid-run
+	# install/clear happened, so the immutable-across-a-run precondition holds).
+	var state_hash_moves: bool = false
+	var h0: int = s.hash_state()
+	for f in range(6):
+		s = SimState.step(s, _in_p1(f), _in_p2(f))
+		_eq(MoveRegistry.install_generation(), gen_at_first,
+			"install-generation unchanged across step %d of a run" % f)
+	if s.hash_state() != h0:
+		state_hash_moves = true
+	# The run actually advanced (so the stability check is not vacuous).
+	_true(state_hash_moves, "state advanced across the run (token stability is non-vacuous)")
+
+	# The token is wiring/precondition state, NOT sim state: it does NOT enter the
+	# canonical state hash. A bump must not change any state hash.
+	var h_before_bump: int = s.hash_state()
+	MoveRegistry.install(TestSupport.build_roster())   # bumps the token
+	_true(MoveRegistry.install_generation() != gen_at_first,
+		"install bumps the install-generation token")
+	_eq(s.hash_state(), h_before_bump,
+		"a token bump does not change the SimState hash (token is not hashed)")
+
+	# clear() also bumps (a fresh roster starts a fresh run).
+	var gen_after_reinstall: int = MoveRegistry.install_generation()
+	MoveRegistry.clear()
+	_true(MoveRegistry.install_generation() != gen_after_reinstall,
+		"clear bumps the install-generation token")
 
 
 func _has_float(v) -> bool:

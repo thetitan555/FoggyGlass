@@ -182,39 +182,81 @@ func _test_special_cancel_on_hit() -> void:
 
 
 func _test_cancel_requires_tag() -> void:
-	# If the LIGHT does NOT connect (whiff), no tag is granted, so BUTTON_1 must NOT
-	# special-CANCEL into SPECIAL (requires_tag gate). P0 attacks into empty air (P1 far).
+	# The tag gate: on a WHIFF, LIGHT grants no TAG_SPECIAL, so its requires_tag /
+	# on_contact special-cancel into SPECIAL is DENIED — the player stays in LIGHT for the
+	# whole committed move. A CONNECTING LIGHT grants the tag and DOES cancel to SPECIAL at
+	# the same committed frame. The whiff-vs-hit contrast at one committed frame is the
+	# clean, buffer-independent signal that the gate is real (and not vacuously passing).
 	#
-	# ISOLATION (JC-026): SPECIAL is ALSO directly reachable from neutral via the BUTTON_1
-	# button_map entry (test_support.gd _map(1,0,0,STATE_SPECIAL)). So we must only feed
-	# BUTTON_1 while LIGHT is still a COMMITTED move — where the sole path to SPECIAL is the
-	# tag-gated cancel. Once LIGHT recovers to idle, a held BUTTON_1 would enter SPECIAL as
-	# an ordinary neutral press (not a cancel), which is correct sim behavior but does NOT
-	# exercise the gate. We therefore assert P0 stays in LIGHT for every committed tick
-	# while BUTTON_1 is held, then stop before recovery hands control back to neutral.
-	var s := _two_char_state(300)   # too far to connect
-	s = SimState.step(s, InputFrame.BUTTON_0, InputFrame.NEUTRAL)
-	# Feed BUTTON_1 every tick, but only INSPECT/ASSERT while LIGHT is still committed
-	# (not yet actionable). The moment LIGHT would become actionable we stop — beyond that
-	# tick SPECIAL is reachable via the neutral BUTTON_1 press, which is not what we gate.
-	var cancelled: bool = false
-	var asserted: int = 0
-	for _k in range(20):
-		# Stop once LIGHT is no longer committed: an actionable LIGHT (last recovery frame)
-		# would take the neutral-press path next, not the cancel path.
-		if s.players[0].state_id != TestSupport.STATE_LIGHT:
-			break
-		if Actionability.is_actionable(s.players[0], _p0_move(s)):
-			break
+	# WHY THE CONTRAST, NOT "did P0 reach SPECIAL" (JC-027, supersedes/corrects JC-026):
+	# BUTTON_1 reaches SPECIAL by TWO paths — the tag-gated special-cancel (find_cancel,
+	# gated on the tag) AND a plain neutral press (test_support.gd _map(1,0,0,STATE_SPECIAL)).
+	# The 6-frame command buffer (AD-022) carries a held BUTTON_1 across LIGHT's recovery
+	# boundary, so on LIGHT's first ACTIONABLE frame (frame == duration) the buffered press
+	# legitimately enters SPECIAL via the neutral path (_buffered_command) — correct AD-022
+	# behavior, NOT a cancel. JC-026 tried to isolate by feeding only "while committed," but
+	# the buffered press still fires the instant LIGHT becomes actionable, so observing
+	# "reached SPECIAL" could not distinguish cancel from buffered-neutral-press. The fix:
+	# NEVER step to LIGHT's actionable frame here. Assert only WHILE LIGHT is committed and
+	# NON-actionable, where the neutral-press path is not yet reachable — so the sole route
+	# to SPECIAL is the tag-gated cancel, and the whiff staying in LIGHT is meaningful.
+
+	# LIGHT: startup 1..3, active 4..6, recovery 7..12 (duration 12). It is committed and
+	# NON-actionable on frames 1..11; frame 12 is the first actionable frame (Actionability:
+	# frame_in_state >= duration). The initial step enters LIGHT on frame 1; each subsequent
+	# whiff step (no hitstop) advances frame by one. We feed BUTTON_1 and assert STILL-LIGHT
+	# across the committed window, stopping at frame 11 — one frame BEFORE the actionable
+	# frame where a buffered neutral press would fire. That boundary is what makes the
+	# negative buffer-independent: the neutral-press path is provably unreachable here.
+
+	# --- Negative: whiffed LIGHT does NOT cancel, and no neutral-press contamination -----
+	var s := _two_char_state(300)   # too far to connect -> LIGHT whiffs
+	s = SimState.step(s, InputFrame.BUTTON_0, InputFrame.NEUTRAL)   # enter LIGHT (frame 1)
+	_eq(s.players[0].state_id, TestSupport.STATE_LIGHT, "P0 committed to LIGHT (frame 1)")
+	var whiff_seen: bool = false
+	# Advance only up to the LAST committed non-actionable frame (frame 11), holding BUTTON_1.
+	# Loop count is fixed by frame math (frames 2..11 = 10 steps), NOT by is_actionable, so a
+	# buffered command can never outrun the guard: we simply never reach the actionable frame.
+	for _k in range(TestSupport.LIGHT_DURATION - 2):   # 10 steps: frame 1 -> frame 11
 		s = SimState.step(s, InputFrame.BUTTON_1, InputFrame.NEUTRAL)
-		asserted += 1
-		if s.players[0].state_id == TestSupport.STATE_SPECIAL:
-			cancelled = true
+		# The whole time, P0 must stay in LIGHT: the tag-gated cancel is denied (no tag on a
+		# whiff) and the neutral-press path is not yet reachable (LIGHT still non-actionable).
+		_eq(s.players[0].state_id, TestSupport.STATE_LIGHT,
+			"whiffed LIGHT stays committed (frame %d) — tag-gated cancel denied, no neutral press yet"
+				% s.players[0].frame_in_state)
+		_false(Actionability.is_actionable(s.players[0], _p0_move(s)),
+			"LIGHT is still committed/non-actionable at frame %d (below duration)"
+				% s.players[0].frame_in_state)
+		if s.players[0].move_contact == PlayerState.CONTACT_WHIFF:
+			whiff_seen = true
+	# The gate was LIVE: LIGHT passed its last active frame with no connect, so move_contact
+	# went WHIFF and a requires_tag/on_contact cancel had a real chance to (wrongly) fire.
+	_true(whiff_seen, "the whiffed LIGHT reached its recovery window (move_contact == WHIFF; gate live)")
+	MoveRegistry.clear()
+
+	# --- Positive control: a CONNECTING LIGHT DOES special-cancel at a committed frame ---
+	# Same input (buffered BUTTON_1), same committed window — the ONLY difference is that the
+	# LIGHT connects, granting TAG_SPECIAL. The cancel fires via find_cancel DURING committed
+	# LIGHT (well before its actionable frame), so this is the genuine tag-gated cancel, not a
+	# neutral press. That the hit cancels where the whiff does not is the gate's real signal.
+	var h := _light_hits(false)   # P0 LIGHT connects on P1 (grants TAG_SPECIAL, move_contact=HIT)
+	_eq(h.players[0].state_id, TestSupport.STATE_LIGHT, "positive control: P0 still in LIGHT on the connect tick")
+	var pos_cancelled: bool = false
+	# Feed BUTTON_1 (buffers through the connect hitstop) and watch for the cancel. It must
+	# occur while LIGHT is still COMMITTED and NON-actionable — a true special-cancel, not a
+	# post-recovery neutral press. We break the moment LIGHT would become actionable so we
+	# only ever attribute a cancel that fired inside the committed window.
+	for _k in range(20):
+		if h.players[0].state_id != TestSupport.STATE_LIGHT:
 			break
-	# We must have actually exercised the whiff-recovery window (so the gate was live).
-	_true(s.players[0].move_contact == PlayerState.CONTACT_WHIFF or asserted >= TestSupport.LIGHT_STARTUP,
-		"the whiffed LIGHT reached its whiff/recovery window (the tag gate was live)")
-	_false(cancelled, "a whiffed LIGHT grants no tag, so BUTTON_1 cannot special-cancel (requires_tag)")
+		if Actionability.is_actionable(h.players[0], _p0_move(h)):
+			break   # reached the actionable frame without cancelling: stop before neutral-press
+		h = SimState.step(h, InputFrame.BUTTON_1, InputFrame.NEUTRAL)
+		if h.players[0].state_id == TestSupport.STATE_SPECIAL:
+			pos_cancelled = true
+			break
+	_true(pos_cancelled,
+		"positive control: a connecting LIGHT special-cancels into SPECIAL during its committed window (tag granted)")
 	MoveRegistry.clear()
 
 

@@ -162,7 +162,9 @@ the pressure/combo cases legibility most depends on. The static value answers
 - **Tech window.** If the defender inputs a throw within a defined window after
   the throw connects, the throw is **teched**: both players are pushed back to
   neutral, no damage. Simultaneous ground throw attempts within the window resolve
-  as a tech (clash).
+  as a tech (clash). The window length is authored on the throwbox's dedicated
+  `HitBox.tech_window` field (AD-029) — not `blockstun` reuse — and the remaining
+  window lives in `players[i].throw_tech_window` (AD-028).
 - **Deferred, explicitly (not in the slice):** air throws and formal
   throw-vs-throw priority beyond the clash rule. The `throwbox` / `invuln` /
   air-eligibility fields exist so these are additions, not rewrites (Tenet 3) —

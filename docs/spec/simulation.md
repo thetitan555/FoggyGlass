@@ -47,6 +47,17 @@ of `(state, inputs)` *given the installed roster*; the roster is a determinism
 precondition, and mutating it mid-run is a determinism hazard the wiring layer
 must not commit (AD-024).
 
+**Install-once / immutable-across-a-run is a checkable invariant (AD-024, F-009).**
+Because the type system cannot prevent a mid-run `install()`/`clear()`, this
+precondition is not left to wiring discipline alone: the `MoveRegistry` exposes an
+**install-generation token** (a monotonic counter, or equivalent identity, bumped on
+every `install`/`clear`) that a run can capture at its first `step` and re-check.
+The invariant is: *the roster's install-generation token observed at the first `step`
+of a run is identical at every subsequent `step` of that run.* A change in the token
+mid-run is a determinism break, not a silent hazard — it is now assertable (acceptance
+criterion 11), the same way produce-before-query ordering was made an owned, checkable
+invariant (F-001 → input.md crit 7) rather than resting on tree-order accident.
+
 ## `SimState` — the serializable root
 
 A single plain-data graph (Dictionaries / typed Resources / packed arrays — no
@@ -75,7 +86,12 @@ Per-player state (`players[i]`):
 | `stun` | Remaining hitstun/blockstun frames; `0` = actionable. |
 | `stun_kind` | Which kind of stun: `0` none / `1` hit / `2` block (backs `PlayerView.stun_kind`). Set by hit resolution (phase 5), cleared when stun expires. Plain int (AD-024). |
 | `combo` | Hit count + current damage-scaling state + cumulative combo damage. Carried as three plain ints: `combo_hits`, `combo_scaling` (FP-scaled multiplier, AD-014 — starts `FP.ONE`), `combo_damage` (whole units, backs `PlayerView.combo.damage_total`). (AD-024.) |
-| `active_hit_ids` | Per-attacker single-hit memory: the hitbox `id_group`s that have already connected during this player's *current* move (`PackedInt32Array`). A hitbox whose `id_group` is present does not re-hit, so a multi-frame active window lands one hit — not one per active frame (AD-016, "one hit per group per contact"). Cleared on every state entry. Serialized as a variable-length run (count-then-ids, order-committing per AD-023), cloned, hashed. Cadenced re-hit (`rehit_interval` > 0) is TKT-P0-09 and consults this same set with an interval. (AD-026.) |
+| `active_hit_ids` | Per-attacker single-hit memory: the hitbox `id_group`s that have already connected during this player's *current* move (`PackedInt32Array`). A hitbox whose `id_group` is present does not re-hit, so a multi-frame active window lands one hit — not one per active frame (AD-016, "one hit per group per contact"). Cleared on every state entry. Serialized as a variable-length run (count-then-ids, order-committing per AD-023), cloned, hashed. Cadenced re-hit (`rehit_interval` > 0) consults this same set with an interval (see `active_hit_frames`). (AD-026.) |
+| `active_hit_frames` | **Parallel to `active_hit_ids`** (index `i` is the tick `active_hit_ids[i]` last connected). Backs cadenced re-hit (`HitBox.rehit_interval`, AD-016): a `rehit_interval` hitbox re-hits the same target only once `rehit_interval` frames have elapsed since that `id_group` last connected — no hit on the frames between. Kept length-synced with `active_hit_ids` (appended/cleared together). `PackedInt32Array`; serialized/cloned/hashed as a variable-length run (count-then-frames, order-committing per AD-023). (AD-028.) |
+| `cancel_tags` | Cancel tags granted to this player *as attacker* by a connecting hitbox in phase 5 of tick T (`HitBox.cancel_tags`), consumable by the cancel phase (phase 2) starting T+1 — the AD-017 grant→consume latency, which falls out for free because phase 2 precedes phase 5. Cleared on every state entry (a new move's tags are its own). `PackedInt32Array`; serialized/cloned/hashed as a variable-length run (count-then-tags, order-committing per AD-023). (AD-028.) |
+| `move_contact` | Outcome of this player's *current* move for `CancelRule.condition` evaluation (AD-015): `0` none / `1` hit / `2` block / `3` whiff-resolved. Set on the attacker in phase 5 on connect; set to whiff once the move's last active frame passes with no connect (so `on_whiff` cancels can fire). An `on_contact` cancel matches hit OR block. Cleared on state entry. Plain int. (AD-028.) |
+| `throw_tech_window` | Frames remaining in which this player (as the thrown *defender*) may tech the throw — input a throw to escape to neutral, no damage (AD-016). Set on throw connect, decremented in phase 7 (a P0 throw connect sets no mutual hitstop, so the window is not frozen). `0` = not in a tech window. Plain int. (AD-028.) |
+| `thrown_by` | The attacker index that threw this player (for tech resolution / combo attribution), or `-1` if not thrown. Set on throw connect, cleared when the tech window closes or the throw resolves. Plain int. (AD-028.) |
 | `input_history` | Ring buffer of recent raw `InputFrame`s — the substrate buffering/motion recognition reads (AD-003). |
 
 **Derived, not stored (AD-001 / AD-005).** Active hitbox/hurtbox geometry is
@@ -173,3 +189,10 @@ sim internals.
     states with the same bytes regrouped differently hash differently; and the hash
     is float-free. Two states with identical data hash identically regardless of
     construction path.
+11. **Roster install-generation stable across a run (AD-024, F-009).** The
+    `MoveRegistry` install-generation token captured at a run's first `step` is
+    identical at every subsequent `step` of that run; a mid-run `install`/`clear`
+    (which bumps the token) is detectable as a determinism break, not a silent one.
+    The token itself is wiring state, not `SimState` — it is not serialized or hashed
+    (it is a determinism *precondition*, not sim truth), but it is observable so QA can
+    assert it holds across a run.

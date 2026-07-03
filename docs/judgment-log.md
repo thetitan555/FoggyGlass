@@ -660,6 +660,16 @@ Architect wants specific canonical motions or a different leniency model, it is 
 change in `_motion_tokens` / the scan. Recorded as latitude: it implements AD-022's stated
 window semantics; no new serialized state, no contract surface (the buffer output feeds
 phase 2 transitions, whose contract — 9f/6f windows — is AD-022's).
+**Ratified as latitude** (Architect, 2026-07-03). Scrutinized as contract-adjacent (content
+authors and QA build against motion semantics). But the load-bearing contract — the 9-frame
+in-order-within-window recognition — is already owned in AD-022; the greedy oldest→newest
+cursor scan is the minimal *computation* of that stated semantics, and the motion-id→token
+table is single-source packaging (FP/MoveData pattern), not a new rule. No serialized
+recognizer state (buffering is a pure function of `input_history`, AD-003), no new contract
+surface. Disposition in decisions.md (JC-022..027 block). **For QA:** the concrete slice
+motions (`236`, `623`) and their token sequences are implementation the recognizer resolves
+uniformly — golden the "in-order-within-9f" behavior, not a specific motion's internal
+token list as a locked contract. No spec change, no code change.
 
 ### JC-023 · 2026-07-03 · TKT-P0-08 · A CancelRule's `input` command is resolved via the button_map entry whose target == the rule target (raw-button fallback); group targets deferred — provisional
 **Decided.** `CancelEval._input_buffered` resolves a cancel rule's required `input` command
@@ -690,6 +700,15 @@ to `_input_buffered`; if the Architect wants a distinct `input`-id namespace or 
 resolution, it is a one-function change. Recorded as latitude: it fills the unspecified
 command-matching mechanism with the single-recognizer reading; the CancelRule fields
 (condition/window/input/requires_tag) are consumed exactly as move-format.md names them.
+**Ratified as latitude** (Architect, 2026-07-03). Scrutinized as contract-adjacent (how a
+cancel's input is recognized is something authors reason about). But move-format.md already
+fixes that a `CancelRule` HAS a required input command; routing it through the ONE
+`InputBuffer` recognizer via the `button_map` entry that names how to reach `target` is the
+single-recognizer reading — it makes a cancel and a neutral transition into the same state
+agree, which is the consistency the format wants, not a new contract. The raw-button
+fallback keeps a bare-button cancel authorable, and deferring group targets matches AD-016's
+"leave the field, don't build the unused path" (no group cancels are authored in the slice).
+Disposition in decisions.md (JC-022..027 block). No spec change, no code change.
 
 ### JC-024 · 2026-07-03 · TKT-P0-09 · Throw tech-window length authored via the throwbox's (otherwise-unused) `blockstun` field; tech = undo-damage-both-to-idle — provisional (FORMAT-FIELD question for Architect)
 **Decided.** The throw tech-window length (frames the defender may tech, AD-016) is read
@@ -717,6 +736,21 @@ overloading `blockstun`, and the natural home for this feel value), that is a mo
 addition to decide at ratification; until then the `blockstun` reuse is the localized,
 reversible P0 stand-in. The specific window length (8f in the test char) and push constant
 are placeholder tuning (Strategist's, like JC-016's scaling numbers), not a golden to lock.
+**OVERTURNED — resolved into an owned format decision (Architect, 2026-07-03, AD-029).** The
+Developer correctly flagged this as a move-format contract question I own and did NOT edit
+the schema — right call. Ruling: the `blockstun` reuse is **overturned** as the durable
+shape. A `blockstun` value that means "on-block stun" on a normal but "tech-window length"
+on a throwbox is exactly the implicit, dual-meaning field-overload that makes the format
+harder to author against and harder for QA to golden (the field's meaning would depend on a
+sibling `is_throw` flag). A throw's tech window is a genuine per-throw feel value and gets a
+**dedicated `HitBox.tech_window` field** (AD-029, folded into move-format.md). The tech/clash
+*resolution* the Developer built (both-to-neutral, damage undone, clash) is AD-016's stated
+outcome and is unchanged — only the window's *authoring home* moves. **Back to the Developer:**
+migrate `test_support.gd` (`tb.blockstun = THROW_TECH_WINDOW`) and the throw-path read off
+`blockstun` to the new `tech_window` field; add the field to `hit_box.gd`. Localized,
+reversible; the 8f length stays placeholder tuning. This is a schema question ratified into
+the format, not dev latitude, and it is *not* a code defect (the sim behavior was correct) —
+it is a durability/legibility improvement to where the value lives.
 
 ### JC-025 · 2026-07-03 · TKT-P0-09 · Rehit cadence via a parallel `active_hit_frames` run + produced-tick comparison; clash detected when both throwboxes connect the same tick — provisional
 **Decided.** Cadenced re-hit (`HitBox.rehit_interval`, AD-016) is tracked with an
@@ -748,6 +782,15 @@ freezes. Both-throwboxes-connect is the literal reading of AD-016's "simultaneou
 throw attempts." Localized to `_rehit_ready` / phase-5 dispatch; the `active_hit_frames`
 field itself is the flagged contract addition (F-010), not this call. Recorded as latitude:
 it implements AD-016's stated cadence + clash with the minimal serialized shape.
+**Ratified as latitude** (Architect, 2026-07-03). The `active_hit_frames` *field* is the
+owned contract addition — ratified separately into simulation.md under AD-028 (F-010); THIS
+call is the cadence/clash *logic* that consumes it, and it implements AD-016's stated forms
+with the minimal shape. Two implementation choices are correct and worth pinning: (1)
+produced-tick comparison (not `frame_in_state`) is the freeze-correct reading — hitstop
+freezes `frame_in_state` but not the intended real-time cadence, so absolute tick is right;
+(2) both-throwboxes-*connect* (not both-in-throw-*state*) is the literal reading of AD-016's
+"simultaneous ground throw attempts" — a throw whose box misses shouldn't clash. Disposition
+in decisions.md (JC-022..027 block). No spec change beyond AD-028's field; no code change.
 
 ### JC-026 · 2026-07-03 · F-011 (test fix) · `_test_cancel_requires_tag` isolates the tag gate to LIGHT's COMMITTED window; adds a gate-liveness assertion — provisional (test-only latitude)
 **Decided.** Rewrote `test_buffer_cancels._test_cancel_requires_tag` so it only feeds/inspects
@@ -782,3 +825,131 @@ exercises exactly the negative it claims: within LIGHT's committed whiff window,
 holds and no cancel occurs. Deterministic (pure over recorded input).
 **Boundary.** F-009/F-010 (Architect-owned) untouched; no P1 work; no refactor beyond this one
 scenario + its helper.
+**SUPERSEDED (Architect, 2026-07-03).** This fix was insufficient — its committed-window
+isolation still let the 6-frame command buffer (AD-022) carry a held BUTTON_1 across LIGHT's
+recovery boundary into SPECIAL via the *neutral* path (`_buffered_command`), which the test
+misread as a leaked cancel; "reached SPECIAL" cannot distinguish a cancel from a buffered
+neutral press. Corrected by JC-027 (whiff-vs-hit contrast at a fixed non-actionable frame +
+positive control). No independent ratification: this entry is superseded, not ratified —
+JC-027 is the ruled disposition. The sim was spec-correct throughout (no code defect); the
+under-count was purely in the test's reachability premise.
+
+### JC-027 · 2026-07-03 · F-011 recurrence (test fix) · `_test_cancel_requires_tag` gate isolation via committed-window CONTRAST + positive control — provisional (test-only latitude) — SUPERSEDES/CORRECTS JC-026
+**Decided.** Rewrote `test_buffer_cancels._test_cancel_requires_tag` so it proves the tag
+gate by a whiff-vs-hit CONTRAST asserted at a committed, NON-actionable frame — never by
+observing "did P0 reach SPECIAL." Negative: a whiffed LIGHT is fed BUTTON_1 and asserted
+STILL in LIGHT across its whole committed window (frames 1..11 of a duration-12 move),
+with a liveness check that `move_contact == CONTACT_WHIFF` was reached (gate live). The
+loop bound is fixed by frame math (`LIGHT_DURATION - 2` = 10 steps → frame 11), NOT by
+`is_actionable`, so it NEVER steps to LIGHT's actionable frame (frame 12). Positive
+control (added): a CONNECTING LIGHT (grants TAG_SPECIAL) fed the same buffered BUTTON_1
+DOES special-cancel to SPECIAL via `find_cancel` DURING its committed window (before the
+actionable frame). **Sim code untouched.**
+**Serves.** F-011 (recurrence); combat-resolution.md crit 8 / move-format.md crit 7 /
+AD-015/017/022 — a whiffed normal grants no cancel tag, so its requires_tag/on_contact
+special-cancel is denied, while a connecting one is granted and cancels.
+**Why JC-026 was insufficient (the correction).** JC-026 isolated *feeding* BUTTON_1 to
+the committed window but did NOT account for the 6-frame COMMAND BUFFER (AD-022) carrying
+a HELD BUTTON_1 across LIGHT's recovery boundary. SPECIAL is reachable by TWO paths — the
+tag-gated cancel (find_cancel) AND a plain neutral press (`test_support.gd
+_map(1,0,0,STATE_SPECIAL)`, via `_buffered_command`). On LIGHT's first ACTIONABLE frame
+(frame == duration) the buffered press fires into SPECIAL through the NEUTRAL path — correct
+AD-022 behavior, NOT a cancel. JC-026's loop still stepped to that frame (its top-of-loop
+`is_actionable` guard breaks only on the NEXT iteration, but the buffered command enters
+SPECIAL on the SAME tick frame reaches 12), so `cancelled` read true. Observing "reached
+SPECIAL" simply cannot distinguish cancel from buffered-neutral-press when the buffer carries
+the input across recovery. JC-027 fixes this by NEVER reaching the actionable frame in the
+negative, and by making the positive/negative CONTRAST — not a reachability probe — the signal.
+**Diagnosis confirmed against live code (Strategist's static read verified).** `find_cancel`
+enforces requires_tag AND ON_CONTACT correctly; on a whiff `move_contact == CONTACT_WHIFF`
+and no tag is granted, so the cancel is denied in the committed window — no sim leak. The
+post-recovery buffered neutral press into SPECIAL is intended AD-022 and is NOT suppressed
+(that would be a contract question to FLAG the Architect, not a code change).
+**Alternatives passed over.** (a) Touch the sim to suppress the post-recovery neutral press —
+rejected: it is correct AD-022 behavior (a held button comes out frame-1 on the first
+actionable frame); suppressing it is a contract change, not a test fix. (b) Keep JC-026's
+"stop before actionable via is_actionable guard" without changing the reachability premise —
+rejected: that is exactly what failed (the buffered press fires ON the actionable-transition
+tick, so the guard can't prevent the misattribution). (c) Move SPECIAL off the BUTTON_1
+neutral map in test_support.gd — rejected (JC-026 reasoning still holds): that entry is
+load-bearing for `_test_special_cancel_on_hit` and mirrors real special inputs; the fix
+belongs in the one scenario, not shared test-support data.
+**Why safe / correct by construction (no Godot available here).** The negative's loop count
+is derived purely from LIGHT's authored frame data (startup 3 / active 3 / recovery 6,
+duration 12): 10 whiff steps advance frame 1 → 11, all strictly below the actionable frame
+12, so the neutral-press path is provably unreachable and the only route to SPECIAL is the
+tag-gated cancel — which is denied. The positive control fires the cancel at the connect
+frame (~4) under find_cancel while hitstop-frozen then first-unfrozen, far below frame 12.
+Deterministic (pure over recorded input); no tick-precise timing that needs execution to trust.
+**Boundary.** TEST-ONLY; sim spec-correct and untouched. F-009/F-010 (Architect-owned)
+untouched; no P1 work; no refactor beyond this one scenario. Recurrence of archived F-011;
+per the Strategist, correcting my own test needs no new flag. Check count of this scenario
+rises (per-committed-frame state + non-actionable assertions, a whiff-liveness check, and
+the positive-control cancel check) vs. JC-026's shape. Entry is append-only: JC-026 is
+superseded, not rewritten.
+**Ratified as test-only latitude (Architect, 2026-07-03).** This is the correct fix and
+supersedes JC-026. The diagnosis is sound: the tag gate in `find_cancel` (requires_tag AND
+on_contact) was spec-correct throughout — on a whiff, `move_contact == CONTACT_WHIFF` and no
+tag is granted, so the cancel is denied — and the post-recovery buffered *neutral* press into
+SPECIAL is intended AD-022 behavior, correctly left unsuppressed (suppressing it would be a
+contract change, which the Developer rightly declined to make as a "test fix"). Proving the
+gate by a whiff-vs-hit *contrast* asserted at a frame that never reaches the actionable frame
+(so the neutral-press path is provably unreachable) is the right construction — it tests the
+gate, not a reachability accident. No sim code touched. Note for QA: this validates the
+`requires_tag`/`on_contact` gate (crit 8) is correct; the interaction between the 6-frame
+command buffer and a move's recovery boundary (a held button firing frame-1 on the first
+actionable frame) is intended AD-022 and is *not* a leak — worth a glance in the drift sweep
+but it is spec-correct. No spec change, no code change.
+
+### JC-028 · 2026-07-03 · AD-024 / F-009 (simulation.md crit 11) · `MoveRegistry` install-generation token packaged as a static `int` counter with an `install_generation()` accessor — provisional
+**Decided.** The install-generation token AD-024/F-009 requires is a process-wide static
+`int` counter (`MoveRegistry._install_generation`) incremented by one on every `install`
+and every `clear`, exposed read-only through a static `install_generation() -> int`
+accessor. No inspection-surface field, no serialization, no clone, no hash — it is
+observable only through the accessor. QA reads `MoveRegistry.install_generation()`
+directly at `step` time (the registry is a static namespace already globally reachable),
+which is what the ticket names as sufficient absent a natural harness hook.
+**Serves.** AD-024 ("the `MoveRegistry` exposes an install-generation token — a monotonic
+counter bumped on every `install`/`clear`") + simulation.md crit 11 (the token captured
+at a run's first `step` is identical at every subsequent `step`). The AD fixes THAT the
+token exists, that it bumps on install/clear, and that it is observable-not-serialized;
+its exact TYPE, NAME, and read-path packaging are left to implementation.
+**Alternatives passed over.** A monotonic timestamp / uuid "identity" (the AD allows
+"or equivalent identity", but a plain `int` counter is the minimal thing that satisfies
+"monotonic, bumped on install/clear, comparable across steps" and is trivially
+hand-checkable); adding the token to the inspection surface / a `SimState` field
+(explicitly wrong — AD-024 keeps it OUT of state; it is not mutable sim truth, Tenet 2 /
+AD-001, and must never enter the hash); a dedicated harness inspection hook (unnecessary —
+the static accessor on a globally-reachable namespace is the natural read path the ticket
+sanctions when no harness hook is more natural).
+**Why.** A static `int` bumped on install/clear is the minimal implementation of the
+monotonic token; the static accessor keeps the read observable without adding it to the
+snapshot-able surface (which would risk it entering a golden — the exact thing AD-024/
+AD-019 guard against for non-sim-truth). Purely additive to `MoveRegistry`; reversible;
+touches no `SimState` shape, no contract the seam exposes. If QA (harness) prefers a
+different read path or identity form, it is a localized change here.
+**Boundary.** Wiring/precondition state only — NOT `SimState`. Explicitly not serialized,
+cloned, or hashed.
+
+### JC-029 · 2026-07-03 · simulation.md crit 11 · The crit-11 install-generation assertion lives in `test_sim_state.gd` — provisional (test-only latitude)
+**Decided.** The acceptance-criterion-11 check (token stable across a run's steps; bumps
+on install/clear; NOT in the state hash) is added as `_test_roster_install_generation_
+stable()` in `test_sim_state.gd` — the existing determinism/serialization test file that
+already covers simulation.md crits 1/3/4/8/9. It installs `TestSupport.build_roster()`,
+captures the token at the first step, asserts it is unchanged across six steps, asserts a
+token bump does not change the `SimState` hash, and asserts install/clear each bump it;
+`_init` now `MoveRegistry.clear()`s at teardown for isolation (matching `test_done_bar`).
+**Serves.** simulation.md crit 11 + the ticket ("update/extend affected tests"). QA owns
+what "verified" means (TKT-P0-11 harness); this is the developer-side test written as I
+build, not a harness verdict.
+**Alternatives passed over.** A new standalone test file (more headless runners for QA to
+wire; crit 11 is a determinism-precondition, so it belongs with the other simulation.md
+determinism crits already in `test_sim_state.gd`); asserting via the inspection surface
+(the token is deliberately NOT on the surface — JC-028 — so there is nothing to read
+there); folding it into `test_done_bar` (that file is the DONE-BAR scenario, not the
+determinism-crit home).
+**Why.** Co-locating crit 11 with the sibling determinism crits it belongs to keeps the
+one determinism/serialization test file the single place those criteria are exercised, and
+the teardown `clear()` keeps the per-run token semantics clean between test files.
+**Boundary.** TEST-ONLY. No sim code touched by THIS call (the sim change is JC-028's
+accessor). Provisional pending QA's TKT-P0-11 harness, which may supersede or relocate it.
