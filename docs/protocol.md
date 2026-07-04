@@ -262,9 +262,15 @@ non-foundational (P1) feature* first. See flags-archive.md, 2026-07-02.)
   keep a human on the one irreversible step. (The old `commit.bat` / `push.bat` /
   `COMMIT_MSG.txt` apparatus was a workaround for git corruption under the retired
   Linux-sandbox mount; that failure mode is gone and the apparatus is retired.)
-- **Commit granularity:** one logical change per commit where practical; the
-  message references the brief, ticket, or flag it serves (e.g.
-  `brief: debug-training-mode`).
+- **Commit often; one logical change per commit.** Prefer **frequent, small
+  commits** — checkpoint each logical unit as it lands rather than batching many
+  changes into one commit. Commits are local and cheap (`push` is the only gate),
+  so err toward *more* checkpoints, not fewer: they shrink how much is lost if a
+  session dies mid-flight and give the user clean, reviewable history to catch a
+  wrong turn early. The message references the brief, ticket, or flag it serves
+  (e.g. `brief: debug-training-mode`). This is orthogonal to session batching in
+  the token-economy section — that minimizes cold-start *reads*; committing often
+  *within* a session costs nothing extra.
 - **Direction lives upstream.** A steer given in chat — by the user or anyone —
   is provisional until the *owning* artifact records it. If a role receives or
   infers direction that belongs to an upstream artifact (priorities, scope, a
