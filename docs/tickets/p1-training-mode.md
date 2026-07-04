@@ -40,9 +40,20 @@ sim-facing interfaces (and the projectile) that Batch 3's overlays read downstre
 - **Batch 2:** TKT-P1-10 — character A authoring, against the move format (needs 0P's
   fireball from Batch 1). *Checkpoint:* A is playable vs a dummy (the record/playback
   dummy from Batch 1's TKT-P1-04) — the **P1 done-bar** (Strategist's flag resolution).
+- **Batch 2E (engine, content-surfaced):** TKT-P1-11, 12 — the two engine builds
+  character-A authoring surfaced as flags (invuln consumption + `hit_kind`; command-schema
+  jump/chord), resolved by the Architect as AD-031/AD-032. They unblock the part of A's
+  done-bar (criteria 4, 6, 8) that inert authored data cannot reach. Independent of each
+  other; both depend on Batch 1 (0P for the projectile invuln gate) and the Batch-2
+  authored data. *Checkpoint:* A's invuln beats a jump-in end-to-end and jump/throw are
+  reachable by live input. (Sequenced after Batch 2 because they consume its authored data;
+  the Strategist scopes this session — see the flag resolutions.)
 - **Batch 3:** TKT-P1-05, 06, 07, 08, 09 — the training-mode shell plus the four
   overlays (all downstream of Batch 1's interfaces; 06–09 depend on 05). *Checkpoint:*
-  the mode shows, live, what the sim is doing.
+  the mode shows, live, what the sim is doing. Note: `PlayerView.invuln` (a derived read,
+  TKT-P1-11) is surfaceable in TKT-P1-01 independently, so the overlays can be built against
+  it in parallel with Batch 2E; only the *end-to-end* whiff-by-invuln display verifies once
+  TKT-P1-11's phase-4 gate lands.
 
 Note the deliberate ordering: character A (Batch 2) lands *before* the player-facing
 overlays (Batch 3) that display it, because "A playable vs a dummy" is the P1 done-bar
@@ -118,6 +129,66 @@ cancels). No engine changes. This is the training mode's first *real* test subje
 and the P1 done-bar (per the Strategist's flag resolution).
 **Acceptance:** `character-a.md` criteria 1–7 and 9 (criterion 8 lands with
 TKT-P0-08; criterion 10 is verified at the feature audit, in-mode).
+
+## Engine (content-surfaced P1 work — flag resolutions)
+
+> These two tickets are P1 **engine** work that character-A authoring (TKT-P1-10)
+> surfaced as flags the Architect resolved (AD-031, AD-032). They unblock the part of
+> `character-a.md`'s done-bar that authored-but-inert data cannot reach on its own. No
+> content authoring here beyond the small `character_a.gd` `button_map` additions TKT-P1-12
+> names; the durable design is the ADs. Sequencing: both are independent of the Batch-3
+> overlays' *interfaces* (they touch the sim, not the seam shape); `PlayerView.invuln`
+> (TKT-P1-11's read) is a derived projection addable in TKT-P1-01 with no dependency on the
+> phase-4 change landing.
+
+### TKT-P1-11 · Consume invulnerability (phase 4) + `HitBox.hit_kind`
+**Serves:** AD-031; `combat-resolution.md` (phase 4 + Invulnerability + criterion 12),
+`move-format.md` (`HitBox.hit_kind`, `Keyframe.invuln`), `inspection-surface.md`
+(`PlayerView.invuln`). **Depends:** P0 phase pipeline (`step_phases.gd`); TKT-P1-0P
+(projectiles, for the PROJECTILE gate); the character-A invuln data authored inert at
+TKT-P1-10. **Scope:**
+- Add `HitBox.hit_kind` (`STRIKE`/`THROW`/`PROJECTILE`; default `STRIKE`) to `hit_box.gd`;
+  reconcile the existing `is_throw` to `hit_kind == THROW` (same fact, two names — the
+  throw path may keep reading `is_throw`). Mark a projectile's carried hitbox `PROJECTILE`.
+- In `phase4_overlap`, gate each candidate contact — **character hitbox and projectile
+  alike** — against the *defender's* covering-keyframe invuln before appending it: a
+  `STRIKE`/`PROJECTILE` against a frame with `invuln_strike` is **not appended**; a `THROW`
+  against `invuln_throw` is not appended. Resolve the defender's covering keyframe via the
+  same `MoveData` keyframe lookup the box resolver uses (derived, no new state). A suppressed
+  contact reaches phase 5 for nothing — no `id_group`/throw-clash/combo effect.
+- A projectile suppressed by invuln is **not consumed** (no phase-5 connect ⇒ no despawn);
+  it may connect on a later vulnerable frame.
+- Add the derived `PlayerView.invuln` (`{ strike, throw }` bools) read in
+  `inspection_view.gd`/`player_view.gd`, projecting the covering keyframe. No `SimState`
+  field, no new hash coverage.
+**Acceptance:** `combat-resolution.md` criterion 12; `character-a.md` criteria 4 (`2H`
+strike-invuln beats a jump-in, gives no combo) and 6 (each DP strike-invuln frame 1→first
+active; `623H` also throw-invuln; the back dash's invuln 1–7); `inspection-surface.md`
+criterion 1 (invuln readable through `PlayerView`) + criterion 4 (no float in the view).
+A test must show: a strike whiffing an `invuln_strike` frame (no damage/stun, `move_contact`
+→ `WHIFF`); the same frame still thrown unless `invuln_throw`; a projectile passing through
+an `invuln_strike` frame and connecting on a later vulnerable frame.
+
+### TKT-P1-12 · Command schema: pure-direction command + two-button chord
+**Serves:** AD-032; `move-format.md` (`ButtonMapEntry` schema / command-recognition
+contract). **Depends:** P0 input buffer (`input_buffer.gd`, `button_map_entry.gd`); the
+character-A jump/throw `MoveState`s authored at TKT-P1-10. **Scope:**
+- Add `chord_button_index: int = -1` to `button_map_entry.gd`.
+- In `input_buffer.gd` `entry_satisfied`: (a) a `button_index == -1 && motion == 0` branch
+  recognizing the entry by `required_direction` held within `COMMAND_BUFFER` (reuse
+  `_required_direction_held`); (b) a chord branch requiring `button_index` **and**
+  `chord_button_index` bits on the **same** buffered frame.
+- Author A's `button_map` entries (in `character_a.gd`): jump (`UP`, no button →
+  `STATE_PREJUMP`) and throw (`BUTTON_0`+`BUTTON_2` chord → `STATE_THROW`), the throw
+  listed **before** the bare `5L/5M/5H` entries so first-match-wins routes `L+H` to the
+  throw while bare presses still reach the normals. Remove the flag scope-note comments now
+  that the entries exist.
+**Acceptance:** `character-a.md` criterion 8 (buffer/recognition) extended: jump is reachable
+by holding up; `L+H` performs the throw; **`5L`/`5M`/`5H` each remain reachable** by a bare
+press (the chord does not shadow them). The recognizer stays a pure function of
+`input_history` (deterministic across sources, `input.md` criterion 2). A test must show a
+bare `L` reaching `5L`, and a same-frame `L+H` reaching the throw, with the throw entry
+ordered first.
 
 ## Player-facing (downstream of the interfaces)
 

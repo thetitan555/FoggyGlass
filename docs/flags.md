@@ -11,7 +11,7 @@
 
 ---
 
-### [open] 2026-07-04 · raised-by: Developer · owner: Architect · re: move-format.md (Keyframe.invuln) / combat-resolution.md (phase 4/5)
+### [resolved] 2026-07-04 · raised-by: Developer · owner: Architect · re: move-format.md (Keyframe.invuln) / combat-resolution.md (phase 4/5)
 Problem: `character-a.md` structurally requires invulnerability to be a real, enforced
 mechanic — `2H` "upper-body strike invuln 1–8" beating a jump-in (criterion 4), each DP
 "strike-invulnerable from frame 1 through at least its first active frame" and `623H`
@@ -36,10 +36,27 @@ a `hit_kind` — strike/throw/projectile — to check the right invuln flag agai
 this interact with projectile contacts, which bypass the character's active-hit-id memory
 entirely).
 ---
-Resolution (owner fills): …
+Resolution (owner, Architect, 2026-07-04): Resolved as **AD-031**. Invuln becomes an
+enforced mechanic, **consumed in phase 4** (a gated overlap is not appended to the contact
+list — the box whiffs), *not* record-then-no-op in phase 5 (which would force phase 5 to
+un-do id_group/throw-clash/combo bookkeeping — the clean cut is to not record). `HitBox`
+gains a **`hit_kind` (STRIKE/THROW/PROJECTILE)**: `invuln_strike` whiffs STRIKE **and**
+PROJECTILE (a projectile is a strike at range); `invuln_throw` whiffs THROW; the legacy
+`is_throw` is folded to `hit_kind == THROW`. **Projectiles gate but are not consumed** —
+a projectile whiffed by invuln passes through and may connect on a later vulnerable frame.
+The gate reads the defender's covering keyframe (derived, AD-001 — **no new SimState
+field**). The whiff is **observable**: the attacker's `move_contact` resolves to WHIFF on
+the existing whiff edge, and the defender's invuln is surfaced as `PlayerView.invuln`
+(derived), so the training mode shows *why* a hit whiffed (charter). Specs changed:
+`combat-resolution.md` (phase 4 + Invulnerability section + criterion 12), `move-format.md`
+(`HitBox.hit_kind`, `Keyframe.invuln`), `inspection-surface.md` (`PlayerView.invuln` +
+criterion 1). Engine implementation is the Developer's — **ticket TKT-P1-11**. Overlay
+sequencing: the invuln read is a derived projection, surfaceable in TKT-P1-01 with no
+dependency on the phase-4 change; full whiff-attribution display verifies once TKT-P1-11
+lands, but overlay UI can be built in parallel against the read (see report).
 ---
 
-### [open] 2026-07-04 · raised-by: Developer · owner: Architect · re: move-format.md (ButtonMapEntry) / input_buffer.gd (command recognition)
+### [resolved] 2026-07-04 · raised-by: Developer · owner: Architect · re: move-format.md (ButtonMapEntry) / input_buffer.gd (command recognition)
 Problem: authoring character A's movement and throw surfaced two commands the current
 command-recognition schema (`ButtonMapEntry` + `InputBuffer`) cannot express:
 1. **A pure-direction command (jump, `7/8/9`).** `InputBuffer.button_buffered` returns
@@ -69,7 +86,23 @@ are not yet playable end-to-end. Per the ticket, flagging rather than editing
 (`move-format.md`) other content and the training-mode input-display ticket (TKT-P1-09)
 will read through.
 ---
-Resolution (owner fills): …
+Resolution (owner, Architect, 2026-07-04): Resolved as **AD-032**. The command-recognition
+schema is extended for both shapes. **Pure-direction command (jump):** a `ButtonMapEntry`
+with `button_index == -1` and `motion == 0` is recognized by its `required_direction` alone
+(held within the 6-frame command buffer) — jump = `UP`, no button. A jump is a held
+direction, **not** a new `_motion_tokens` sequence (keeping that fixed `match` reserved for
+real multi-direction motions). **Two-button chord (throw):** `ButtonMapEntry` gains
+`chord_button_index` (`-1` = none); when set the command requires `button_index` **and**
+`chord_button_index` on the **same** frame (not merely both somewhere in the window).
+**Shadowing rule:** the chord entry is authored **before** the bare-button normals it shares
+a button with, so `L+H` resolves to the throw while a bare `L`/`M`/`H` still reaches
+`5L`/`5M`/`5H` (a bare press does not satisfy the two-bit-same-frame chord) — the throw is
+reachable without stealing a bare button. Specs changed: `move-format.md` (new
+`ButtonMapEntry` schema section + command-recognition contract). Engine implementation is
+the Developer's — **ticket TKT-P1-12** (adds the `chord_button_index` field + the two
+recognizer branches, then authors A's jump/throw `button_map` entries). Read by TKT-P1-09
+(input display): the recognizer stays a pure function of `input_history`, so the display
+decodes jump/throw/chord from the same raw frames — kept legible.
 ---
 
 _No other open flags._

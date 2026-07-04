@@ -41,6 +41,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-029** Dedicated `HitBox.tech_window` field; throw tech-window is not `blockstun` reuse — settled
 - **AD-030** Projectile authored format: `ProjectileData` + `ProjectileRegistry`; runtime `data_id`; spawn timing — settled
 - **AD-031** Invulnerability consumed in phase 4; `HitBox.hit_kind` gates strike/throw/projectile; whiff is observable — settled
+- **AD-032** Command schema extension: pure-direction command + two-button chord; first-match-wins shadowing rule — settled
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -845,3 +846,68 @@ jump-in during startup," which whole-character strike-invuln satisfies; the "upp
 framing is flavor the geometry does not yet encode). If a later character needs true
 partial/geometric invuln, that is a revision to this AD (a per-box or per-region invuln),
 not a silent code change. The `hit_kind` enum and the `invuln_*` flags leave that door open.
+
+### AD-032 · Command schema extension: pure-direction command + two-button chord; the shadowing rule — settled (2026-07-04, resolves the command-recognition flag)
+**Decision.** The `ButtonMapEntry` command-recognition schema (move-format.md;
+`input_buffer.gd` recognizer) is extended so two command shapes character A already
+authors as real `MoveState`s — a **pure-direction command** (jump `7/8/9`) and a
+**two-button chord** (throw `L+H`) — become reachable by a live input stream. Surfaced by
+authoring A's movement and throw (the flag): all three buttons are taken by standing
+normals, so neither shape had a recognition path.
+
+- **Pure-direction command (jump).** A `ButtonMapEntry` with `button_index == -1` (no
+  button) and `motion == 0` is recognized by its `required_direction` alone, held on any
+  of the last `COMMAND_BUFFER` (6) frames — the directionless path the P0 recognizer
+  lacked (`button_buffered` returned `false` outright for `button_index < 0`). Jump is
+  `required_direction == UP`. A jump is a *held direction*, **not** a motion sequence, so
+  it is a `required_direction` gate, not a new `_motion_tokens` entry — `_motion_tokens`
+  stays reserved for genuine multi-direction sequences (`236`/`623`), avoiding the
+  engine-code edit to that fixed `match` the flag correctly declined to make ad hoc.
+- **Two-button chord (throw).** `ButtonMapEntry` gains a `chord_button_index` field
+  (`-1` = none). When set, the command requires `button_index` **and** `chord_button_index`
+  both held on the **same** frame within the command buffer. "Same frame" is load-bearing:
+  a per-button "appears anywhere in the 6-frame window" test would falsely fire on a `L`
+  then a separate `H` six frames apart. The chord is one entry, one recognizer call, both
+  bits checked per frame.
+- **First-match-wins shadowing (the reachability rule).** `button_map` resolves in authored
+  order, first satisfied wins (already true, JC-023 routes cancels through the same
+  ordering). The chord entry MUST be authored **before** the bare-button entries it shares
+  a button with, so `L+H` resolves to the throw, not `5L`. A bare `L` alone does not satisfy
+  the chord (both bits required on one frame), so `5L`/`5M`/`5H` stay reachable when pressed
+  alone. This makes the throw authorable **without** stealing a bare button — the exact
+  blocker the flag hit (aliasing throw to a bare button permanently shadowed a load-bearing
+  normal, e.g. `5H`, central to A's 3-frame-link route). The ordering is an authoring rule
+  the format guarantees is *expressible*; the recognizer needs no new ordering logic.
+
+**Why.** Both are command-recognition *contract* the Architect owns (move-format.md
+`ButtonMapEntry` + the recognizer other content and TKT-P1-09's input display read
+through), surfaced by real authored content that could not be reached — a genuine
+format/engine gap, not a per-move authoring choice, so it is an owned AD, not dev latitude.
+The two additions are the minimal grammar that expresses jump and throw: a no-button
+direction gate (reusing the existing facing-aware `_required_direction_held`) and one
+extra button field with same-frame semantics. Keeping jump a `required_direction` (not a
+motion token) and the chord a single per-frame check keeps the recognizer a pure function
+of `input_history` (AD-003/Tenet 2) — replays/netcode reproduce both for free, and TKT-P1-09
+decodes them from the same raw frames. The shadowing rule is stated as an owned authoring
+invariant so QA can assert `5L/5M/5H` reachability, rather than leaving it a content
+accident.
+**Rejected.** A new `motion` token for "UP" (would edit `input_buffer.gd`'s fixed
+`_motion_tokens` match for a single held direction — heavier than a direction gate, and
+conflates a held direction with a multi-frame sequence; the flag correctly declined this
+ad hoc, and the direction-gate reading is cleaner as the owned resolution). Aliasing the
+throw to a bare button (permanently shadows a standing normal under first-match-wins — the
+flag's blocker; rejected). A general N-button chord list (`PackedInt32Array` of required
+buttons) — more than the slice needs (throw is exactly two buttons); the single
+`chord_button_index` is the minimal expressible form and a third button is a later AD
+revision if a command ever needs it (Tenet 3: leave the door, don't build the unused path,
+matching AD-016's discipline). Requiring both chord buttons *anywhere* in the 6-frame window
+rather than same-frame (would fire on sequential presses — wrong for a chord; rejected).
+**Consequence (Developer, via the engine ticket).** `button_map_entry.gd` gains
+`chord_button_index: int = -1`. `input_buffer.gd` `entry_satisfied` gains: (a) a
+`button_index == -1 && motion == 0` branch recognizing the entry by `required_direction`
+within `COMMAND_BUFFER` (via the existing `_required_direction_held`); (b) a chord branch
+requiring both button bits on the same buffered frame. `character_a.gd` then authors the
+jump `button_map` entry (`UP`, no button) and the throw entry (`L`+`H` chord, listed before
+the bare `5L/5M/5H` normals) — that authoring lands with character A, driven by this ticket's
+schema, not invented by the content session. No `SimState` shape change; the recognizer stays
+a pure function of history.

@@ -107,6 +107,47 @@ to another normal within a `window`; **special-cancel** = `requires_tag` granted
 by the hit; **whiff-cancel** = `on_whiff`. Rehit/multi-hit is *not* a cancel —
 see `HitBox.rehit_interval` and AD-016.
 
+### `ButtonMapEntry` (one entry in `Character.button_map`) — command recognition contract (AD-018, AD-032)
+
+Maps a generic input command to a destination `state_id`. This is the only place
+buttons gain meaning (AD-002/AD-018). Entries are evaluated in **authored order**;
+the **first entry whose command is satisfied wins** (first-match-wins). A command is
+"satisfied" when it is recognized within the input buffer (motion within the 9-frame
+window, buttons/directions within the 6-frame command buffer — AD-022), read through
+the one recognizer.
+
+| Field | Meaning |
+|---|---|
+| `motion` | Optional motion id (`236`, `623`, …); `0` = none. Recognized in the 9-frame motion window. |
+| `button_index` | The primary generic button (`BUTTON_0…7`), or **`-1` = no button** (a pure-direction / motion-only command). |
+| `chord_button_index` | Optional **second** required button (AD-032); `-1` = none. When set, the command requires `button_index` **and** `chord_button_index` both held on the **same** frame within the command buffer — a two-button *chord* (e.g. throw `L+H`). |
+| `required_direction` | Optional direction gate (raw direction bits; the sim resolves forward/back by facing before matching). For a pure-direction command (`button_index == -1`, no `motion`) this is the *whole* command (e.g. jump = `UP`). |
+| `target_state_id` | Destination `state_id`. |
+
+**Two command shapes this contract must express (AD-032):**
+
+- **Pure-direction command** (jump, `7/8/9`): `button_index = -1`, `motion = 0`, and a
+  `required_direction` (e.g. `UP`). Recognized when the required direction is held on any
+  of the last 6 (command-buffer) frames — no button needed. This is the directionless/
+  button-less path the P0 recognizer lacked. (A jump is a *held direction*, not a motion
+  sequence, so it is a `required_direction` gate, **not** a new `motion` token — keeping
+  `_motion_tokens` reserved for actual multi-direction sequences.)
+- **Two-button chord** (throw, `L+H`): `button_index` = one button, `chord_button_index` =
+  the other, both required on the **same** frame (not merely both somewhere in the window,
+  which a naive per-button buffer scan would wrongly accept). `required_direction`/`motion`
+  optional.
+
+**First-match-wins and shadowing (the reachability rule, AD-032).** Because the first
+satisfied entry wins, a **chord entry must be listed *before* the bare-button entries it
+shares a button with**, so a simultaneous `L+H` resolves to the throw, not to `5L`. A bare
+`L` alone does **not** satisfy the chord (both bits required on one frame), so `5L`/`5H`
+stay reachable when pressed alone — the chord does not shadow its component normals. This
+ordering requirement is an **authoring rule the format guarantees is expressible**, not new
+engine behavior: the recognizer already resolves entries in authored order; the chord field
+is what lets the throw be authored at all without stealing a bare button (the exact problem
+that left `L+H` unreachable — three buttons all taken by standing normals). QA can assert
+`5L`/`5M`/`5H` each remain reachable alongside the throw.
+
 ### `Box` (geometry, character-local)
 | Field | Meaning |
 |---|---|
