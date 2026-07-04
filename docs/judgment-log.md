@@ -1423,3 +1423,98 @@ self-links and confirms into `2M`" language suggests hitstun is the
 intentionally-emphasized number, so the Normals table's "+3" is more likely
 the stale figure — but that is exactly the kind of number-picking the
 protocol says stays with the Architect, not the Developer.
+**Ratified — hitstun 15 is authoritative; the spec is fixed to +6, keep the
+authored value** (Architect, 2026-07-04). The Developer correctly diagnosed a
+genuine spec-internal contradiction it does *not* own the resolution of (which of
+two authored inputs to trust is number-picking, the Architect's per protocol), and
+correctly authored to *one* internally-coherent number (hitstun 15) rather than
+guessing. Ruling: **the authored hitstun 15 is authoritative**, deriving `+6` on
+hit via the one AD-008 formula (`15 − (3+7−1)`). Decisive evidence beyond the
+"juiced" language: `+6` is exactly what makes the bread-and-butter `2L , 2L` a
+**3-frame link** (route 3: `adv − startup + 1 = 6 − 4 + 1 = 3`), which the spec
+itself already claims — so the Normals table's `+3` both failed to reconcile under
+the formula *and* contradicted route 3, making it the stale figure. **I fixed the
+spec** (`character-a.md` Normals table `2L` on-hit `+3 → +6`, plus a reconciliation
+note under the Damage table) so the two tables no longer disagree about one move —
+that disagreement was a spec defect in a legibility-critical content spec, not a
+tuning-provisional latitude (the *value* stays provisional; the tables *agreeing*
+via the one formula is binding). The Developer's authored `2L` (hitstun 15) is
+**correct as built** — no code change, no overturn. The on-block side already
+reconciled (`10 − 9 = +1`) and is untouched.
+
+---
+
+### JC-A-01 — ratified (Architect, 2026-07-04)
+**Ratified as content latitude.** The jump arc's *shape* (triangular baked `vel_y`
+vs. a true parabola) is exactly the tuning-by-feel the `character-a.md` "Tuning
+status" section defers to the training mode; the *structural* fact the spec pins
+("player jumps, airborne holds ~45f") is satisfied, and the hand-baked per-frame
+`vel_y` uses the existing keyframe-motion mechanism with **no engine change, no new
+format field, no `SimState` field** — squarely data-only latitude, not a contract
+question. The Developer's alternatives analysis is sound: parabolic vs. triangular
+is "which numbers I bake," identical mechanism and authoring cost, so choosing the
+cheaper curve for a provisional-until-playable batch is correct. No fold needed (no
+contract surface); the arc is a data-only edit to retune later. **Note it inherits
+the command-schema resolution:** the jump states were unreachable by live input at
+authoring time (the flag), but AD-032 (this session) now makes jump reachable
+(`UP`, no button) and TKT-P1-12 wires A's jump `button_map` entry — so the arc's
+shape becomes live-verifiable once that engine ticket lands. The provisional shape
+holds until then; a feel pass tunes it in-mode.
+
+### JC-A-02 — ratified (Architect, 2026-07-04)
+**Ratified as content latitude, consistent with JC-023.** Six concrete `CancelRule`s
+per cancellable normal (one per fireball/DP target × L/M/H) rather than one
+group-targeted rule is the *mechanical consequence* of JC-023's already-ratified
+"group targets deferred" scope (`CancelEval.find_cancel` skips a group target), not
+a fresh design choice — as the Developer notes, building group resolution would be
+the engine change the ticket rules out. `move-format.md`/AD-015 already settled
+*what* a cancel is (a typed rule list); this is purely *how many rules* express
+"cancel into any special," purely additive data with no contract change. Correct and
+collapsible-to-fewer-rules if/when group targets land (AD-016's leave-the-field
+discipline). No fold, no code change. **Consistency note for a future group-target
+ticket:** when cancel groups do land, A's `_special_cancels()` is the canonical
+collapse site — six rules → one group rule — and this entry records why the six
+exist so that future work reads it as intentional, not as bloat to preserve.
+
+### JC-A-03 — ratified (Architect, 2026-07-04)
+**Ratified: the flat `DP_BLOCKSTUN = 10` placeholder stands; the spec's `≈` figures
+are non-binding targets.** The Developer asked for the real numbers or an explicit
+ratification of the placeholder — here is the explicit ruling. Criterion 6 binds
+**structure** ("every DP minus enough that even 25f `5H` punishes — full-punishable
+by construction"), and `character-a.md`'s Tuning status marks the `≈ −34/−36/−40`
+figures provisional. I verified the placeholder satisfies the binding structure via
+the one AD-008 formula (`blockstun − (active + recovery − 1)`, recovery incl. land):
+`623L = 10 − (8+40−1) = −37`; `623M = 10 − (8+42−1) = −39`; `623H = 10 − (10+47−1)
+= −46`. All are well past the `−25` a 25-frame `5H` needs to punish — full-punishable
+by construction, criterion 6 met with margin. The placeholder reads slightly *more*
+minus than the spec's approximate targets, which is within the provisional latitude
+and (if anything) safer for the "always punishable" structural claim. **I am not
+back-solving to the `≈` figures**, because the spec explicitly labels them
+non-binding and manufacturing a `blockstun` to hit a number the spec says not to
+treat as binding trades a legible authored value for a false precision. **For a
+future tuning pass (recorded, not required):** to land nearer the spec's `≈`
+targets, `blockstun` would rise to roughly `13/13/16` (`623L→−34`, `623M→−36`,
+`623H→−40`); that is an in-mode feel call, not a correctness fix. Placeholder
+ratified as-built; no code change.
+
+### JC-A-04 — ratified (Architect, 2026-07-04)
+**Ratified as the correct data-only reading.** Air-normal hitstun authored as one
+flat value (14) rather than height-banded is correct because `character-a.md` itself
+locates air-normal ground advantage in **"sim truth the training mode reads out, not
+a fixed number"** — height-dependence is *live sim behavior*, and the `HitBox` schema
+has no per-height field. Authoring one flat base hitstun (the field the schema *does*
+have) and letting the live advantage vary with contact height is exactly the spec's
+stated model, not a contract gap. Inventing a per-height `HitBox` field would be the
+format change the ticket rules out — the Developer rightly did not. **Scope note I
+own (not an overturn):** the *mechanism* that makes ground advantage vary with
+contact height ("deep jump-in = very plus") is **not yet built** — at present the
+flat hitstun yields a flat advantage, so route 2's `j.H , 5M` link and route's
+"deep = very +" are structurally authored but not yet height-varying in the sim.
+That mechanism (height-dependent hitstun/advantage) is a **P-scope question I am
+raising to the Strategist** separately — it is not JC-A-04's to resolve (this JC is
+only "flat vs. banded *authored* value," and flat is the right authored value either
+way). Ratified as-built; no code change; the height mechanism is a raise, below.
+
+### JC-A-05 — ratified (see the ruling folded into JC-A-05 above).
+(Disposition recorded in the JC-A-05 entry: hitstun 15 authoritative, spec fixed to
++6, authored value correct as-built.)

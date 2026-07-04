@@ -66,7 +66,7 @@ without a flag round-trip. (Flag-resolved 2026-07-02; see the flag ledger.)
 | `5L` | 4 | 3 | 6 | **+1** | **+4** | yes (on contact) | Fast poke / frame trap. |
 | `5M` | 5 | 4 | 11 | −2 | **+2** | yes (on contact) | Footsie + DP-cancel confirm. |
 | **`5H`** | 25 | 3 | 13 | **+3** | **+7** | no | **Forward-advancing pressure reset / hard-read poke.** Very slow (reactable) and committal; plus on block and, on hit, the **3-frame link** into the high-damage combo. Advances ~30 px. |
-| `2L` | 4 | 3 | 7 | **+1** | **+3** | yes (on contact) | Low pressure starter, links. |
+| `2L` | 4 | 3 | 7 | **+1** | **+6** | yes (on contact) | Low pressure starter, links. |
 | **`2M`** | 6 | 3 | 13 | −1 | **+3** | yes (on contact) | **The signature poke** — long range, whiff-punish, `> 236/623`. |
 | **`2H`** | 5 | 3 | 13 | −2 | air reset (no combo) | no | **Fast get-off-me anti-air.** Upper-body invuln **1–8**; low reward — a safer, weaker DP. |
 | `j.L` | 4 | 6 | (land) | — | height-dep. | no | Air-to-air. |
@@ -89,6 +89,19 @@ without a flag round-trip. (Flag-resolved 2026-07-02; see the flag ledger.)
 reset (keeps your turn, closes space). Air normals' ground advantage is
 height-dependent (deep jump-in = very plus, enabling the grounded links); that is
 sim truth the training mode reads out, not a fixed number.
+
+**`2L` on-hit reconciliation (2026-07-04, ruling JC-A-05).** The Normals table's
+`2L` on-hit is **+6**, derived from the authored hitstun 15 via the one canonical
+formula (`15 − (3+7−1) = +6`) — *not* the stale +3 that previously sat here. The
+authored **hitstun (15) is authoritative**: it is the intentionally-juiced number
+("hitstun juiced so `2L` self-links and confirms into `2M`", below), and +6 is
+exactly what makes the bread-and-butter `2L , 2L` a **3-frame link** (route 3:
+`adv − startup + 1 = 6 − 4 + 1 = 3`). The old +3 could not reconcile with the
+authored hitstun under the one formula and contradicted route 3's own claim, so it
+was the stale figure. On-block already reconciled (`10 − 9 = +1`) and is unchanged.
+This keeps both tables internally consistent through the single AD-008 derivation
+(the value stays tuning-provisional per "Tuning status," but the two tables must not
+*disagree* about the same move — that is a spec defect, now fixed).
 
 Note: with `2H` now an anti-air rather than a sweep, A's **knockdowns come from the
 DP and the throw** (no low sweep) — a deliberate narrowing of the simplified kit.
