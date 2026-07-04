@@ -1272,3 +1272,154 @@ travel begins the tick after the projectile appears — otherwise the fireball's
 reach is mis-tuned by one tick. Folded into **AD-030** with the explicit authoring
 consequence spelled out (spawn frame 14 ⇒ exists at frame 14, first moves/ages frame 15).
 No code change (build matches AD-030).
+
+---
+
+### JC-A-01 · 2026-07-04 · TKT-P1-10 · Jump arc authored as a hand-baked triangular vel_y profile (no gravity primitive) — provisional
+**Decided.** Character A's ~45-frame jump (`STATE_JUMP_N/F/B`, `game/content/
+character_a.gd`) is authored as one-frame `Keyframe`s carrying an explicit
+per-frame `motion_vel_y`: a constant rise velocity for the first 22 frames, a
+constant fall velocity (same magnitude) for the remaining 23, sign-flipped at
+the apex — a triangular position curve, not a true parabola. Horizontal carry
+(0 / forward / back) is a constant `motion_vel_x` per state, matching the
+existing keyframe-motion mechanism exactly (`StepPhases._apply_keyframe_motion`
+already applies whatever `vel_x`/`vel_y` a covering keyframe authors, integrated
+by plain fixed-point add — no new engine code needed).
+**Serves.** `character-a.md` → Movement table (`Jump 7/8/9`, "~45f airborne, no
+air dash, no double jump, no jump cancels").
+**Alternatives passed over.** A true parabolic arc (a per-frame table baked from
+a quadratic) — mechanically identical authoring cost (still one `vel_y` value per
+frame; the engine has no gravity constant to lean on either way, so "parabolic"
+vs. "triangular" is purely which numbers I bake, not a different mechanism) but
+more frames of hand-tuned numbers for a P1 batch whose numbers are already
+provisional-until-playable (`character-a.md` "Tuning status"). Escalating jump
+entirely (declining to author it) — rejected because the movement table's
+authored values are real content the ticket asks for and nothing about a
+keyframe-driven arc requires an engine change.
+**Why latitude, not a flag.** The *shape* of a jump arc (triangular vs.
+parabolic vs. any other curve) is exactly the kind of tuning-by-feel number
+`character-a.md`'s "Tuning status" section already defers to the training mode
+("every number ... provisional until playable ... tuned by feel"); the
+*structural* fact the spec pins is "player jumps and airborne category holds
+for ~45f," which this satisfies. No tenet or contract is touched (no new
+`SimState` field, no new phase, no new authored-format field).
+**Boundary / reversibility.** Purely a content choice inside one file; swapping
+to a smoother per-frame curve later is a data-only edit, no format change.
+**Note.** The jump states are authored but **not reachable via `button_map`** in
+this batch (see `docs/flags.md`'s command-recognition flag) — the arc's shape is
+therefore unverified in a live input stream; dev tests drive the state directly
+to assert the keyframe motion integrates correctly.
+
+---
+
+### JC-A-02 · 2026-07-04 · TKT-P1-10 · Six concrete `CancelRule`s per cancellable normal, not one group-targeted rule — provisional
+**Decided.** Each of A's four special-cancellable normals (`5L`/`5M`/`2L`/`2M`)
+carries **six** `CancelRule`s (one per concrete target: fireball L/M/H, DP L/M/H),
+all sharing `condition = ON_CONTACT`, `requires_tag = TAG_SP`, default window,
+differing only in `target`/`input` — rather than one rule targeting a "specials"
+group.
+**Serves.** `character-a.md` → Cancels ("Cancellable normals carry
+`cancel_tags: ["sp"]`; Fireball and Shoryuken are `CancelRule`s with
+`requires_tag: "sp"` ... `> 236/623` cancels").
+**Alternatives passed over.** A single `CancelRule` with `target_is_group = true`
+naming a "specials" group — rejected because `CancelEval.find_cancel` explicitly
+treats a group target as unresolvable (`if rule.target_is_group: continue` —
+JC-023, already ratified as *"group targets deferred ... matches AD-016's
+leave-the-field-don't-build-the-unused-path"*). Building group resolution myself
+would be exactly the kind of engine change the ticket rules out; six concrete
+rules is the mechanical consequence of the existing engine, not a design
+alternative.
+**Why latitude, not a flag.** `move-format.md`/AD-015 already settled *what* a
+cancel is (a typed rule list); this is purely *how many rules* express one
+design intent ("cancel into any special") given JC-023's already-ratified
+scope line. No contract changes; purely additive data.
+**Boundary.** Local to each normal's authored `cancels` array
+(`_special_cancels()` in `character_a.gd`); trivially collapsible to fewer rules
+if/when group targets land.
+
+---
+
+### JC-A-03 · 2026-07-04 · TKT-P1-10 · DP blockstun authored as a small placeholder value, not back-solved to the spec's approximate on-block number — provisional
+**Decided.** Each shoryuken's `blockstun` is authored as a small flat value
+(`DP_BLOCKSTUN = 10`) rather than back-solved so the derived static on-block
+advantage matches `character-a.md`'s approximate on-block figures
+(`623L ≈ -34`, `623M ≈ -36`, `623H ≈ -40`).
+**Serves.** `character-a.md` → Specials → Shoryuken table; acceptance criterion
+6 ("every DP is minus enough that even 25f `5H` punishes before the DP
+recovers — full-punishable by construction, exact advantage provisional").
+**Alternatives passed over.** Back-solving `blockstun` to hit e.g. exactly -34
+for `623L` — rejected because the spec itself labels these numbers
+approximate ("≈") and structurally provisional ("Tuning status: numbers
+provisional until playable... What is binding is structure"); manufacturing a
+blockstun value purely to hit a non-binding approximate figure would be
+authoring to a number the spec explicitly says not to treat as binding, at the
+cost of a less legible authored value.
+**Why latitude, not a flag.** Criterion 6 only requires "full-punishable by
+construction" (checked: with `recovery=28..33`, `land=12..14`, `active=8..10`,
+even `5H`'s 25-frame startup punishes before any DP recovers — verified by the
+dev test), not the exact -34..-40 figures. The spec's own tuning-status
+section defers exact numbers to the training mode.
+**Boundary.** A single named constant (`DP_BLOCKSTUN`); trivially retunable.
+
+---
+
+### JC-A-04 · 2026-07-04 · TKT-P1-10 · Air-normal hitstun authored as one flat value, not height-dependent — provisional
+**Decided.** `j.L`/`j.M`/`j.H`'s `HitBox.hitstun` is authored as one flat value
+(14) rather than varying by the defender's height at contact.
+**Serves.** `character-a.md` → Normals table ("height-dep." hitstun/advantage
+for air normals; "Air normals' ground advantage is height-dependent ... that is
+sim truth the training mode reads out, not a fixed number").
+**Alternatives passed over.** Authoring several height-banded hitstun values —
+rejected because `move-format.md`'s `HitBox` schema has no per-height field (a
+`HitBox` is a fixed authored value; height-dependence is sim behavior the spec
+explicitly locates in "sim truth," not the move-format schema) and inventing
+one would be exactly the kind of format change the ticket rules out. The flat
+value is the correct data-only reading of a spec that itself says the
+height-dependent number is a *live* sim readout, not an authored table entry.
+**Why latitude, not a flag.** No contract gap: the spec is explicit that this
+is live-computed, not authored. The one authored value is the base hitstun the
+schema *does* have a field for.
+**Boundary.** Local to the three air-normal hitboxes; revisit only if a future
+ticket adds a height-dependent hitstun mechanism to the format.
+
+---
+
+### JC-A-05 · 2026-07-04 · TKT-P1-10 · `2L` authored to hitstun 15 (internally consistent), not back-solved to the spec's stated +3 on-hit — provisional
+**Decided.** `2L`'s `HitBox.hitstun` is authored as **15** (character-a.md's
+Damage & stun table value) even though this derives, via the one canonical
+formula (`hitstun − (recovery + active − 1)` = `15 − (7+3−1)` = `15 − 9` =
+**+6**), to an on-hit advantage that does not match the Normals table's stated
+**+3** for `2L`. The on-block side of the same move DOES reconcile exactly
+(`10 − 9 = +1`, matching the table).
+**Serves.** `character-a.md` → Normals table (`2L` row) + Damage & stun table
+(`2L` row); move-format.md AD-008 (one canonical derivation).
+**The contradiction.** Given `2L`'s own authored startup/active/recovery
+(4/3/7) and its own authored hitstun (15), the two spec tables disagree with
+each other about what `2L`'s on-hit advantage is — this is an inconsistency in
+the spec's authored numbers, not an authoring error on my part (I copied
+startup/active/recovery from the Normals table row and hitstun/blockstun from
+the Damage & stun table row, as authored, and ran them through the one
+formula).
+**Alternatives passed over.** Silently shrinking `recovery` (to 4, which would
+reconcile `15-(4+3-1)=9`... still doesn't land at +3 cleanly either) or
+shrinking `hitstun` to whatever value makes +3 land exactly (12, which would
+give `12-9=3`) — either is a plausible fix, but BOTH require changing an
+authored number the spec explicitly states (not silently substituting my own
+guess for which one is "wrong").
+**Why latitude, not a flag.** move-format.md criterion 2 and the character-a.md
+"Tuning status" section are explicit that exact table numbers are
+placeholder-provisional and QA verifies *derivation-consistency*, not an exact
+match to the table — so authoring to one internally-coherent number (the
+table's own hitstun=15) and letting the derived advantage be whatever the
+formula says is the correct data-only reading, not a contract question. Not a
+flag because nothing here is ambiguous about *how* to derive advantage (AD-008
+is unambiguous) — only *which of two contradictory authored inputs* to trust,
+which is squarely a tuning-pass question the spec already defers.
+**Boundary / what a future tuning pass should know.** If the Architect wants
+`2L` to land on exactly +3, either `hitstun` (→ 12) or `recovery` (→ 4, giving
++2, not quite +3 — `hitstun` is the cleaner fix) should change; both are
+one-line edits in `_build_2l()`. Character-a.md's own "hitstun juiced so `2L`
+self-links and confirms into `2M`" language suggests hitstun is the
+intentionally-emphasized number, so the Normals table's "+3" is more likely
+the stale figure — but that is exactly the kind of number-picking the
+protocol says stays with the Architect, not the Developer.
