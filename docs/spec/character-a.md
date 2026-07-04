@@ -90,6 +90,22 @@ reset (keeps your turn, closes space). Air normals' ground advantage is
 height-dependent (deep jump-in = very plus, enabling the grounded links); that is
 sim truth the training mode reads out, not a fixed number.
 
+**Height-dependent air advantage is a real mechanism (AD-033, F-014 in P1).** The
+"height-dependent" clause above is **backed by an engine rule**, not provisional
+hand-waving: an airborne attacker's on-hit air normal scales the hitstun it inflicts
+by the attacker's **contact depth** — deeper (closer to the ground) inflicts more
+hitstun, so a deep jump-in is more plus (a high/early hit is far less plus). The rule
+is the sim-wide `AirHeightScaling` definition (`combat-resolution.md` → "Air-normal
+height-dependent advantage"), and the live advantage / contact depth / hitstun delta
+are readable through the inspection surface, so the training mode shows *why* a deep
+`j.H` is so plus. **Reconciliation with the authored `HitBox.hitstun` (JC-A-04):** the
+flat `j.L`/`j.M`/`j.H` hitstun (14) in the Damage & stun table is the **base** the
+scaling starts from — height adds a signed delta on top at contact, it does not
+replace the authored value. So the flat authored number and the "height-dependent"
+prose are consistent: one is the authored base, the other is the live sim scaling.
+(The scaling's own numbers are slice-provisional, like all Tuning-status values; the
+*mechanism* — deep = more plus, observable — is what makes route 2 real.)
+
 **`2L` on-hit reconciliation (2026-07-04, ruling JC-A-05).** The Normals table's
 `2L` on-hit is **+6**, derived from the authored hitstun 15 via the one canonical
 formula (`15 − (3+7−1) = +6`) — *not* the stale +3 that previously sat here. The
@@ -169,7 +185,12 @@ Special-cancels + links only. No gatlings, no jump cancels.
 `>` cancel, `,` link. The training mode shows each link window (the brief's promise).
 
 1. **Footsie / whiff-punish:** `2M > 623L` → hard KD → oki (~150).
-2. **Jump-in:** `j.H , 5M > 623M` → hard KD (~250).
+2. **Jump-in:** `j.H , 5M > 623M` → hard KD (~250). The `j.H , 5M` link requires a
+   **deep** `j.H` (attacker low at contact): the height-dependent air-advantage rule
+   (AD-033) makes a deep `j.H` plus enough to link `5M`, while a high/early `j.H` is
+   not — a real, observable read the training mode shows (contact depth → hitstun →
+   advantage), not a fixed number. This route is backed behaviorally now, not just
+   structurally.
 3. **Low confirm:** `2L , 2L , 2M > 236H` — pressure + fireball oki. (`2L , 2L` =
    3f link; `2L , 2M` = **1f** — the kit's hardest link.)
 4. **The 5H combo (the 3-frame link):** `5H , 5M > 623M` — `5H` on hit (+7) links
@@ -225,3 +246,12 @@ archetypal "knockdown → pressure → read" loop.
 10. **Bread-and-butter works.** Each route is executable in the training mode and
     deals damage in the stated ballpark; each required link window is non-empty and
     displayed.
+11. **Height-dependent air advantage (AD-033).** A deep `j.H` (attacker low at
+    contact) is more plus than a high/early one — the same air normal at two contact
+    heights yields different, correctly-ordered live advantages, and a deep `j.H`
+    is plus enough to link `5M` (route 2). The contact depth and the height-scaled
+    hitstun delta are readable through the inspection surface so the read is
+    attributable. The flat authored air-normal hitstun is the *base* the scaling
+    starts from (JC-A-04), consistent with the height-dependent prose. Scaling
+    numbers are provisional (Tuning status); QA verifies the ordering (deep > high),
+    the floor, and observability, not the specific curve.
