@@ -250,6 +250,20 @@ foundational/contract-dense, so its impl:contract ratio is not the steady-state
 signal. Adoption gate: measure the [impl]:[contract] ratio on a *completed
 non-foundational (P1) feature* first. See flags-archive.md, 2026-07-02.)
 
+**The batch plan is an Architect deliverable, not Developer discretion.** How a
+phase's tickets group into Developer *sessions* is a read of the ticket
+dependency graph, the spec-read overlap between tickets (shared reads are what a
+batch amortizes), and the seam interfaces — all of which the Architect assembles
+during ticketing and already sketches in the ticket file's "Sequencing" section.
+So the Architect **draws the batch plan there** (a short "Build batches" block:
+which tickets per session, and the checkpoint each batch ends on), governed by
+the tradeoff above — amortize shared reads, but right-size each batch to a real
+checkpoint so blast-radius and steerability stay bounded. The **Developer
+executes the plan, and never invents its own batching.** The **Strategist may
+widen or narrow a phase's batching on steerability grounds** (where the user
+needs a checkpoint to catch a wrong turn) — that override is a direction call and
+stays with the Strategist; the mechanical grouping is the Architect's.
+
 ## Working agreements
 
 - **Roles commit; the user pushes.** The handoff is still the saved file on the

@@ -74,6 +74,13 @@ Read, in this order, and treat them as binding:
   even while one person writes both halves. Note the sequencing consequence: at
   the seam, the player-facing side is downstream of the simulation-facing
   interface, so those interfaces (even as stubs) come first.
+- **The batch plan** — for each phase, how the tickets group into Developer
+  *sessions*, drawn in the ticket file's "Sequencing" section as a short "Build
+  batches" block (tickets per session + the checkpoint each batch ends on). This
+  is yours because it falls out of the dependency graph and spec-read overlap you
+  already assemble; the Developer executes it and never invents its own. Governed
+  by the protocol's token-economy tradeoff — see `protocol.md` → "Token economy";
+  the Strategist may widen/narrow a phase's batching on steerability grounds.
 
 ## How you work
 
