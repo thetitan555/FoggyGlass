@@ -15,16 +15,18 @@ extends RefCounted
 ## All spatial/physics values are BAKED FIXED-POINT integers (AD-014). Frame
 ## counts, damage, stun are plain ints (whole frames / whole units).
 ##
-## SCOPE NOTE (flagged 2026-07-04, docs/flags.md). `Keyframe.invuln_strike` /
-## `invuln_throw` are authored below on the DP / 2H / back dash exactly as
-## character-a.md specifies, because the DATA should be ready the moment the
-## engine gains a consumption path — but nothing in step_phases.gd currently
-## reads them (no engine change per the ticket), so those frames do not yet
-## actually grant invulnerability. This is a flagged engine/format gap, not an
-## authoring omission: criteria 4 and 6 (invuln correctness) cannot pass
-## end-to-end until it resolves. Every OTHER structural criterion (frame data,
-## cancels, the fireball, the throw, no-gatling/no-jump-cancel) is fully
-## authored and enforced by the existing engine.
+## INVULN NOTE (AD-031, TKT-P1-11, landed 2026-07-04). `Keyframe.invuln_strike`
+## / `invuln_throw` are authored below on the DP / 2H / back dash exactly as
+## character-a.md specifies, and the engine now CONSUMES them: step_phases.gd
+## phase 4 gates a covered contact out of the contact list (the box whiffs) —
+## `invuln_strike` whiffs STRIKE and PROJECTILE contacts, `invuln_throw` whiffs
+## THROW (against `HitBox.hit_kind`). The whiff is observable (attacker
+## `move_contact` resolves to WHIFF; defender invuln surfaces as
+## `PlayerView.invuln`). So criteria 4 and 6 (invuln correctness) now pass
+## end-to-end — see `game/tests/test_invuln.gd`. This was previously a flagged
+## engine/format gap (invuln authored-but-inert); AD-031 resolved it. Every
+## structural criterion (frame data, cancels, the fireball, the throw,
+## no-gatling/no-jump-cancel) is fully authored and enforced by the engine.
 ##
 ## JUMP ARC (movement table). The engine has no gravity constant / airborne
 ## transition system (nothing in SimState or step_phases.gd integrates gravity
@@ -325,9 +327,9 @@ static func _build_movement() -> Array[MoveState]:
 	dash_f.timeline = [df_kf]
 	out.append(dash_f)
 
-	# BACK DASH: 22f, ~80px, invuln 1-7 (strike+throw) -- authored per spec even
-	# though invuln is not yet consumed by the engine (docs/flags.md, this file's
-	# header note). ~80/22 ~= 3.64 px/f.
+	# BACK DASH: 22f, ~80px, invuln 1-7 (strike+throw) -- enforced by the engine
+	# (step_phases.gd phase 4 consumes invuln per AD-031/TKT-P1-11; see this
+	# file's header note and game/tests/test_invuln.gd). ~80/22 ~= 3.64 px/f.
 	var dash_b := MoveState.new()
 	dash_b.id = STATE_DASH_B
 	dash_b.category = MoveState.CATEGORY_GROUNDED
@@ -711,8 +713,9 @@ static func _build_2m() -> MoveState:
 
 
 ## 2H: 5 startup / 3 active / 13 recovery -- fast get-off-me anti-air.
-## Upper-body strike invuln 1-8 (authored on the keyframes per spec; inert
-## until the engine consumes invuln -- see docs/flags.md). dmg 60, blockstun
+## Upper-body strike invuln 1-8 (authored on the keyframes per spec and enforced
+## by the engine -- step_phases.gd phase 4 consumes invuln per AD-031/TKT-P1-11;
+## see this file's header note and game/tests/test_invuln.gd). dmg 60, blockstun
 ## 13, hitstun N/A (air reset, no combo -- see STATE_AIR_RESET), hitstop 10.
 ## NOT cancellable (anti-air, character-a.md).
 static func _build_2h() -> MoveState:
