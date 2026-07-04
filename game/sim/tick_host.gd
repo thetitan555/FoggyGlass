@@ -118,3 +118,45 @@ func get_state() -> SimState:
 ## (AD-020), not here — the host owns only the sim clock.
 func set_state(state: SimState) -> void:
 	_sim_state = state
+
+
+# ---------------------------------------------------------------------------
+# Frame control (TKT-P1-02; training-mode.md "Control layer" → Frame control;
+# AD-010). Control operations on the deterministic loop, distinct from the
+# read-only inspection surface: these DRIVE the sim, InspectionView only READS
+# it (inspection-surface.md "Principles" — read-only, no mutator, no path to
+# advance the sim lives there). `running` already gates `_physics_process`
+# (see above); `set_paused`/`is_paused` are the training-mode-facing names for
+# that same gate, and `step_once` is the one new operation: advance exactly one
+# tick on demand, independent of `_physics_process` cadence, while paused.
+# ---------------------------------------------------------------------------
+
+## Pause or resume the sim loop. A paused sim does not advance (training-mode.md
+## criterion 2): `_physics_process` no-ops while `running` is false. Resuming
+## continues deterministically — nothing about pausing touches sim state or the
+## tick counter, so a resumed run hashes identically to an uninterrupted one
+## (pausing is purely "do we call `_advance` this physics frame," never a
+## rewrite of state).
+func set_paused(paused: bool) -> void:
+	running = not paused
+
+
+## Whether the sim loop is currently paused (the inverse of `running`).
+func is_paused() -> bool:
+	return not running
+
+
+## While paused, advance the sim by EXACTLY ONE tick on demand (training-mode.md
+## criterion 1). This is the same `_advance` `_physics_process` would call — no
+## separate step path — so a manual step and a running-loop tick are identical
+## in every respect (same phase pipeline, same input sourcing). Frame-stepping
+## CROSSES hitstop one tick per call: hitstop is in-state countdown state, not a
+## loop pause (AD-010) — `step_once` does not special-case it; it just runs the
+## one `step` that would have run anyway, and `StepPhases`/`phase7_advance_
+## counters` handle the hitstop freeze exactly as they do during normal running.
+## Calling this while NOT paused is still well-defined (it advances one tick,
+## same as any call to `_advance` would) but is not the intended usage — the
+## training-mode control layer only calls it while paused.
+func step_once() -> void:
+	_sim_state = _advance(_sim_state)
+	ticked.emit(current_tick())
