@@ -1,28 +1,20 @@
 @echo off
 setlocal enabledelayedexpansion
 REM FoggyGlass - commit all changes, then push to GitHub.
-REM Runs on YOUR machine with native git (the role sandboxes cannot do this
-REM safely). Roles edit files and, when ready to checkpoint, write their commit
-REM message into COMMIT_MSG.txt; this script uses it, then deletes it.
+REM Your manual push gate: work is committed with native git during a session;
+REM run this when you want the branch backed up to origin/main. Prompts for a
+REM commit message if there is anything still uncommitted.
 cd /d "%~dp0"
 echo === FoggyGlass: commit ^& push ===
 echo.
-
-REM Clear stale git lock files left behind by earlier sandbox operations. In
-REM this project only these helper scripts run git, one at a time, so a leftover
-REM lock is always safe to remove. (Windows can delete them; the sandbox can't.)
-if exist ".git\index.lock" ( del /f /q ".git\index.lock" && echo Cleared a stale .git\index.lock )
-if exist ".git\HEAD.lock" ( del /f /q ".git\HEAD.lock" && echo Cleared a stale .git\HEAD.lock )
 
 git add -A
 git diff --cached --quiet
 if errorlevel 1 (
   set "MSG="
-  if exist COMMIT_MSG.txt set /p MSG=<COMMIT_MSG.txt
-  if "!MSG!"=="" set /p MSG=Commit message:
+  set /p MSG=Commit message:
   if "!MSG!"=="" set "MSG=checkpoint"
   git commit -m "!MSG!"
-  if exist COMMIT_MSG.txt del COMMIT_MSG.txt
 ) else (
   echo Nothing to commit - pushing existing commits.
 )

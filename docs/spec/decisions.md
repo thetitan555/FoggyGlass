@@ -635,6 +635,13 @@ simpler to serialize/hash and adds no nesting the hash walk must special-case).
 a SimState *shape* addition is a flag the Architect ratifies under an AD, never dev
 latitude. The rehit *cadence logic* and the throw *clash detection* that consume these
 fields are JC-025 (ratified latitude); this AD owns only the field shapes.
+**Observability (F-013, 2026-07-04).** Four of these fields are legibility-relevant
+sim truth (`move_contact`, `cancel_tags`, `throw_tech_window`, `thrown_by`) and are
+surfaced read-only through the inspection seam's `PlayerView` (`inspection-surface.md`),
+resolving F-013 — the same F-002 precedent (AD-024) that legibility-relevant serialized
+`SimState` truth is exposed through the one read surface (AD-011), not left observable-in-
+principle-only. This surfacing lands in TKT-P1-01 (P1); no new field shape and no new AD
+(the shapes are this AD; the surface is AD-011) — it is a projection of existing truth.
 
 ### AD-029 · Dedicated `HitBox.tech_window` field; the throw tech window is not `blockstun` reuse — settled (2026-07-03, ruling JC-024)
 **Decision.** A throw's tech-window length (AD-016) is authored in a **dedicated

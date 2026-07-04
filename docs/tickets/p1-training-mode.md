@@ -36,8 +36,12 @@ content) sharpens validation when it lands.
 **Scope:** Implement `InspectionView` and its return types (`PlayerView`,
 `BoxView`, `FrameData`, `AdvantageView`, `HitEvent`) as read-only views over the
 current state, sourcing advantage/frame-data from the sim's own functions (no
-re-derivation). Build the interface first; this is the seam everything else reads.
-Snapshot-able views are fixed-point only; px is a render-only projection (AD-019).
+re-derivation). `PlayerView` includes the batch-2 legibility fields
+(`move_contact`, `cancel_tags`, `throw_tech_window`, `thrown_by`) surfaced
+read-only from the corresponding `SimState` truth (F-013 / AD-028) — no
+re-derivation, just projection. Build the interface first; this is the seam
+everything else reads. Snapshot-able views are fixed-point only (these four are
+plain int / int-array, no floats); px is a render-only projection (AD-019).
 **Acceptance:** `inspection-surface.md` criteria 1–6.
 
 ### TKT-P1-02 · Frame control (pause / resume / step-once)

@@ -12,31 +12,44 @@
 
 ## The one fact everything else follows from
 
-The five roles run as **separate Cowork projects (and one outside-Cowork chat)
-that do not share memory.** They cannot talk to each other. They coordinate
-through exactly two channels:
+The four roles run as **native Claude Code subagents** (defined in
+`.claude/agents/`) against the real working tree at `E:\FoggyGlass`. Each role
+session is **memory-less** — no role carries state across sessions — so they
+coordinate through two channels:
 
-1. **The shared working tree** — **every role mounts the same folder on the
-   user's disk (`E:\FoggyGlass`).** This is a hard requirement, not a
-   convenience: the role sandboxes are network-isolated and *cannot reach GitHub
-   at all*, so they cannot sync through a remote. They share state only by
-   sharing the same local working copy. A role "hands off" work simply by
-   **saving the file**; because it's the same disk, the next role sees it
-   immediately — no commit, no pull, no git in the handoff at all. Every artifact
-   lives here.
-2. **The user** — the only live connection between rooms. The user carries the
+1. **The shared working tree** — every role reads and writes the same repo on the
+   user's disk (`E:\FoggyGlass`). A role "hands off" work by **saving the file**;
+   the next role reads it directly from disk — no commit, no pull required in the
+   handoff itself. Every artifact lives here. (`CLAUDE.md` auto-loads each
+   session and `claude --resume` can pick a prior session back up, so the
+   cold-start re-read is cheaper than it was under the old chat substrate — but
+   the *coordination* premise below is unchanged: roles still share state through
+   the tree, not through memory.)
+2. **The user** — the live connection between role sessions. The user carries the
    signal "go look at X" from one role to the next, and carries flagged problems
    back to their owner.
 
-**Git's role, and who runs it:** git is for history and off-machine backup —
-*not* the inter-role transport (the shared working tree is). **Roles never run
-git.** Committing and pushing both happen with native git on the user's Windows
-machine, via the `commit.bat` and `push.bat` helpers at the repo root, because
-git operations through the mounted folder are unreliable (see "Working
-agreements"). A role that wants its work checkpointed writes its commit message
-into `COMMIT_MSG.txt` at the repo root and tells the user "ready"; the user runs
-a helper. Every git operation stays on a healthy filesystem, with the user —
-already the relay — as the trigger.
+**Why the user is the bus (for now):** the roles run as separate sessions that do
+not message each other, so the user relays handoffs and flags between them. This
+is the **chosen protocol for the first milestone on the new substrate**, not a
+technical constraint — the old network-isolation reason (Cowork sandboxes that
+couldn't reach a remote) is gone. Claude Code offers direct role-to-role
+messaging (agent-teams), but adopting it changes this load-bearing premise, so
+it is **deliberately deferred until one milestone has run on the new substrate**
+and the migration's roadblocks are confirmed dead (see `docs/migration-plan.md`,
+Part 6). Revisit then; don't change the platform and the coordination model at
+once.
+
+**Git's role, and who runs it:** git runs **natively on the user's Windows
+machine** and is for history and off-machine backup — *not* the inter-role
+transport (the shared working tree is). A role may run `git status`, stage, and
+`git commit` directly when a unit of work reaches a checkpoint. **`push` stays
+the user's manual gate:** roles commit freely to local history, but pushing to
+`origin` is the user's call (run or approve it yourself) — a human checkpoint on
+the one irreversible step, and nowhere it isn't needed. The old `commit.bat` /
+`push.bat` / `COMMIT_MSG.txt` apparatus was a workaround for sandbox git
+corruption and is **retired**; don't write `COMMIT_MSG.txt` or invoke the
+helpers.
 
 Design consequence: if it isn't **saved to the shared working tree**, it didn't
 happen. No role may rely on something another role "knows" — only on what's on
@@ -137,7 +150,7 @@ Resolution (owner fills): …
 The raiser writes the flag and tells the user. The user relays it to the owner.
 The owner resolves — edits their artifact if needed, writes the resolution line,
 flips `[open]` to `[resolved]` — and the user relays back. (The change reaches
-GitHub at the next checkpoint, when the user runs a helper.) Entries are never
+`origin` at the next checkpoint the user chooses to push.) Entries are never
 edited after the fact; once a resolution has been relayed, the **Strategist moves
 the entry to `/docs/flags-archive.md`** — the permanent record — so the live
 ledger stays small and cheap to read. **Batch where possible:** flags for the
@@ -148,7 +161,7 @@ session re-pays that role's full reading cost.
 user's request and with the user's confirmation, it may *draft* a flag as a
 paste-ready block for the user to append here — **raise-only, never resolve** —
 by design, so the user's deliberate carry-in holds even though the Consultant
-may run in Cowork. Such entries are tagged `raised-by: Consultant (via user)`
+runs outside this repo's substrate. Such entries are tagged `raised-by: Consultant (via user)`
 and carry a stale-context caveat, since the Consultant works only from what the
 user pasted into its chat; the owner sanity-checks against live state first.
 
@@ -158,7 +171,7 @@ user pasted into its chat; the owner sanity-checks against live state first.
   work, check `flags.md` for entries the owner has flipped to `[resolved]` and
   relayed back. Move each to `flags-archive.md`. This is the only place this
   duty is enforced structurally rather than left to memory — see
-  `roles/strategist.md`.
+  `.claude/agents/strategist.md`.
 - **Per feature.** QA audits each feature against its acceptance criteria, the
   tenets (determinism + serialization especially), and the audit criterion before
   it is "done." This gates the loop — nothing is done un-audited.
@@ -184,7 +197,9 @@ user pasted into its chat; the owner sanity-checks against live state first.
 every subagent — re-pays the cost of reading its binding inputs (charter,
 principles, tenets, this protocol) plus its task-specific inputs, because no role
 carries memory across sessions. Producing the work is cheap next to that fixed
-re-read. The consequence that matters: **a feature's cost scales with the number
+re-read. (`.claude/CLAUDE.md` now auto-loads each session, so the binding-read
+*pointer* is free rather than re-pasted by hand; the artifacts it points to are
+still read fresh every session, so the logic below holds.) The consequence that matters: **a feature's cost scales with the number
 of separate sessions it is split across**, not just the work in it. Four thin
 sessions pay four full re-reads; one session that carries the same work to a
 decision point pays one.
@@ -201,9 +216,11 @@ things: fewer checkpoints for the user to catch a wrong turn, and more lost work
 if a session dies mid-flight (a limit, a crash) — interrupted work that wasn't
 checkpointed or logged has to be reconstructed. So batch size trades tokens
 against steerability and blast-radius. Right-size it to **as much as can run
-before a genuine decision point or a natural checkpoint** — and write
-`COMMIT_MSG.txt` and judgment-log / flag entries *as you go*, not at the end, so
-an interruption loses as little as possible.
+before a genuine decision point or a natural checkpoint** — and commit and write
+judgment-log / flag entries *as you go*, not at the end, so an interruption loses
+as little as possible. (`claude --resume` softens the blast radius further — an
+interrupted batch can resume rather than respawn from a cold start — but that is
+insurance, not a license to skip the as-you-go checkpoints.)
 
 **Prioritize spend by drift-cost.** Put scrutiny where divergence is expensive —
 determinism, the contracts multiple roles build against, the charter's legibility
@@ -235,21 +252,19 @@ non-foundational (P1) feature* first. See flags-archive.md, 2026-07-02.)
 
 ## Working agreements
 
-- **Roles don't run git — they save files and request checkpoints.** Edit files
-  in place; the handoff is the saved file on the shared disk. When a unit of work
-  is ready to checkpoint, write a one-line message to `COMMIT_MSG.txt` at the
-  repo root and tell the user "ready." Do not run `git` from the sandbox.
-- **Why git is Windows-only here.** The repo lives on a Windows folder mounted
-  into the Linux sandboxes, and git's crash-safety assumes POSIX semantics the
-  mount doesn't honor (atomic rename, unlink-of-open-files, read-after-write
-  coherence). Sandbox-side git leaks undeletable lock files, can silently commit
-  *stale* bytes, and has corrupted the index outright. So all git runs natively
-  on Windows: **`commit.bat`** (checkpoint locally) and **`push.bat`** (commit +
-  push to GitHub), both run by the user. Each reads `COMMIT_MSG.txt` for the
-  message and clears it after.
-- **Commit granularity (set by the message a role proposes):** one logical change
-  per checkpoint where practical; the message references the brief, ticket, or
-  flag it serves (e.g. `brief: debug-training-mode`).
+- **Roles commit; the user pushes.** The handoff is still the saved file on the
+  shared disk, but git now runs **natively on Windows**, so a role may run
+  `git status`, stage, and `git commit` directly when a unit of work reaches a
+  checkpoint — no `COMMIT_MSG.txt`, no `.bat` helper, no "ready" relay for the
+  commit itself. **`git push` stays the user's manual gate:** commit freely to
+  local history; leave pushing to `origin` to the user (who runs or approves it).
+  This is the "autonomous-but-safe" shape — automate the reversible checkpoint,
+  keep a human on the one irreversible step. (The old `commit.bat` / `push.bat` /
+  `COMMIT_MSG.txt` apparatus was a workaround for git corruption under the retired
+  Linux-sandbox mount; that failure mode is gone and the apparatus is retired.)
+- **Commit granularity:** one logical change per commit where practical; the
+  message references the brief, ticket, or flag it serves (e.g.
+  `brief: debug-training-mode`).
 - **Direction lives upstream.** A steer given in chat — by the user or anyone —
   is provisional until the *owning* artifact records it. If a role receives or
   infers direction that belongs to an upstream artifact (priorities, scope, a

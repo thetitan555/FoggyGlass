@@ -51,6 +51,10 @@ InspectionView (read-only over the current SimState):
 | `hitstop_remaining` | Frozen frames left (AD-010). |
 | `stun_remaining`, `stun_kind` | Stun countdown and `hit` / `block` / `none`. |
 | `combo` | `{ hit_count, scaling_pct, damage_total }`. |
+| `move_contact` | This player's current-move outcome as attacker (AD-028): `none` / `hit` / `block` / `whiff`. Backs "did my move connect / whiff" and gates which cancels are live. Plain int enum (0/1/2/3, mirrors `PlayerState.CONTACT_*`). |
+| `cancel_tags` | The cancel tags this player currently holds as attacker (AD-017/028) — i.e. an *open cancel window*: the set of tags a buffered cancel can consume this tick. Snapshot-able `PackedInt32Array` (empty ⇒ no cancel window open). |
+| `throw_tech_window` | Frames remaining in which this player (as thrown defender) may still tech the throw (AD-016/028). `0` ⇒ not in a tech window; `> 0` ⇒ the live count of tech frames left. |
+| `thrown_by` | The attacker index that threw this player, or `-1` if not currently thrown (AD-028). |
 | `input_current` | The raw `InputFrame` this player's source emitted this tick (Tenet 2). |
 | `input_history` | Last N raw `InputFrame`s (ring buffer view). |
 | `boxes` | The resolved `BoxView`s active this tick (below). |
@@ -106,8 +110,14 @@ snapshots them. The single source of truth that QA snapshots stays fixed-point.
 ## Acceptance criteria (QA-checkable)
 
 1. **Traceability.** Every readout the brief requires — frame data, advantage,
-   box geometry, state+frame, hitstop/stun, input history, damage/combo — maps to
-   a field/query above.
+   box geometry, state+frame, hitstop/stun, input history, damage/combo, and the
+   batch-2 legibility state (move contact/whiff, open cancel window, throw
+   tech-window + who threw whom) — maps to a field/query above. Specifically, a
+   thrown defender's remaining tech frames (`throw_tech_window` > 0), the attacker
+   who threw them (`thrown_by`), an open cancel window (`cancel_tags` non-empty),
+   and a move's connect/whiff outcome (`move_contact`) are each readable through
+   `PlayerView` — no legibility-relevant serialized `SimState` field is truth the
+   seam cannot surface (F-013).
 2. **Read-only.** No method on the surface mutates `SimState`; after any sequence
    of inspection calls, the state hash is unchanged. No mutator is exposed.
 3. **Single source.** `advantage()` returns the value from the sim's one advantage
