@@ -60,16 +60,38 @@ is the consistency guard that lets character B be *content, not engineering*.
 | `throwboxes` | List of `Box` for throws (optional). |
 | `motion` | Per-range movement deltas / velocity sets (optional). |
 | `invuln` | Optional invulnerability flags (e.g. throw-invuln, strike-invuln) for this range. |
-| `spawn` | Optional (AD-021). Spawns a projectile this range: `{ projectile, offset, velocity }`. Subject to the owner's live-projectile cap; if the cap is full the spawn is suppressed. |
+| `spawn` | Optional (AD-021, AD-030). Spawns a projectile this range: `{ projectile, offset, velocity }` — `projectile` names a `ProjectileData` by `data_id`, `offset`/`velocity` are the fixed-point spawn position/velocity supplied to the runtime entity. **Fires once**, on the tick `frame_in_state == frame_start` for this range (AD-030 / JC-033) — *not* once per covered frame; a spawn authored across several frames spawns one projectile. Subject to the owner's live-projectile cap; if the cap is full the spawn is suppressed. |
 
-### `Projectile` (spawned entity — AD-021)
+### `ProjectileData` (authored projectile shell — AD-021, AD-030)
+The authored `.tres` shell for a projectile's own **fixed design**. Named
+`ProjectileData` (not `Projectile`) because the runtime entity in
+`SimState.projectiles[]` owns the `Projectile` identifier (AD-030 / JC-032). Authored
+content, resolved through `ProjectileRegistry` — *not* serialized state (AD-024).
+
 | Field | Meaning |
 |---|---|
-| `owner` | Player index that spawned it (for cap, facing, and combo attribution). |
-| `position`, `velocity` | Fixed-point; integrates each tick independently of the owner. |
+| `id` | Registry key (`data_id`); the runtime entity carries this to re-reach its authored data. |
 | `hitbox` | A `HitBox` (geometry + hit data) carried by the projectile. |
-| `lifetime` | Frames it persists before despawning; consumed on hit/block. |
+| `lifetime` | Frames it persists before despawning; consumed on hit/block. Measured from the tick *after* spawn (AD-030 / JC-034 — see below). |
 | `max_per_owner` | Live cap (1 for the slice fireball). |
+
+The runtime entity additionally carries, set at spawn time (not authored on the shell):
+`owner` (casting player index, from `SimState` — for cap, facing, combo attribution),
+and initial `position`/`velocity` (from the `spawn` keyframe's `offset`/`velocity`),
+which then integrate each tick independently of the owner.
+
+**Projectile resolution & serialization (AD-030).** The runtime `Projectile` serializes
+a plain int `data_id`, **not** a live `HitBox` — authored geometry stays out of the
+snapshot (AD-024) — and re-attaches its `hitbox` via `ProjectileRegistry.data(data_id).hitbox`
+on `from_dict`, exactly as `character_id` re-reaches move data through `MoveRegistry`.
+`ProjectileRegistry` is installed once per run with the same install/clear/generation-token
+discipline as `MoveRegistry` (AD-024/F-009).
+
+**Spawn-tick timing (AD-030 / JC-034).** A projectile spawned on tick T appears at its
+authored spawn position with its full `lifetime`, and first **integrates (moves) and ages
+(decrements `lifetime`) on tick T+1** — the same convention AD-010 fixes for hitstop. So a
+`spawn` keyframe on frame F means the projectile exists starting frame F and begins
+travelling frame F+1; author a `lifetime` and reach with that one-tick offset in mind.
 
 ### `CancelRule` (one entry in `MoveState.cancels` — AD-015)
 | Field | Meaning |

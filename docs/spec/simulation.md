@@ -68,7 +68,7 @@ live node references). Top-level fields:
 | `tick` | Monotonic tick counter; the authoritative clock. |
 | `rng` | Seed + current RNG state, **inside** the serialized state (Tenet 1). Any randomness draws from here. |
 | `players[2]` | Per-player state (below). |
-| `projectiles` | List of live projectile entities (AD-021) — owner, fixed-point position/velocity, hit data, lifetime. Capped at one per owner for the slice. Empty when none are out. |
+| `projectiles` | List of live projectile entities (AD-021, AD-030) — owner, fixed-point position/velocity, lifetime, and a `data_id` (int) resolving the authored `ProjectileData` (its `hitbox` re-attached from `ProjectileRegistry` on restore — authored geometry is not serialized, AD-024/AD-030). Capped at one per owner for the slice. Empty when none are out. |
 | `stage` | Bounds / wall positions / any stage state affecting the sim. |
 | `last_hit` | The most recently resolved hit as a plain serialized `HitRecord`, or null if none has resolved this run (AD-024). Backs `InspectionView.last_hit()`; distinct from the seam-side `HitEvent` view it projects to. Serialized (null ⇒ empty-dict marker), deep-cloned, hashed with a presence flag (AD-023, AD-024). |
 | `neutral_restored_this_tick` | Bool. Set by phase 6 exactly on the tick both players *transition* to actionable (rising edge — AD-025), cleared every other tick. Backs `AdvantageView.neutral_restored`. Serialized (as 0/1), cloned, hashed. |

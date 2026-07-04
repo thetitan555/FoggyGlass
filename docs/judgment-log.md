@@ -1148,6 +1148,25 @@ file's fields renamed. Recorded as latitude because AD-021/AD-024 already fix
 the shape's principles (first-class serialized entity; authored content stays
 out of state, resolved via an installed roster) — the class-naming collision and
 its resolution are implementation, not a new design decision.
+**Ratified INTO the spec (AD-030), not as bare latitude** (Architect, 2026-07-04).
+The Developer built the right thing on the right principles (AD-021/AD-024), but two
+parts of this call are move-format *contract* I own, not standing dev latitude, so they
+must live in the spec: (1) the naming collision was a genuine **defect in move-format.md**
+— the table named an authored shell `Projectile` that must coexist with a shipped runtime
+class of the same conceptual role, so the authored type is renamed `ProjectileData` and
+the format text is fixed to match; and (2) the **authored field split** (`ProjectileData`
+authors `id`/`hitbox`/`lifetime`/`max_per_owner`; `owner`/`position`/`velocity` are
+spawn-time/keyframe values on the runtime entity) and the **`data_id`-carries-across-
+restore** rule (runtime entity serializes a plain int, re-attaches `hitbox` via
+`ProjectileRegistry` on `from_dict` — never serializing the `HitBox`, per AD-024) are
+contract multiple roles author and golden against. All folded into **AD-030** and
+reflected in move-format.md's `ProjectileData` table + a "Projectile resolution &
+serialization" note. The `ProjectileRegistry` 1:1 mirror of `MoveRegistry` (install/clear/
+generation-token) is exactly right and inherits AD-024/F-009's install-generation
+invariant. This is the JC-007→AD-023, JC-018→AD-025 pattern applied again: a call touching
+an owned format is ratified into an owned rule, not left a standing dev decision. Code as
+built matches AD-030; no code change required — the ruling folds the contract into the spec
+where authors and QA read it.
 
 ### JC-033 · 2026-07-04 · TKT-P1-0P · Spawn fires once on the exact tick a spawning keyframe's range is ENTERED (`frame_in_state == frame_start`), not once per covered frame — provisional
 **Decided.** `StepPhases._process_spawn` (phase 3) fires a keyframe's `spawn`
@@ -1186,6 +1205,17 @@ or added beyond what move-format.md already names (`has_spawn`, `spawn_offset_*`
 "per-owner cap" and "if the cap is full the spawn is suppressed" language already
 presumes a single discrete spawn EVENT per firing, which the once-per-range
 reading is the natural way to produce.
+**Ratified INTO the spec (AD-030)** (Architect, 2026-07-04). The Developer read the
+under-specified mechanism correctly — the once-at-`frame_start` firing is the unique
+reading consistent with the per-owner cap language (which presumes one discrete spawn
+event) and with how a hitbox authored across an active range is one hit, not one per
+frame. But this is **release-timing contract that character A's fireball is tuned
+against** (character-a.md: "projectile spawns frame 14"), so it must not stay a standing
+dev call — it is folded into **AD-030** and stated in move-format.md's `spawn` keyframe
+row. An author now reads "a spawn fires once, on the `frame_start` tick of its keyframe
+range" directly in the format. Ratified-into-spec, not bare latitude, precisely because
+character-A authoring (Batch 2) tunes the fireball's release frame against it. No code
+change (build matches AD-030).
 
 ### JC-034 · 2026-07-04 · TKT-P1-0P · A projectile does not integrate (move) or age (lifetime decrement) on the same tick it spawns — mirrors the existing `was_frozen` hitstop convention — provisional
 **Decided.** `SimState.step` captures `existing_projectile_count` (how many
@@ -1230,3 +1260,15 @@ Recorded as latitude because it is filling an unstated edge case using an
 already-established, spec-adjacent convention (AD-010's own reasoning), not
 inventing a new rule from nothing — flag-worthy only if the Architect wants
 spawn-tick integration to behave differently for feel reasons.
+**Ratified INTO the spec (AD-030)** (Architect, 2026-07-04). The convention is the
+right one — it is AD-010's own `was_frozen` reasoning ("a freshly-set countdown holds
+for N *following* ticks, not N-1") applied to projectile spawn/lifetime, which keeps the
+mental model uniform and avoids the double-advance artifact the Developer's own tests
+caught (a spawn landing at a wall reading off-stage the same tick). Ratified into the
+spec rather than left as bare latitude because it is **directly load-bearing for tuning
+character A's fireball lifetime and reach** (character-a.md § Fireball): an author must
+know that a `lifetime` of N is counted from the tick *after* the spawn frame, and that
+travel begins the tick after the projectile appears — otherwise the fireball's on-screen
+reach is mis-tuned by one tick. Folded into **AD-030** with the explicit authoring
+consequence spelled out (spawn frame 14 ⇒ exists at frame 14, first moves/ages frame 15).
+No code change (build matches AD-030).

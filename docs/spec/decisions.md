@@ -39,6 +39,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-027** AABB overlap is strict (touching edges do not overlap) — settled
 - **AD-028** Buffer/cancel + throw/rehit mutable SimState fields (TKT-P0-08/09) — settled
 - **AD-029** Dedicated `HitBox.tech_window` field; throw tech-window is not `blockstun` reuse — settled
+- **AD-030** Projectile authored format: `ProjectileData` + `ProjectileRegistry`; runtime `data_id`; spawn timing — settled
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -670,3 +671,93 @@ the window through `tb.blockstun = THROW_TECH_WINDOW`; the throw resolution read
 on the test throwbox, and read it in the throw path — a localized, reversible change. The
 specific window length (8f in the test char) stays placeholder tuning (Strategist's, like
 JC-016's scaling numbers), not a golden to lock.
+
+### AD-030 · Projectile authored format: `ProjectileData` + `ProjectileRegistry`; runtime entity carries a `data_id`; spawn timing — settled (2026-07-04, ratified from JC-032/033/034)
+**Decision.** Three related projectile-format questions the P1 `TKT-P1-0P` build
+surfaced — *what the authored projectile shell is called and how a live projectile
+resolves its authored data across serialization*, and *when a spawn fires and when a
+fresh projectile first moves/ages* — are settled together because they are all move-
+format contract the fireball (`character-a.md` criterion 5, § Fireball) must be
+authored and tuned against, and all follow AD-021/AD-024's already-settled principles
+(a projectile is a first-class serialized entity; fixed authored content stays out of
+serialized state, resolved through an installed roster).
+
+- **Authored shell = `ProjectileData`, not `Projectile` (JC-032).** The authored
+  projectile schema type is named **`ProjectileData`** (`game/sim/data/projectile_data.gd`,
+  `Resource`). The identifier `Projectile` is already owned by the *runtime* SimState
+  entity (`SimState.projectiles[]`, a `RefCounted`, shipped at TKT-P0-05 per JC-010) —
+  so the authored shell takes the distinct name to avoid the collision, exactly as
+  `MoveState`-authoring-vs-runtime naming is kept distinct elsewhere. move-format.md's
+  table is renamed `ProjectileData` to match (a spec-consistency fix; the collision was
+  a defect in the format text, since `Projectile` there named an authored shell that in
+  fact must coexist with a runtime class of the same conceptual role).
+- **Registry resolution mirrors `MoveRegistry` 1:1 (JC-032).** A **`ProjectileRegistry`**
+  holds the authored `data_id -> ProjectileData` roster, installed once per run and never
+  mutated mid-run — the identical install/clear/generation-token discipline AD-024 fixes
+  for `MoveRegistry` (including the F-009 install-generation invariant: the token observed
+  at a run's first `step` must be identical at every subsequent `step`). Authored
+  projectile content is a *fixed input to the sim*, not serialized state (AD-024/Tenet 2).
+- **Runtime entity carries a plain `data_id`, resolves `hitbox` on restore (JC-032).**
+  The runtime `Projectile` serializes a plain int `data_id` (hashed like any int),
+  **not** a live `HitBox` reference — a `HitBox` is fixed authored geometry and must not
+  enter the snapshot (it is not mutable sim truth the canonical hash commits to, AD-024).
+  `Projectile.from_dict` re-attaches its `hitbox` via `ProjectileRegistry.data(data_id).hitbox`
+  on restore, exactly as `character_id` re-reaches move data through `MoveRegistry`. This
+  closes the P0-era gap `projectile.gd` already flagged.
+- **Authored field split (JC-032).** move-format.md's `Projectile` table lists
+  `owner, position, velocity, hitbox, lifetime, max_per_owner`. Of these, `owner` and
+  the initial `position`/`velocity` are **spawn-time** values, not part of the
+  projectile's own fixed design: `owner` is the casting player (from `SimState` at spawn),
+  and the initial position/velocity come from the **spawning `Keyframe`** (`spawn` =
+  `{ projectile, offset, velocity }`, move-format.md). So `ProjectileData` authors only
+  the projectile's own fixed design — `id` (registry key), `hitbox`, `lifetime`,
+  `max_per_owner` — while `owner`/`position`/`velocity` remain runtime-entity fields set
+  at spawn. The move-format.md table is split accordingly (authored-shell fields vs.
+  runtime-entity fields) so an author knows what the `.tres` carries vs. what the spawn
+  supplies.
+- **Spawn fires once, at `frame_start` (JC-033).** A `spawn` keyframe fires **once**,
+  on the tick `frame_in_state == frame_start` for that keyframe's range — a one-shot per
+  range, *not* once per covered frame. A spawn action authored across frames 3..5 spawns
+  exactly one projectile, on frame 3. This is the projectile analogue of how a hitbox
+  authored across an active range is one hit (collapsed by `id_group`), and it is what the
+  per-owner cap language ("if the cap is full the spawn is suppressed") already presumes —
+  a single discrete spawn *event* per firing. The authored frame range around a spawn is
+  authoring convenience (the keyframe block), not a per-frame repeat instruction.
+- **A projectile does not integrate or age on its spawn tick (JC-034).** A projectile
+  spawned on tick T appears at its exact authored spawn position with its full authored
+  `lifetime`, and first integrates (moves) and ages (decrements `lifetime`) on tick T+1.
+  This is the same convention AD-010 fixes for hitstop (a freshly-set N-frame countdown
+  holds for N *following* ticks, not N-1 — the `was_frozen` gate): a newly-created
+  countdown/position starts at its authored value and only changes starting the next tick.
+  Implemented by capturing a pre-spawn projectile count in `step` and gating phase-3
+  integration / phase-7 lifetime on it, mirroring `was_frozen`. **Authoring consequence:**
+  an authored `lifetime` of N means N ticks of life *measured from the tick after spawn*,
+  and a spawn keyframe on frame F means the projectile exists starting frame F — so
+  character A's fireball "spawns frame 14" (character-a.md) and its lifetime is counted
+  from frame 15 onward. Tune the fireball's reach with this in mind (release frame = the
+  `frame_start` of its `spawn` keyframe; travel begins the following tick).
+
+**Why.** All three are move-format contract the Architect owns, surfaced by the first
+projectile build and load-bearing for authoring character A's fireball the first time
+(so content lands off provisional ground — the point of this session). The naming split
+and registry mirror are the cheapest-to-reason resolution: anyone who understands
+`character_id -> MoveRegistry` understands `data_id -> ProjectileRegistry` with identical
+discipline. The spawn-once and no-spawn-tick-aging rules are the unique readings
+consistent with the already-settled cap mechanism (JC-033) and AD-010's countdown
+convention (JC-034); leaving them unstated would let the fireball be mis-tuned (a burst
+instead of one shot, or a lifetime silently one tick short).
+**Rejected.** Renaming the runtime entity to free `Projectile` for the authored shell
+(touches more shipped P0 surface — `SimState.projectiles`, `ProjectileView`, `SimHarness`
+— than naming the new authored type distinctly; JC-032). Serializing the `HitBox` on the
+runtime entity (authored geometry in the snapshot — the exact thing AD-024 keeps out of
+state; JC-032). A single shared registry across moves and projectiles (conflates two
+authored-content domains for no benefit; the 1:1 `MoveRegistry`/`ProjectileRegistry`
+mirror is more legible; JC-032). Firing a spawn on every covered frame (a multi-frame
+spawn range would burst-spawn and defeat the per-owner cap; JC-033). Integrating/aging a
+projectile the same tick it spawns (double-advances one tick's data — the first build's
+own tests caught a spawn landing at a wall and immediately reading off-stage; also
+silently shortens authored lifetime by one; JC-034).
+**Note.** Projectile-vs-projectile interaction stays deferred (AD-021 scope). The
+`ProjectileRegistry` install-generation invariant is the same one AD-024/F-009 make a
+checkable precondition; QA asserts it the same way. If a future feel need wants spawn-tick
+integration to behave differently, that is a revision to this AD, not a silent code change.

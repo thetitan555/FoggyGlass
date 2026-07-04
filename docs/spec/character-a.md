@@ -102,8 +102,16 @@ DP and the throw** (no low sweep) — a deliberate narrowing of the simplified k
 | `236M` | 13 | 30 | 7 px/f |
 | `236H` | 13 | 30 | 9 px/f (neutral control, best ender) |
 
-Projectile spawns frame 14 (`spawn` keyframe), **one fireball per player** (cap,
-AD-021): damage 60, hitstun 16, blockstun 12, lifetime until off-stage/consumed.
+Projectile spawns frame 14 — the `frame_start` of its `spawn` keyframe (AD-030 /
+JC-033: the spawn fires **once**, on that tick, not per covered frame), **one fireball
+per player** (cap, AD-021): damage 60, hitstun 16, blockstun 12, lifetime until
+off-stage/consumed. The fireball appears at its spawn position on frame 14 and begins
+travelling on frame 15 (AD-030 / JC-034: a projectile does not integrate or age its
+spawn tick — its `lifetime`, if a finite value is authored rather than off-stage-only,
+counts from frame 15). Tune the fireball's speed/reach against that one-tick offset. The
+authored shell is a `ProjectileData` resolved through `ProjectileRegistry` by `data_id`
+(AD-030); the `.tres` authors only `id`/`hitbox`/`lifetime`/`max_per_owner` — `owner`
+and initial position/velocity come from the cast and the `spawn` keyframe.
 The 30-frame recovery is the risk — a jumped fireball up close is a full punish.
 
 ### Shoryuken (DP) — `623L/M/H` (the juiced reversal/anti-air)
@@ -185,9 +193,10 @@ archetypal "knockdown → pressure → read" loop.
    the end of its active frames, beats a jump-in, gives **no combo** on hit, and
    is at worst slightly minus on block (not punishable) — distinct from the DP's
    high-risk/high-reward. (No sweep exists in the kit.)
-5. **Fireball is a projectile.** Casting spawns one `Projectile` (AD-021); a second
-   cast while one is live is suppressed; it travels, hits/blocks once, is consumed,
-   and is visible in the geometry overlay.
+5. **Fireball is a projectile.** Casting spawns one runtime `Projectile` from a
+   `ProjectileData` (AD-021, AD-030); a second cast while one is live is suppressed; it
+   travels (from the tick after spawn, AD-030), hits/blocks once, is consumed, and is
+   visible in the geometry overlay.
 6. **DP invuln + punish.** Each DP is strike-invulnerable from frame 1 through at
    least its first active frame (`623H` also throw-invulnerable); on block every
    DP is minus enough that **even 25f `5H` punishes before the DP recovers** —

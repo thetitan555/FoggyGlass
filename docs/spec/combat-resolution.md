@@ -127,14 +127,22 @@ the pressure/combo cases legibility most depends on. The static value answers
   scaling state) before damage is subtracted — deterministic and surfaced.
 - Combo state resets when the defender returns to actionable/neutral.
 
-## Projectiles (AD-021)
+## Projectiles (AD-021, AD-030)
 
-- A `spawn` keyframe creates a `Projectile` in `SimState.projectiles` if the owner
-  is under the per-owner cap (1 for the slice); otherwise the spawn is suppressed.
+- A `spawn` keyframe creates a runtime `Projectile` in `SimState.projectiles` if the
+  owner is under the per-owner cap (1 for the slice); otherwise the spawn is suppressed.
+  The spawn **fires once**, on the tick `frame_in_state == frame_start` for that keyframe
+  range (AD-030 / JC-033) — not once per covered frame. The authored design comes from a
+  `ProjectileData` resolved by `data_id` through `ProjectileRegistry`; the runtime entity
+  carries a plain `data_id` (re-attaching its `hitbox` on restore), not a serialized
+  `HitBox` (AD-030).
 - Each tick a projectile integrates its own fixed-point position (phase 3), its
   hitbox is tested against the opponent's hurtbox (phase 4), and on hit/block it
   resolves like any hit (phase 5) — damage, stun, hitstop, pushback — then is
   **consumed**. It also despawns when `lifetime` elapses or it leaves the stage.
+  A projectile spawned this tick does **not** integrate or age on its spawn tick — it
+  first moves and decrements `lifetime` on the following tick (AD-030 / JC-034, the same
+  convention AD-010 fixes for hitstop).
 - A projectile's hit is attributed to its `owner` for combo/advantage accounting.
   Projectile-vs-projectile interaction is out of slice scope (AD-021).
 
