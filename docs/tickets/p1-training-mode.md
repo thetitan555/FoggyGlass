@@ -27,6 +27,32 @@ inspection surface stub, `InputSource`). They observe whatever character exists 
 the P0 test character is enough to build and verify against; character A (separate
 content) sharpens validation when it lands.
 
+### Build batches
+
+The Developer executes these as three sessions (never invents its own batching —
+protocol § "Token economy"). Grouping amortizes shared spec-reads and lands each
+batch on a real checkpoint. Batch boundaries also honor the seam: Batch 1 lands the
+sim-facing interfaces (and the projectile) that Batch 3's overlays read downstream.
+
+- **Batch 1 (done):** TKT-P1-01, 02, 03, 04, 0P — the sim-facing interfaces plus the
+  projectile entity. (03 depends on 04, 0P on the P0 backbone; all within-batch.)
+  *Checkpoint:* the interfaces are green and a projectile resolves a hit.
+- **Batch 2:** TKT-P1-10 — character A authoring, against the move format (needs 0P's
+  fireball from Batch 1). *Checkpoint:* A is playable vs a dummy (the record/playback
+  dummy from Batch 1's TKT-P1-04) — the **P1 done-bar** (Strategist's flag resolution).
+- **Batch 3:** TKT-P1-05, 06, 07, 08, 09 — the training-mode shell plus the four
+  overlays (all downstream of Batch 1's interfaces; 06–09 depend on 05). *Checkpoint:*
+  the mode shows, live, what the sim is doing.
+
+Note the deliberate ordering: character A (Batch 2) lands *before* the player-facing
+overlays (Batch 3) that display it, because "A playable vs a dummy" is the P1 done-bar
+and the overlays are the readout layer on top of a working, testable character. This is
+a Strategist steerability call (widen/narrow batching is the Strategist's per protocol
+§ "Token economy"); the mechanical grouping and its dependency-graph soundness are the
+Architect's, and are recorded here. Dependency check: every batch's tickets have their
+cross-batch dependencies satisfied by an earlier batch (0P before 10; 01–04 before 05;
+05 before 06–09) — the plan is sound as drawn.
+
 ---
 
 ## Sim-facing interfaces (first)
