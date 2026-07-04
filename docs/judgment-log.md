@@ -997,6 +997,19 @@ the sim `StateBlob`.
 as latitude because input.md fixes the `InputSource` interface and reproducibility
 contract precisely, and every choice here is in service of satisfying that contract
 uniformly — not inventing new contract surface.
+**Ratified as latitude** (Architect, 2026-07-04). Correct build of input.md's already-owned
+`InputSource` contract (frame-indexed, reproducible, no-future-reads), which every producer
+must satisfy uniformly. The dual `_buffer` (recording/playback script) vs `_answers`
+(uniform reproducibility history) split is the reading that keeps `get_input` a plain
+uniformly-growing indexed read — never a mode-dependent modulo/branch — so nothing
+downstream (tick host, rollback re-sim, QA replay runner) needs mode-aware special-casing.
+That is exactly what the contract wants; the parallel-array cost mirrors the ratified
+`active_hit_ids`/`active_hit_frames` pattern (AD-028). The restorable-position dict
+(`{playback_cursor, produced_count, answers}`, no `_buffer`) correctly honors AD-020
+("restore the reset point's sim state *and playback position*, not the recording itself")
+and stays external to `SimState` (Tenet 2). No contract surface moves; nothing to fold —
+the `InputSource`/AD-020 contracts already own everything this call satisfies. No spec
+change, no code change.
 
 ### JC-031 · 2026-07-04 · TKT-P1-03 · `TrainingHarness` (new class) owns snapshot/restore + the single reset slot, sits above `TickHost`, and is the "driver" that produces registered dummies before stepping — provisional
 **Decided.** A new `game/sim/training_harness.gd` (`class_name TrainingHarness`)
@@ -1059,6 +1072,22 @@ all unchanged). Recorded as latitude because training-mode.md/AD-020 already
 name what this class must do and who is responsible for it; the class's shape
 and its `step_once()` driver responsibility are the implementation filling that
 already-owned mandate.
+**Ratified as latitude** (Architect, 2026-07-04). `TrainingHarness` fills an
+already-owned mandate: AD-020 puts reset coordination "above the sim, holding both
+the runner and the sources," and input.md's produce-before-query invariant (criterion 7)
+explicitly assigns ordering to "the layer that drives the tick... not the sources
+themselves." This harness *is* that layer, so it owning `step_once()`'s
+produce-before-query for the sources it registers is the invariant's own placement, not
+a new rule. The rejected alternatives are all correctly ruled out on already-settled
+grounds: self-driving sources violate input.md's "no future reads / a source cannot know
+if a query is current or future"; pushing production into `TickHost._advance` repeats the
+exact coupling JC-009/F-001 already rejected for device sources ("the host holds only the
+abstract `InputSource`; nothing in the sim knows which concrete source it holds"). Thin-
+wrapping `SimHarness.dump_state`/`load_state` (no second serialization path) is right —
+it keeps one StateBlob format. It composes with an externally-produced device source
+(drives only the sources it owns), so it does not assume exclusive tick control. No sim-
+facing contract moves; nothing to fold beyond noting this harness is the concrete "driver"
+input.md criterion 7 and AD-020 already name. No spec change, no code change.
 
 ### JC-032 · 2026-07-04 · TKT-P1-0P · Authored projectile shell named `ProjectileData` (not `Projectile`), resolved through a new `ProjectileRegistry` by `data_id` — mirrors `Character`/`MoveRegistry` exactly — provisional
 **Decided.** move-format.md's authored `Projectile` table is implemented as
