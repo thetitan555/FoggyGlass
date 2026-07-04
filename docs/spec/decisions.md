@@ -42,6 +42,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-030** Projectile authored format: `ProjectileData` + `ProjectileRegistry`; runtime `data_id`; spawn timing — settled
 - **AD-031** Invulnerability consumed in phase 4; `HitBox.hit_kind` gates strike/throw/projectile; whiff is observable — settled
 - **AD-032** Command schema extension: pure-direction command + two-button chord; first-match-wins shadowing rule — settled
+- **AD-033** Air-normal height-dependent advantage: phase-5 `AirHeightScaling` on hitstun; contact-depth read — settled
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -911,3 +912,86 @@ jump `button_map` entry (`UP`, no button) and the throw entry (`L`+`H` chord, li
 the bare `5L/5M/5H` normals) — that authoring lands with character A, driven by this ticket's
 schema, not invented by the content session. No `SimState` shape change; the recognizer stays
 a pure function of history.
+
+### AD-033 · Air-normal height-dependent advantage: a phase-5 `AirHeightScaling` rule on hitstun — settled (2026-07-04, resolves F-014)
+**Decision.** An **airborne attacker's** connecting on-hit strike scales the **hitstun it
+inflicts** by the attacker's **contact height**, so a deep jump-in leaves the attacker more
+plus than a high one. This is the mechanism `character-a.md` already promises ("deep
+jump-in = very plus … sim truth the training mode reads out, not a fixed number") and that
+route 2 (`j.H , 5M > 623M`) leans on; the Strategist ruled it in P1's done-bar (F-014). It is
+a **bounded phase-5 resolution rule**, not authored data (JC-A-04 correctly authors one flat
+base hitstun; height is a live-sim scaling on top of it).
+
+- **Locus: phase 5, on `hitstun`, feeding the one AD-008 formula.** The rule scales the
+  hitstun *input* to hit resolution, not advantage directly — advantage is derived from
+  hitstun by the single AD-008 formula, so scaling the input keeps one advantage computation
+  and one place the number comes from (the consistency guard AD-008 exists to hold). The
+  scaled hitstun flows into the defender's `stun`; the live advantage then reflects it for
+  free (it reads the defender's actual remaining stun).
+- **Height reference: attacker depth above ground.** `depth = ground_y − attacker.pos_y`
+  (fixed-point; screen convention up = `−y`, so an airborne attacker has `pos_y < ground_y`,
+  `depth > 0`, `depth == 0` at the floor). The **attacker's** height (how deep the jumping
+  attacker connects), stage-relative via `ground_y`, character-agnostic.
+- **Scaling: one `AirHeightScaling` definition (mirrors `DamageScaling`).** A single sim-wide
+  static definition maps `depth` → a signed hitstun **delta** (a pure function of `depth`
+  alone): `+DEEP_BONUS` at `depth ≤ 0`, `−HIGH_PENALTY` at `depth ≥ HIGH_REF_DEPTH`, linear
+  between. Applied hitstun = `max(base_hitstun + delta, MIN_HITSTUN)` (a floor so a high hit
+  still yields real, brief hitstun — never zero/negative; no upper clamp needed since
+  `delta ≤ +DEEP_BONUS` by construction). The four numbers are **slice-provisional
+  placeholder tuning** (feel is the Strategist's via the spec, exactly like DamageScaling's
+  step/floor, JC-016); the **mechanism** — single definition, depth→delta, applied pre-stun,
+  clamped, surfaced — is the contract. Integer/fixed-point only (AD-014); no float.
+- **Gate: attacker `category == AIRBORNE` and the contact is a hit.** The character-agnostic
+  definition of "air normal" is an airborne strike, not a named move list. A grounded
+  normal's hitstun is untouched. Block is unaffected (a blocked air normal uses authored
+  `blockstun`; air-blocking is out of P1 scope anyway). Throws never take this path.
+- **Observable (charter / F-014's whole point).** The live advantage already reflects the
+  scaled hitstun (no extra plumbing). To answer *why*, two ints are surfaced on the hit
+  record — `contact_depth` and `air_height_hitstun_delta` — through `HitEvent`
+  (`inspection-surface.md`), so the training mode can show "connected deep (depth X) → +N
+  hitstun → this much more plus." Jump-in-depth→advantage is one of the least-observable
+  things in most fighters; making it answerable live is close to the platonic north-star case.
+
+**Why.** Height-dependent air advantage is genuine combat-resolution contract (multiple
+roles build against phase 5) and legibility-relevant, so an owned AD, not dev latitude —
+same bar as AD-031/AD-028. Scaling *hitstun into the one formula* (not advantage) is the
+unique reading that preserves AD-008's single advantage computation while making the number
+vary; a second, parallel advantage adjustment would be exactly the canonical drift AD-008
+prevents. A single `AirHeightScaling` definition mirrors the already-ratified `DamageScaling`
+single-source packaging. Gating on `AIRBORNE` (not a move list) keeps it character-agnostic
+(character B's air normals scale identically). The delta-is-depth-only shape makes the
+`air_height_hitstun_delta` readout exactly height's contribution, so the "why" is legible
+without back-computation. It is genuinely **bounded**: a small phase-5 computation
+(resolve attacker category, compute depth, look up the delta, clamp), one static definition,
+and two int readout fields — no new phase, no new per-player field, no new system.
+**Serialized-shape note.** The two readouts are a `HitRecord` shape addition (two `int`
+fields, `0`/`0` on a non-air-normal hit) — Architect-owned like every serialized-shape change
+(AD-024/AD-028 precedent), added to `HASH_FIELDS`/`to_dict`/`from_dict`/`clone` and covered by
+the canonical hash (AD-023). No `players[i]` field is added: depth is computed from the
+already-serialized `pos_y`, and the scaled hitstun flows into the already-serialized `stun`.
+**Rejected.** Scaling **advantage** directly instead of hitstun (a second advantage
+adjustment beside AD-008's formula — the canonical drift AD-008 exists to prevent; the
+live-advantage read would then need its own height term, duplicating the logic). A per-move
+or per-`HitBox` authored height table (JC-A-04 already ruled height is *live sim behavior*,
+not authored data; a per-move table also loses the single-source consistency guard and
+re-opens the "format is character-A-shaped" risk). Using the **defender's** height as the
+reference (wrong semantics — a jump-in is "deep" by where the *attacker* connects, not the
+grounded defender's position). A new serialized `players[i]` "last contact height" field
+(unnecessary — the value is a transient of one hit, correctly homed on `last_hit`, not
+per-player state). Leaving the numbers as a locked golden (they are slice-provisional feel
+like DamageScaling — QA goldens the *mechanism*: deep > high, ordered correctly, floored;
+not the specific curve).
+**Consequence (Developer, via TKT-P1-13).** Add `AirHeightScaling`
+(`game/sim/air_height_scaling.gd`, all-static, mirroring `damage_scaling.gd`) with the four
+provisional constants and a `hitstun_delta(depth: int) -> int`. In `step_phases.gd`
+`_resolve_one_hit`, on the **hit** branch (not block), when the attacker's resolved move
+`category == CATEGORY_AIRBORNE`, compute `depth = next.stage.ground_y − atk.pos_y`, get the
+delta, and set `stun_frames = max(hb.hitstun + delta, MIN_HITSTUN)`; record `contact_depth`
+and `air_height_hitstun_delta` on the `HitRecord` (both `0` otherwise). Add the two fields to
+`hit_record.gd` (`HASH_FIELDS`, `to_dict`, `from_dict`, `clone`) and the two projected reads
+to `hit_event.gd`/`inspection_view.gd`. `character-a.md` route 2 / "deep = very +" are then
+backed by a real mechanism (no character-A engine code — the rule is character-agnostic).
+**Note (deferred, Tenet 3).** Height-dependent *pushback*, *launch*, or juggle behavior for
+air normals is **not** in this rule — only hitstun/advantage, which is what F-014 and route 2
+need. A later character wanting height-scaled launch is a revision to this AD (extend
+`AirHeightScaling` to return more than a hitstun delta), not a silent code change.
