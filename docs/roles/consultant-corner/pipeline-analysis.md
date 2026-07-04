@@ -101,7 +101,7 @@ One caution that isn't on your list: the **role-boundary blur** (strain #4). As 
 
 ---
 
-Hi! I'm the user. The attached was written by the Strategist as an analysis. You can keep the topics in this doc in mind when thinking critically, but don't let them limit your imagination. 
+Hi! I'm the user. The above was written by the Strategist as an analysis. You can keep the topics in this doc in mind when thinking critically, but don't let them limit your imagination. 
 This is my first time working with an agentic workflow to this level, so my own learning about this kind of process is valuable too. I have some coding experience but I'm a video game player, not a software engineer. 
 
 Another point to add to all of the above is that as the repo grows, the load will become larger and larger. Will the repo become unworkable as soon as 500mb of sound files are introduced to game/? Mitigating it with more strict repo definitions has limitations spelled out by the Strategist in #4.
@@ -113,3 +113,59 @@ Some ideas I've heard of from elsewhere:
 * https://github.com/TencentCloud/CubeSandbox . Apparently a much more efficient way to spin up VMs. That would make this more efficient, but I have absolutely no experience in this area so I don't know if it's necessary, desireable, or if it'd even help at all.
 
 Do some research. If you find other repos I'm interested in hearing about them too. I'm also open to migrating to a 3rd party app instead of just the Claude app. My budget is $50/month, of which I'm only currently spending $20/mo on Claude Pro. If something would certainly and substantially improve the workflow, I'm willing to increase the budget to an absolute maximum $100/mo.
+
+The following was written by Fable in a generic chat as an analysis of this document, including this segment (except this sentence obviously).
+
+---
+
+I've read through all four repos plus dug into some adjacent territory. Before going repo-by-repo, I need to lead with the finding that reframes everything else, because it affects how you should weigh each of these tools.
+
+## The big one: your three roadblocks are artifacts of the tool, not the design
+
+Your pipeline runs in the Claude app's sandbox, and every one of the Strategist's three walk-away blockers — no Godot execution, corrupt sandbox git, no session resumption — is a property of that sandbox, not of your protocol. **Claude Code**, which is already included in your $20 Pro plan, runs natively on your Windows machine with direct access to `E:\FoggyGlass`. That dissolves all three at once:
+
+**Godot execution (your disqualifier):** Claude Code can just run the engine. Godot has first-class headless testing — gdUnit4 ships a command line tool for running tests outside the editor, with JUnit XML output for CI integration, and GUT works the same way (a headless import pass followed by a headless GUT run with `-gexit` so a single failing test fails the job). Your Developer writes a test, runs `godot --headless ... --run-tests`, reads the result, and fixes it in the same session. F-006 and F-011 — blind-authoring failures that cost you multiple full cold-start cycles — simply stop being a failure class. This also fixes strain #4: the Strategist stops absorbing QA work, because QA can actually execute. There are even ready-made pieces here: Randroids-Dojo's Godot-Claude-Skills is a Claude Code plugin with GdUnit4 integration and PlayGodot E2E automation, installable via the plugin marketplace.
+
+**Git:** native git on your real filesystem. The `COMMIT_MSG.txt` / `commit.bat` dance and its clobbering problem disappear entirely. You can keep a human approval gate on *push* if you want the safety valve, but commits stop being your job.
+
+**Cold starts and fragmentation:** Claude Code has the exact primitives your protocol is missing. Sessions resume (`--resume`/`--continue`), so an interrupted batch doesn't re-pay the binding read. `CLAUDE.md` is your binding read loaded automatically. And your roles map directly onto subagents: subagents are Markdown files with YAML frontmatter — each with its own system prompt, tool restrictions, and context window, so a Developer subagent returns only its summary to the orchestrating session instead of the whole conversation dying at a token ceiling.
+
+Cost of this migration: $0. Usage across claude.ai, Claude Code, and Claude Desktop counts toward the same limit, so you're spending the same subscription either way — just far more efficiently, because resumption and subagent isolation attack cold-start × session-count structurally, which your Strategist correctly identified as the biggest unused lever.
+
+Now the repos, evaluated against that backdrop.
+
+## caveman — right instinct, wrong cost center (mostly)
+
+It's real and the benchmarks are unusually honest — they compare against "Answer concisely" rather than verbose defaults, and the README explicitly admits "Caveman only affects output tokens — thinking/reasoning tokens untouched". So no, not a scam. But hold that admission against your own analysis: your Strategist's finding is that **cold-start reading (input) dominates cost, not output**. The headline 65–75% savings applies to the thing that was never your bottleneck.
+
+The one piece that *does* target your bottleneck is the compress sub-skill: `caveman-compress` rewrites memory files like CLAUDE.md into compressed form, cutting ~46% of input tokens every session, with code/URLs/paths byte-preserved. Compressing your binding read (charter, tenets, protocol) would pay on every single role session. But I'd be cautious about applying it to your *artifacts*: in your system, the artifacts are the memory and the contract. A spec or AD written in telegraphic caveman-speak is a contract that's harder for you to audit and harder to adjudicate flags against — and your instinct that it would make subagent behavior harder to debug is correct, since ambiguity in a compressed contract becomes a new source of judgment calls. Verdict: steal `caveman-compress` for the fixed binding docs if you can tolerate reading them that way; skip output compression (wrong cost) and don't compress the specs/ADs/flags themselves.
+
+## claude-code-agents-orchestra — skip the repo, steal the mechanism
+
+The repo itself is thin — 68 stars, 14 commits, and 47 agents heavily skewed toward web apps, crypto, and CMS work you'll never touch. Your role definitions, honed over two weeks and validated across 29 judgment calls, are strictly better than its generic ones. But you spotted the genuinely valuable idea inside it: per-role model assignment. Its framework assigns Opus to strategic roles and Sonnet to implementation roles, and that's not a feature of this repo — it's a native Claude Code capability. The `model` field in subagent frontmatter accepts sonnet, opus, haiku, or a full model ID, and picking the right one is where most cost optimization happens. So yes: a Developer session fixing a single flag absolutely does not need the top model. Strategist/Architect on a strong model, Developer on Sonnet, and quick mechanical fixes or file-searching on Haiku. This is a second structural token lever on top of resumption, and it requires migrating to Claude Code — which you should do anyway.
+
+## superpowers — your "oof" is only half-warranted
+
+It's the heavyweight here: 243k stars, actively maintained, available through Anthropic's official Claude plugin marketplace. And yes, the overlap is real — brainstorming refines ideas into a saved design document, writing-plans breaks work into small tasks, then subagent-driven-development dispatches a fresh subagent per task with two-stage review (spec compliance, then code quality), often running autonomously for a couple of hours. That's your brief → spec → tickets → build → audit flow.
+
+But here's the unbiased read: superpowers is a generic SDLC methodology. What it does *not* have is the part of your system that P0 proved actually works — the one-owner-per-artifact model, the flag ledger with owner-only resolution, the judgment-call log with Architect ratification, the milestone drift sweep that caught the vacuously-green test. Those are governance mechanisms, and they're your system's genuine contribution. Superpowers' equivalent (two-stage review per task) is per-task; it has nothing like your cumulative behavior-vs-charter sweep.
+
+So: don't migrate wholesale, and don't feel bad about the two weeks — you built the layer superpowers lacks, and you now understand *why* each piece exists, which someone who installed a plugin never learns. The right move is to run your protocol on Claude Code and cherry-pick: their fresh-subagent-per-task dispatch is precisely the fix for your batch-fragmentation strain (each ticket gets a clean context, the orchestrator keeps the thread, no whole-batch death at a token ceiling), and their two-stage review pattern is worth comparing against your QA audit criteria. Install it, watch how it dispatches, and port the mechanics into your roles.
+
+## CubeSandbox — wrong layer, skip it
+
+This one I'll be blunt about, per your standing preference: it solves a problem you don't have. It's a KVM/RustVMM microVM service that creates hardware-isolated sandboxes in under 60ms with under 5MB memory overhead, targeting thousands of agents per machine, E2B-compatible, aimed at people *hosting fleets* of agent sandboxes — RL training runs, SaaS products running untrusted LLM code. Your costs are token costs (model inference), and VM spin-up speed has zero effect on those. Worse, it requires an x86_64 Linux environment with KVM support, so you'd be standing up WSL2 infrastructure to solve a sandbox problem that migrating to Claude Code eliminates outright — Claude Code doesn't sandbox you away from your machine; that's the whole point. Not necessary, not desirable, wouldn't help.
+
+## The 500MB question: repo size ≠ context cost
+
+Good instinct to worry about scaling, but the mechanics are more forgiving than you fear. Agents pay tokens for what they *read into context*, not for what exists on disk. 500MB of `.ogg` files will never enter a context window — no role has a reason to read them, and binary files can't be read as text anyway. The real (and much smaller) issues are:
+
+1. **Git performance and backup bloat.** Solve with Git LFS for the asset directories, or simply `.gitignore` `game/assets/` and back assets up separately — they don't need code-style version history.
+2. **Search noise.** Make sure roles' file searches exclude asset directories so a grep doesn't waste time trawling them. Claude Code respects ignore configuration for this.
+3. **The actual scaling threat your Strategist already named:** the growing *binding read* (specs + decision record). That grows with tokens-read-per-session, which is the number that matters. The fix is active pruning plus moving reference material out of the always-loaded set — Claude Code's skills load on demand rather than every session, which is exactly the "keep the fixed read small" mechanism your protocol wants but the chat app can't give you.
+
+## Budget
+
+Don't spend anything yet. The migration is free, and it attacks all three roadblocks plus the model-tiering lever. The honest caveat: Pro's limits are a five-hour session limit plus a weekly cap across all models, shared across surfaces, and an autonomous build-verify loop burns tokens faster than chat sessions do — Anthropic pitches Pro as suited to "short coding sprints in small codebases". So after migrating, run a milestone and check Settings > Usage. If you're consistently hitting walls, your two options both fit your stated ceiling: usage credits let you continue past your plan's limits at pay-as-you-go rates (good if overruns are occasional — a $30/mo credit budget keeps you at $50 total), or Max 5x at $100/mo for 5× Pro's per-session usage if you're walled daily. Measure first; my guess is Pro + Sonnet-tier Developer subagents + resumption gets you further than Pro + your current architecture ever could, because you're currently paying the cold-start tax roughly ten times per milestone for nothing.
+
+**Priority order, mapped to your Strategist's list:** migrate to Claude Code (fixes #2 git and enables everything), wire up GUT or gdUnit4 headless (fixes #3 Godot, the disqualifier), rebuild roles as subagents with per-role models and port `CLAUDE.md` from your binding docs (fixes #1 tokens). Your coordination protocol — the hard part — transfers intact; only the substrate changes.
