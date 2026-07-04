@@ -454,6 +454,7 @@ static func phase4_overlap(next: SimState) -> Array:
 		var def: PlayerState = next.players[defender]
 		var atk_boxes: Array = _resolved_boxes_for(atk)
 		var def_boxes: Array = _resolved_boxes_for(def)
+		var def_invuln: Dictionary = _defender_invuln(def)
 		# Collect defender hurtboxes once.
 		var hurts: Array = []
 		for rb in def_boxes:
@@ -468,13 +469,20 @@ static func phase4_overlap(next: SimState) -> Array:
 				if rb.overlaps(hb):
 					connected = true
 					break
-			if connected:
-				contacts.append({
-					"attacker": attacker,
-					"defender": defender,
-					"hitbox": rb.hit,
-					"projectile_index": -1,
-				})
+			if not connected:
+				continue
+			# Invuln gate (AD-031): a geometric overlap against a covering-keyframe
+			# invuln that matches this box's hit_kind WHIFFS — not appended, so phase 5
+			# never sees it (no id_group/throw-clash/combo effect from a suppressed
+			# contact). The box's own HitBox.hit_kind carries STRIKE by default.
+			if _invuln_gates(rb.hit, def_invuln):
+				continue
+			contacts.append({
+				"attacker": attacker,
+				"defender": defender,
+				"hitbox": rb.hit,
+				"projectile_index": -1,
+			})
 
 	# Projectile-vs-opponent-hurtbox (AD-021). Each live projectile is tested
 	# against the NON-OWNER's hurtboxes only (a projectile never hits its own
@@ -487,10 +495,17 @@ static func phase4_overlap(next: SimState) -> Array:
 			continue
 		var defender: int = 1 - pr.owner
 		var def_boxes: Array = _resolved_boxes_for(next.players[defender])
+		var def_invuln: Dictionary = _defender_invuln(next.players[defender])
 		for hb in def_boxes:
 			if hb.kind != BoxView.KIND_HURT:
 				continue
 			if rb.overlaps(hb):
+				# Gated (AD-031): the projectile is NOT consumed — it is simply not
+				# appended as a contact, so phase 5's "consume on connect" path never
+				# runs for it. It passes through and may connect on a later vulnerable
+				# frame (the one operational difference from a character strike).
+				if _invuln_gates(rb.hit, def_invuln):
+					break
 				contacts.append({
 					"attacker": pr.owner,
 					"defender": defender,
@@ -499,6 +514,43 @@ static func phase4_overlap(next: SimState) -> Array:
 				})
 				break   # one contact per projectile per tick is enough; phase 5 consumes it
 	return contacts
+
+
+## The defender's CURRENT-frame invulnerability, read from its covering keyframe(s)
+## for `frame_in_state` (AD-031; derived, no new SimState field — mirrors how box
+## geometry is resolved). Multiple covering keyframes union (any covering keyframe
+## setting a flag grants it, matching how MoveData unions box lists). Returns
+## `{ "strike": bool, "throw": bool }`; both false if the character/state/keyframe
+## is unknown (a safe, always-vulnerable default).
+static func _defender_invuln(def: PlayerState) -> Dictionary:
+	var out: Dictionary = {"strike": false, "throw": false}
+	var character: Character = MoveRegistry.character(def.character_id)
+	if character == null:
+		return out
+	var move: MoveState = character.get_state(def.state_id)
+	if move == null:
+		return out
+	for kf in move.timeline:
+		if not kf.covers(def.frame_in_state):
+			continue
+		if kf.invuln_strike:
+			out["strike"] = true
+		if kf.invuln_throw:
+			out["throw"] = true
+	return out
+
+
+## True iff the incoming box's `hit_kind` is whiffed by the defender's current
+## invuln (AD-031): STRIKE/PROJECTILE gate on invuln_strike; THROW gates on
+## invuln_throw. `hb` may be null defensively (never gates a null box).
+static func _invuln_gates(hb: HitBox, def_invuln: Dictionary) -> bool:
+	if hb == null:
+		return false
+	if hb.hit_kind == HitBox.HIT_KIND_THROW:
+		return bool(def_invuln.get("throw", false))
+	# STRIKE and PROJECTILE both gate on invuln_strike (AD-031: "a projectile is a
+	# strike delivered at range — one immunity beats both").
+	return bool(def_invuln.get("strike", false))
 
 
 ## Resolve a player's active boxes this tick (derived, AD-001). Delegates to the ONE

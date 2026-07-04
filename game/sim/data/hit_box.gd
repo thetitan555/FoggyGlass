@@ -9,6 +9,19 @@ extends Resource
 ## geometry / whole-frame values are integers (baked fixed-point where spatial —
 ## AD-014); no floats reach the runtime (move-format.md criterion 9).
 
+## Contact category (AD-031): STRIKE / THROW / PROJECTILE. Determines which of a
+## defender's invuln_* flags gates this box in phase 4 (STRIKE and PROJECTILE are
+## whiffed by invuln_strike; THROW by invuln_throw — a projectile is a strike
+## delivered at range, so the same immunity beats both). The CANONICAL category;
+## the legacy `is_throw` flag below is exactly `hit_kind == THROW` (same fact, two
+## names for continuity with the shipped throw path, which keys on `is_throw`).
+## Authoring may set either; they must agree. Default STRIKE.
+@export var hit_kind: int = HIT_KIND_STRIKE
+
+const HIT_KIND_STRIKE: int = 0
+const HIT_KIND_THROW: int = 1
+const HIT_KIND_PROJECTILE: int = 2
+
 ## The AABB (character-local, fixed-point).
 @export var box: Box = null
 
@@ -46,9 +59,18 @@ extends Resource
 ## target again after this many frames. 0 (unset) => one hit per contact.
 @export var rehit_interval: int = 0
 
-## Throw flag (AD-016). If true this box is a throwbox: on connect it bypasses
-## blockstun and enters the throw resolution path (combat-resolution.md).
-@export var is_throw: bool = false
+## Throw flag (AD-016/AD-031). A COMPUTED property backed by `hit_kind` — reading
+## it returns `hit_kind == HIT_KIND_THROW`; writing it sets/clears `hit_kind`
+## to/from THROW. This keeps the legacy name working for the shipped throw path
+## (combat-resolution.md, step_phases.gd) and for existing authored content that
+## sets `is_throw = true` directly, while `hit_kind` stays the single underlying
+## fact (no two fields to drift apart — AD-031 "authoring may set either but they
+## must agree" is enforced by construction, not by convention).
+var is_throw: bool:
+	get:
+		return hit_kind == HIT_KIND_THROW
+	set(value):
+		hit_kind = HIT_KIND_THROW if value else HIT_KIND_STRIKE
 
 ## Throw tech-window length, in frames (AD-029; AD-016 tech window). The number of
 ## frames after this throw connects during which the thrown defender may tech it

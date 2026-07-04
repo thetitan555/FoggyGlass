@@ -983,6 +983,7 @@ static func _build_projectile_data(proj_id: int, speed: float) -> ProjectileData
 	data.max_per_owner = FIREBALL_MAX_PER_OWNER
 	var hb := HitBox.new()
 	hb.box = Box.make(FP.from_int(-12), FP.from_int(-12), FP.from_int(24), FP.from_int(24))
+	hb.hit_kind = HitBox.HIT_KIND_PROJECTILE   # AD-031: a projectile's carried hitbox is PROJECTILE
 	hb.damage = FIREBALL_DAMAGE
 	hb.hitstun = FIREBALL_HITSTUN
 	hb.blockstun = FIREBALL_BLOCKSTUN

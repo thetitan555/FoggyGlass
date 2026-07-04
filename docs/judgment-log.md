@@ -1518,3 +1518,60 @@ way). Ratified as-built; no code change; the height mechanism is a raise, below.
 ### JC-A-05 — ratified (see the ruling folded into JC-A-05 above).
 (Disposition recorded in the JC-A-05 entry: hitstun 15 authoritative, spec fixed to
 +6, authored value correct as-built.)
+
+### JC-035 · 2026-07-04 · TKT-P1-11 · `HitBox.is_throw` reconciled to `hit_kind` as a computed property — provisional
+**Decided.** `is_throw` becomes a GDScript computed property (`get`/`set`) backed by
+the new `hit_kind` field, rather than a second stored bool kept in sync by
+convention: `get` returns `hit_kind == HIT_KIND_THROW`; `set` writes `hit_kind` to
+THROW or STRIKE. No other call site (`step_phases.gd`, `move_data.gd`,
+`test_character_a.gd`, `character_a.gd`, `test_support.gd`) needed to change — every
+existing `hb.is_throw = true` / `if hb.is_throw` read/write keeps working, now
+reading/writing the canonical field underneath.
+**Serves.** AD-031 ("the legacy `is_throw` flag is exactly `hit_kind == THROW` — the
+same fact under two names... authoring may set either but they must agree").
+**Alternatives passed over.** Two independent stored fields with a
+validator/assertion that they agree (drift is possible until the assertion runs;
+adds a checking pass with no runtime benefit). Keeping `is_throw` as the only
+stored field and deriving `hit_kind` from it in phase 4 (would make `hit_kind`
+non-authoritative for PROJECTILE, which has no boolean equivalent — doesn't
+generalize to three categories). Migrating every `is_throw` call site to `hit_kind
+== HitBox.HIT_KIND_THROW` (correct but a larger, non-mechanical diff across content
+and tests for no behavioral gain over the computed-property reading, which the AD's
+"authoring may set either" phrasing explicitly anticipates).
+**Why.** A computed property is the one reading that makes "the same fact under two
+names" literally true (one storage location, `hit_kind`) rather than true "by
+discipline" — AD-031 says they must agree; making disagreement structurally
+impossible is stronger than documenting the invariant. Zero-diff on every existing
+throw call site is a bonus, not the driver.
+**Serves.** TKT-P1-11 (`game/sim/data/hit_box.gd`).
+
+### JC-036 · 2026-07-04 · TKT-P1-11 · dev-test scenarios state-inject a non-attacking invuln state to isolate the phase-4 gate — provisional
+**Decided.** `game/tests/test_invuln.gd`'s strike-whiff test uses character A's back
+dash (invuln, no hitbox of its own) as the invuln-bearing defender, not `2H` (which
+character-a.md's own matchup uses to beat a jump-in); the projectile-passes-through
+test places the defender in `623L` (DP) but moves the OTHER player far outside the
+DP's own hitbox reach. Both tests set `frame_in_state` directly (mirroring
+`test_character_a.gd`'s existing direct-drive convention) rather than driving from
+the character's neutral opener through real timing.
+**Serves.** TKT-P1-11 acceptance ("a strike whiffing an invuln_strike frame... a
+projectile passing through... and connecting on a later vulnerable frame").
+**Alternatives passed over.** Driving the exact `character-a.md` matchup (`j.H` vs
+`2H`) end-to-end from neutral: confirmed by hand-tracing that in that matchup `2H`'s
+own hitbox (active frames 6-8) lands on the incoming jump attacker BEFORE the jump
+normal's own hitbox is even active (`j.H` active frames 9-13) — so that matchup
+demonstrates 2H's frame/reach advantage beating a jump-in, not a frame where the
+*invuln gate itself* is the reason the incoming hit is suppressed (2H's active
+hitbox interrupts first, either way). Using `2H` as the invuln-bearing defender in
+the isolated unit test would let 2H's own hitbox counter-hit the attacker mid-move,
+interrupting the attacker's move before its own whiff-edge (`move_contact`)
+accounting completes — confounding the exact mechanism under test.
+**Why.** The ticket's acceptance is about the phase-4 SUPPRESSION MECHANISM
+(gate-then-no-record), which is best isolated with a defender state that has no
+hitbox of its own to introduce a second, unrelated interaction — the back dash and a
+distanced DP_L do this without inventing any new authored data or engine surface.
+The real `2H`-vs-jump-in matchup is still exercised for its *structural* claim by
+`test_character_a.gd`'s existing authored-data assertions (invuln frames 1-8) plus
+this ticket's end-to-end phase-4 gate proof on the shared mechanism; the specific
+choreography-level "2H beats this exact jump-in" interaction-level claim is
+character-a.md content tuning, not this engine ticket's contract.
+**Serves.** TKT-P1-11 (`game/tests/test_invuln.gd`).

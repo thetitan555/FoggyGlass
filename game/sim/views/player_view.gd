@@ -69,6 +69,13 @@ var throw_tech_window: int = 0
 ## The attacker index that threw this player, or -1 if not currently thrown (AD-028).
 var thrown_by: int = -1
 
+## This player's CURRENT-frame invulnerability (AD-031), read from its covering
+## keyframe(s) for `frame_in_state`: `{ strike, throw }` bools. A DERIVED projection
+## (like box geometry) — not a serialized SimState field. Backs "this frame is
+## invulnerable" and, paired with the opponent's `move_contact == CONTACT_WHIFF`,
+## "the hit whiffed because of invuln" (charter legibility / no knowledge checks).
+var invuln: Dictionary = {"strike": false, "throw": false}
+
 # --- Inputs -----------------------------------------------------------------
 var input_current: int = InputFrame.NEUTRAL
 var input_history: PackedInt32Array = PackedInt32Array()   # oldest -> newest
@@ -130,10 +137,12 @@ func _init(state: SimState, i: int, roster: Dictionary = {}) -> void:
 		state_category = move.category
 		state_duration = move.duration
 		boxes = _resolve_boxes(p, move, pushbox)
+		invuln = _resolve_invuln(move, p.frame_in_state)
 	else:
 		state_category = MoveState.CATEGORY_GROUNDED
 		state_duration = 0
 		boxes = []
+		invuln = {"strike": false, "throw": false}
 
 	# actionable: stun == 0 AND not in committed recovery (inspection-surface.md).
 	# Committed-recovery determination reads move data; the sim's canonical
@@ -150,6 +159,23 @@ static func _history_oldest_to_newest(hist: InputHistory) -> PackedInt32Array:
 	# at(age): age 0 is newest. Walk from oldest (age n-1) to newest (age 0).
 	for age in range(n - 1, -1, -1):
 		out.append(hist.at(age))
+	return out
+
+
+## This player's invulnerability for `frame`, read from move's covering keyframe(s)
+## (AD-031). Mirrors StepPhases._defender_invuln's union-of-covering-keyframes logic
+## exactly (the same phase-4 gate reasoning), but over an already-resolved `move` —
+## PlayerView resolves move data through the supplied roster, not MoveRegistry, so
+## this is the roster-shaped twin rather than a call into step_phases.gd.
+static func _resolve_invuln(move: MoveState, frame: int) -> Dictionary:
+	var out: Dictionary = {"strike": false, "throw": false}
+	for kf in move.timeline:
+		if not kf.covers(frame):
+			continue
+		if kf.invuln_strike:
+			out["strike"] = true
+		if kf.invuln_throw:
+			out["throw"] = true
 	return out
 
 
