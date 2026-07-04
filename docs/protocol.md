@@ -46,10 +46,14 @@ transport (the shared working tree is). A role may run `git status`, stage, and
 `git commit` directly when a unit of work reaches a checkpoint. **`push` stays
 the user's manual gate:** roles commit freely to local history, but pushing to
 `origin` is the user's call (run or approve it yourself) — a human checkpoint on
-the one irreversible step, and nowhere it isn't needed. The old `commit.bat` /
-`push.bat` / `COMMIT_MSG.txt` apparatus was a workaround for sandbox git
-corruption and is **retired**; don't write `COMMIT_MSG.txt` or invoke the
-helpers.
+the one irreversible step, and nowhere it isn't needed. The `commit.bat` /
+`COMMIT_MSG.txt` batch-commit apparatus (a workaround for sandbox git corruption)
+is **retired** — roles commit with native git, and no one writes `COMMIT_MSG.txt`.
+`push.bat` survives, **rewritten** as the user's thin manual push-gate: it pushes
+the natively-committed history and only prompts for a message if the tree is
+unexpectedly dirty. Running it is the user's push step — but run it against a
+**clean tree**, because its `git add -A` would otherwise sweep any uncommitted
+WIP (e.g. a subagent mid-write) into one catch-all commit.
 
 Design consequence: if it isn't **saved to the shared working tree**, it didn't
 happen. No role may rely on something another role "knows" — only on what's on
@@ -273,9 +277,10 @@ stays with the Strategist; the mechanical grouping is the Architect's.
   commit itself. **`git push` stays the user's manual gate:** commit freely to
   local history; leave pushing to `origin` to the user (who runs or approves it).
   This is the "autonomous-but-safe" shape — automate the reversible checkpoint,
-  keep a human on the one irreversible step. (The old `commit.bat` / `push.bat` /
-  `COMMIT_MSG.txt` apparatus was a workaround for git corruption under the retired
-  Linux-sandbox mount; that failure mode is gone and the apparatus is retired.)
+  keep a human on the one irreversible step. (The `commit.bat` / `COMMIT_MSG.txt`
+  batch-commit apparatus was a sandbox-git-corruption workaround and is retired;
+  `push.bat` remains as the user's thin manual push-gate — see the Git's-role note
+  above for its one caveat.)
 - **Commit often; one logical change per commit.** Prefer **frequent, small
   commits** — checkpoint each logical unit as it lands rather than batching many
   changes into one commit. Commits are local and cheap (`push` is the only gate),
