@@ -34,6 +34,8 @@ const THROW_DAMAGE: int = 80
 const THROW_HITSTUN: int = 20
 const THROW_TECH_WINDOW: int = 8   # frames the defender may tech (authored via HitBox.tech_window, AD-029)
 const THROW_ID_GROUP: int = 5
+const THROW_PUSHBACK: float = 3.0  # tech/clash separation (units); nonzero so a clash's
+                                    # pushback is independently observable (F-011 fix)
 const MULTI_DAMAGE: int = 20
 const REHIT_DAMAGE: int = 15
 const REHIT_INTERVAL: int = 4      # frames between cadenced re-hits
@@ -320,6 +322,7 @@ static func _build_throw() -> MoveState:
 	tb.damage = THROW_DAMAGE
 	tb.hitstun = THROW_HITSTUN
 	tb.tech_window = THROW_TECH_WINDOW   # dedicated tech-window frame count (AD-029)
+	tb.pushback_hit = FP.from_units(THROW_PUSHBACK)   # clash/tech separation (AD-016)
 	tb.hitstop = 0
 	tb.hit_reaction = STATE_THROWN
 	tb.block_reaction = STATE_THROWN

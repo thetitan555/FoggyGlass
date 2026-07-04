@@ -116,10 +116,31 @@ func _test_throw_tech_to_neutral() -> void:
 func _test_simultaneous_throw_clash() -> void:
 	# crit 10: simultaneous ground throws within the window clash to a tech — neither
 	# lands, both stay actionable, no damage. Both input a throw on the same tick.
+	#
+	# F-011 lineage: asserting only "neither is THROWN / neither took damage" is also
+	# true of throws that never connect at all (a broken button map, drifted throwbox
+	# geometry, an accidental early return). This test therefore ALSO asserts positive
+	# liveness: (a) both players actually entered STATE_THROW with their throwbox on its
+	# authored active window (frames 1..3, TestSupport._build_throw) on the tick the
+	# clash is checked, and (b) the clash path actually ran — `_resolve_throw_clash`
+	# applies a deterministic symmetric pushback (step_phases.gd), so the players'
+	# separation strictly increases from its pre-clash value. Without both of these, a
+	# "neither thrown / no damage" reading would be indistinguishable from throws that
+	# simply whiffed.
 	var s := _two_char_state(40)
+	var pre_clash_separation: int = absi(s.players[1].pos_x - s.players[0].pos_x)
 	var throw_cmd0: int = InputFrame.BUTTON_2 | InputFrame.DOWN
 	var throw_cmd1: int = InputFrame.BUTTON_2 | InputFrame.DOWN
 	s = SimState.step(s, throw_cmd0, throw_cmd1)
+	# Liveness: both players actually entered their THROW move (STATE_THROW) and their
+	# throwbox is on its active window (frames 1..3) — i.e. the throws are live, not
+	# whiffed or blocked by a button-map/geometry regression.
+	_eq(s.players[0].state_id, TestSupport.STATE_THROW, "P0 entered STATE_THROW (live throw attempt)")
+	_eq(s.players[1].state_id, TestSupport.STATE_THROW, "P1 entered STATE_THROW (live throw attempt)")
+	_true(s.players[0].frame_in_state >= 1 and s.players[0].frame_in_state <= 3,
+		"P0's throwbox is on its authored active window (frame 1..3)")
+	_true(s.players[1].frame_in_state >= 1 and s.players[1].frame_in_state <= 3,
+		"P1's throwbox is on its authored active window (frame 1..3)")
 	# On the tick both throwboxes connect, the clash resolves: neither enters THROWN.
 	var clashed: bool = false
 	for _k in range(6):
@@ -135,6 +156,12 @@ func _test_simultaneous_throw_clash() -> void:
 	_true(clashed, "simultaneous throws clash to a tech (neither is thrown)")
 	_eq(s.players[0].health, 1000, "no damage to P0 on a throw clash")
 	_eq(s.players[1].health, 1000, "no damage to P1 on a throw clash")
+	# Positive proof the clash path RAN (not just "throws never connected"):
+	# `_resolve_throw_clash` (step_phases.gd) applies a deterministic symmetric pushback
+	# once both throwboxes connect, so separation must have strictly increased.
+	var post_clash_separation: int = absi(s.players[1].pos_x - s.players[0].pos_x)
+	_true(post_clash_separation > pre_clash_separation,
+		"clash applied symmetric pushback (proof _resolve_throw_clash executed, not a whiff)")
 	MoveRegistry.clear()
 
 
