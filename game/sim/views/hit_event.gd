@@ -17,6 +17,14 @@ var scaling_applied: int = 100
 var combo_count_after: int = 0
 var tick: int = 0
 
+## Air-normal height-dependent advantage readout (AD-033; TKT-P1-13). The
+## attacker's depth above ground at connect (fixed-point) and the signed
+## whole-frame hitstun delta it produced through AirHeightScaling — both `0` on
+## any non-air-normal hit (blocked, thrown, or a grounded attacker), so "why" a
+## deep jump-in is more plus is readable without back-computation.
+var contact_depth: int = 0
+var air_height_hitstun_delta: int = 0
+
 
 ## Build a view from the sim's serialized HitRecord. The single source of truth is
 ## the record in state; this only re-shapes it for the seam.
@@ -29,4 +37,6 @@ static func from_record(rec: HitRecord) -> HitEvent:
 	e.scaling_applied = rec.scaling_applied_pct
 	e.combo_count_after = rec.combo_count_after
 	e.tick = rec.tick
+	e.contact_depth = rec.contact_depth
+	e.air_height_hitstun_delta = rec.air_height_hitstun_delta
 	return e

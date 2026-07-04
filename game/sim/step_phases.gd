@@ -681,6 +681,8 @@ static func _resolve_one_hit(next: SimState, attacker: int, defender: int, hb: H
 	var reaction_state: int
 	var stun_frames: int
 	var stun_kind: int
+	var contact_depth: int = 0
+	var air_height_hitstun_delta: int = 0
 	if blocking:
 		reaction_state = hb.block_reaction
 		stun_frames = hb.blockstun
@@ -689,6 +691,19 @@ static func _resolve_one_hit(next: SimState, attacker: int, defender: int, hb: H
 		reaction_state = hb.hit_reaction
 		stun_frames = hb.hitstun
 		stun_kind = PlayerView.STUN_HIT
+		# --- Air-normal height-dependent advantage (AD-033), hit branch only ---
+		# When the ATTACKER's current move category is AIRBORNE, scale the hitstun
+		# it inflicts by contact depth through the ONE AirHeightScaling definition,
+		# feeding the single AD-008 advantage formula (never a second, parallel
+		# advantage adjustment). Grounded normals and blocked/thrown contacts are
+		# untouched. depth = ground_y - attacker.pos_y (fixed-point; deeper = smaller
+		# depth, more plus).
+		var atk_character: Character = MoveRegistry.character(atk.character_id)
+		var atk_move: MoveState = atk_character.get_state(atk.state_id) if atk_character != null else null
+		if atk_move != null and atk_move.category == MoveState.CATEGORY_AIRBORNE:
+			contact_depth = next.stage.ground_y - atk.pos_y
+			air_height_hitstun_delta = AirHeightScaling.hitstun_delta(contact_depth)
+			stun_frames = max(hb.hitstun + air_height_hitstun_delta, AirHeightScaling.MIN_HITSTUN)
 
 	# --- Combo accounting + damage scaling (combat-resolution.md) ------------
 	# On a fresh hit (defender not already in a hitstun-chained state) the combo
@@ -770,6 +785,11 @@ static func _resolve_one_hit(next: SimState, attacker: int, defender: int, hb: H
 	rec.was_block = blocking
 	rec.scaling_applied_pct = scaling_pct
 	rec.combo_count_after = def.combo_hits if not blocking else 0
+	# Air-normal height-dependent advantage readout (AD-033): 0/0 on any
+	# non-air-normal hit (blocked, thrown, or a grounded attacker) — set above only
+	# on the airborne-attacker hit branch, otherwise left at their zero defaults.
+	rec.contact_depth = contact_depth
+	rec.air_height_hitstun_delta = air_height_hitstun_delta
 	# The hit is observable on the frame this step PRODUCES. Phase 7 sets the final tick
 	# to next.tick + 1, so record that value now — HitEvent.tick then equals the tick of
 	# the state in which last_hit is first readable (deterministic, phase-order-stable).

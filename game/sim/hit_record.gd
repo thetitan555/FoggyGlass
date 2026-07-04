@@ -31,10 +31,20 @@ var combo_count_after: int = 0
 ## The tick this hit resolved on.
 var tick: int = 0
 
+## Air-normal height-dependent advantage readout (AD-033; TKT-P1-13). `contact_depth`
+## is the attacker's depth above ground at the moment of connect (fixed-point,
+## ground_y - attacker.pos_y); `air_height_hitstun_delta` is the signed whole-frame
+## hitstun delta AirHeightScaling derived from it. Both `0` on any non-air-normal
+## hit (blocked, thrown, or a grounded attacker) — the deterministic default, so a
+## ground hit's record reads "no height scaling applied."
+var contact_depth: int = 0
+var air_height_hitstun_delta: int = 0
+
 ## Canonical hash field order (AD-023). SimState.hash_state folds these in order.
 const HASH_FIELDS: Array[String] = [
 	"attacker", "defender", "damage_dealt", "was_block_int",
 	"scaling_applied_pct", "combo_count_after", "tick",
+	"contact_depth", "air_height_hitstun_delta",
 ]
 
 
@@ -47,6 +57,8 @@ func clone() -> HitRecord:
 	r.scaling_applied_pct = scaling_applied_pct
 	r.combo_count_after = combo_count_after
 	r.tick = tick
+	r.contact_depth = contact_depth
+	r.air_height_hitstun_delta = air_height_hitstun_delta
 	return r
 
 
@@ -61,6 +73,8 @@ func to_dict() -> Dictionary:
 		"scaling_applied_pct": scaling_applied_pct,
 		"combo_count_after": combo_count_after,
 		"tick": tick,
+		"contact_depth": contact_depth,
+		"air_height_hitstun_delta": air_height_hitstun_delta,
 	}
 
 
@@ -73,4 +87,6 @@ static func from_dict(d: Dictionary) -> HitRecord:
 	r.scaling_applied_pct = int(d["scaling_applied_pct"])
 	r.combo_count_after = int(d["combo_count_after"])
 	r.tick = int(d["tick"])
+	r.contact_depth = int(d["contact_depth"])
+	r.air_height_hitstun_delta = int(d["air_height_hitstun_delta"])
 	return r
