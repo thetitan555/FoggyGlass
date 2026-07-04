@@ -18,6 +18,13 @@ extends RefCounted
 ## until then it is an empty typed array. `state_category`, `state_duration`, and
 ## `actionable` read through move data where available, with a safe default when the
 ## roster has no entry for the current state (so the view is always well-formed).
+##
+## F-013 / AD-028 (TKT-P1-01). Four batch-2 legibility fields are surfaced READ-ONLY
+## from the corresponding PlayerState truth, straight projection — no re-derivation:
+## `move_contact`, `cancel_tags`, `throw_tech_window`, `thrown_by`. These back "did my
+## move connect/whiff," "is a cancel window open," and "who threw whom, how long can I
+## tech" (inspection-surface.md criterion 1). All plain int / PackedInt32Array — no
+## floats, snapshot-able (AD-019).
 
 # --- Identity + state machine ----------------------------------------------
 var character_id: int = 0
@@ -42,6 +49,25 @@ var stun_kind: int = STUN_NONE
 ## { hit_count, scaling_pct, damage_total }. scaling_pct is an integer percent
 ## (fixed-point projected to whole percent) so it stays snapshot-able / float-free.
 var combo: Dictionary = {"hit_count": 0, "scaling_pct": 100, "damage_total": 0}
+
+# --- Batch-2 legibility (F-013 / AD-028) — read-only projection of PlayerState ----
+
+## This player's CURRENT-move outcome as attacker (AD-028): CONTACT_NONE / _HIT /
+## _BLOCK / _WHIFF (mirrors PlayerState.CONTACT_* — plain int enum 0/1/2/3). Backs
+## "did my move connect / whiff" and gates which cancels are live.
+var move_contact: int = PlayerState.CONTACT_NONE
+
+## The cancel tags this player currently holds AS ATTACKER (AD-017/028) — an open
+## cancel window: the set of tags a buffered cancel can consume this tick. Empty =>
+## no cancel window open. Snapshot-able PackedInt32Array.
+var cancel_tags: PackedInt32Array = PackedInt32Array()
+
+## Frames remaining in which this player (as thrown DEFENDER) may still tech the
+## throw (AD-016/028). 0 => not in a tech window; >0 => the live tech-frame count.
+var throw_tech_window: int = 0
+
+## The attacker index that threw this player, or -1 if not currently thrown (AD-028).
+var thrown_by: int = -1
 
 # --- Inputs -----------------------------------------------------------------
 var input_current: int = InputFrame.NEUTRAL
@@ -80,6 +106,13 @@ func _init(state: SimState, i: int, roster: Dictionary = {}) -> void:
 		"scaling_pct": FP.round_to_int(FP.mul(p.combo_scaling, FP.from_int(100))),
 		"damage_total": p.combo_damage,
 	}
+
+	# F-013 / AD-028: straight read-only projection of the corresponding SimState
+	# truth — no re-derivation (inspection-surface.md "Single source of truth").
+	move_contact = p.move_contact
+	cancel_tags = p.cancel_tags.duplicate()
+	throw_tech_window = p.throw_tech_window
+	thrown_by = p.thrown_by
 
 	input_current = p.input_history.newest()
 	input_history = _history_oldest_to_newest(p.input_history)
