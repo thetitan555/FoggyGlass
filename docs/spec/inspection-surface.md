@@ -99,6 +99,8 @@ sim owns the record; this view is read-only over it.
 | `damage_dealt`, `was_block` | Damage applied; whether blocked. |
 | `scaling_applied`, `combo_count_after` | Scaling at the time; combo count after. |
 | `tick` | When it resolved. |
+| `contact_depth` | Fixed-point (sim truth; snapshot-able). The attacker's depth above ground at contact (`ground_y − attacker.pos_y`, AD-033); `0` on a non-air-normal hit. Backs "this jump-in connected deep." |
+| `air_height_hitstun_delta` | The signed hitstun-frame delta the air-normal height scaling contributed at this hit (AD-033); `0` on a non-air-normal hit. Backs "…deep → +N hitstun → this much more plus" — the *why* behind a deep jump-in's advantage. Plain int (whole frames). |
 
 ## Render projection (render-only, never snapshotted — AD-019)
 
@@ -121,6 +123,10 @@ snapshots them. The single source of truth that QA snapshots stays fixed-point.
    seam cannot surface (F-013). A defender frame's **invulnerability** (`invuln`,
    AD-031) is likewise readable through `PlayerView`, so a whiff-by-invuln is
    attributable in the training mode (charter: "find out what happened and why").
+   An air normal's **contact depth and height-scaled hitstun delta** (`HitEvent.
+   contact_depth`, `HitEvent.air_height_hitstun_delta`, AD-033) are readable through
+   `last_hit()`, so *why* a deep jump-in is more plus is attributable (both `0` on a
+   non-air-normal hit).
 2. **Read-only.** No method on the surface mutates `SimState`; after any sequence
    of inspection calls, the state hash is unchanged. No mutator is exposed.
 3. **Single source.** `advantage()` returns the value from the sim's one advantage
