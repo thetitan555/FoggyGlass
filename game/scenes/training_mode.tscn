@@ -1,0 +1,40 @@
+[gd_scene load_steps=6 format=3 uid="uid://bfg1trainingmode1"]
+
+[ext_resource type="Script" path="res://scenes/training_mode.gd" id="1_shell"]
+[ext_resource type="Script" path="res://sim/tick_host.gd" id="2_tickhost"]
+[ext_resource type="Script" path="res://scenes/overlays/geometry_overlay.gd" id="3_geometry"]
+[ext_resource type="Script" path="res://scenes/overlays/frame_data_panel.gd" id="4_framedata"]
+[ext_resource type="Script" path="res://scenes/overlays/live_state_panel.gd" id="5_livestate"]
+
+[node name="TrainingMode" type="Node2D"]
+script = ExtResource("1_shell")
+
+[node name="TickHost" type="Node" parent="."]
+script = ExtResource("2_tickhost")
+
+[node name="GeometryOverlay" type="Node2D" parent="."]
+script = ExtResource("3_geometry")
+
+[node name="FrameDataPanel" type="Control" parent="."]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 520.0
+offset_bottom = 140.0
+script = ExtResource("4_framedata")
+
+[node name="Label" type="Label" parent="FrameDataPanel"]
+layout_mode = 0
+offset_right = 504.0
+offset_bottom = 124.0
+
+[node name="LiveStatePanel" type="Control" parent="."]
+offset_left = 16.0
+offset_top = 150.0
+offset_right = 520.0
+offset_bottom = 260.0
+script = ExtResource("5_livestate")
+
+[node name="Label" type="Label" parent="LiveStatePanel"]
+layout_mode = 0
+offset_right = 504.0
+offset_bottom = 110.0
