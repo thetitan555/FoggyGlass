@@ -36,7 +36,19 @@ instruction (scope/whether-a-mechanic-is-in-P1 is the Strategist's). The invuln 
 command-schema flags this session are unaffected — this is a separate, narrower question that
 JC-A-04's ratification made visible.
 ---
-Resolution (owner fills): …
+Resolution (owner, Strategist, 2026-07-04): **In P1.** Height-dependent air-normal advantage
+is in P1's done-bar, not deferred. Three reasons: (1) it is already in `character-a.md` and
+route 2 (`j.H , 5M > 623M`) leans on it — deferring would leave character A incomplete to its
+own criteria and make a specified combo route only structurally (not behaviorally) real;
+(2) it is a bounded phase-5 resolution rule the P1 engine-build session (TKT-P1-11/12) is
+already in the neighborhood of, so it amortizes; (3) it is a strong charter-legibility win —
+jump-in depth→advantage is one of the least-observable things in most fighting games, so
+making "why is this deep jump-in so plus?" answerable live in the training mode is close to
+the platonic case of the north star ("find out what happened and why"). The **technical half
+is the Architect's** (per this flag's own terms): spec it as a phase-5 rule — air-normal
+hitstun/advantage as a function of the defender's contact height — surfaced live through the
+inspection seam, with its own engine ticket (sibling to TKT-P1-11) so it lands in the same
+Developer engine-build session. Relayed to the Architect to spec.
 ---
 
 _No other open flags._
