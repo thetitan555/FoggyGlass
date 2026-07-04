@@ -1059,3 +1059,145 @@ all unchanged). Recorded as latitude because training-mode.md/AD-020 already
 name what this class must do and who is responsible for it; the class's shape
 and its `step_once()` driver responsibility are the implementation filling that
 already-owned mandate.
+
+### JC-032 · 2026-07-04 · TKT-P1-0P · Authored projectile shell named `ProjectileData` (not `Projectile`), resolved through a new `ProjectileRegistry` by `data_id` — mirrors `Character`/`MoveRegistry` exactly — provisional
+**Decided.** move-format.md's authored `Projectile` table is implemented as
+`game/sim/data/projectile_data.gd`, `class_name ProjectileData extends Resource`
+— NOT named `Projectile`, because the runtime SimState entity already owns that
+identifier (`game/sim/projectile.gd`, a `RefCounted` living in
+`SimState.projectiles`, wired at TKT-P0-05 per JC-010's packaging). A new
+`ProjectileRegistry` (`game/sim/projectile_registry.gd`) holds the authored
+`data_id -> ProjectileData` roster, install-once per run, exactly mirroring
+`MoveRegistry`'s shape/rationale (AD-024: authored content is a fixed input, not
+`SimState`). The runtime `Projectile` entity carries a plain int `data_id`
+(serialized/hashed) instead of a live `HitBox` reference; `Projectile.from_dict`
+re-attaches `hitbox` via `ProjectileRegistry.data(data_id).hitbox` on restore —
+this is exactly the gap the existing P0-era comment in `projectile.gd` already
+flagged ("re-attaches it from move data by projectile id at spawn re-derivation
+(TKT-P1)").
+**Serves.** move-format.md → `Projectile` (authored fields: owner, position,
+velocity, hitbox, lifetime, max_per_owner) + AD-021 (projectiles are first-class
+serialized sim entities) + AD-024 (authored content stays out of serialized
+state, resolved through an installed roster). The format NAMES the authored
+shell "Projectile" and its fields; it does not anticipate the GDScript identifier
+collision with the already-built runtime entity of the same conceptual role, nor
+say how a live projectile resolves its authored hitbox across a restore.
+**Alternatives passed over.** Naming the runtime entity something else instead
+(e.g. `LiveProjectile`) to free up `Projectile` for the authored shell — rejected
+because the runtime entity was already ratified and built at TKT-P0-05 (JC-010)
+and is the class every other file (`SimState.projectiles`, `ProjectileView`,
+`SimHarness`) already references by that name; renaming it now touches more
+surface than naming the NEW authored type differently. Serializing the `HitBox`
+object directly on the runtime entity (rejected: authored data does not belong
+in the snapshot, per AD-024's exact reasoning for `character_id`/`MoveRegistry` —
+a HitBox is fixed content, and serializing it would put non-hashed-consistently
+authored geometry inside the "mutable sim truth" the canonical hash commits to).
+A single shared registry keyed by an opaque handle across both `Character` moves
+and projectiles (rejected: conflates two different authored-content domains for
+no benefit; `MoveRegistry`/`ProjectileRegistry` mirroring each other 1:1 is more
+legible than one registry with two id namespaces).
+**Field split from the spec table (see file header comment for detail).**
+move-format.md's `Projectile` table lists `owner, position, velocity, hitbox,
+lifetime, max_per_owner`. Of these, `owner` is known only at spawn time (the
+casting player, from `SimState`) and `position`/`velocity` are already carried on
+the spawning `Keyframe` (`spawn_offset_x/y`, `spawn_velocity_x/y` — move-format.md
+Keyframe.spawn: "{ projectile, offset, velocity }"). So `ProjectileData` authors
+only what is genuinely part of the projectile's own fixed design: `hitbox`,
+`lifetime`, `max_per_owner` (plus the new `id` for registry resolution). This is
+a reading of an already-fixed table, not a new field invented — the ticket text
+explicitly separates "spawn keyframe action with per-owner cap" (the mechanism)
+from what the shell itself needs to author.
+**Why.** The 1:1 mirror of `MoveRegistry`'s already-ratified pattern (F-004/
+AD-024) is the cheapest-to-reason-about resolution: anyone who understands how
+`character_id` resolves through `MoveRegistry` already understands how
+`data_id` resolves through `ProjectileRegistry`, with identical install/clear/
+determinism discipline. Keeping the runtime entity's existing name and giving
+the NEW authored type a distinct one is the smaller diff against already-shipped
+P0 code.
+**Boundary.** New authored resource type + new registry; no existing contract
+file's fields renamed. Recorded as latitude because AD-021/AD-024 already fix
+the shape's principles (first-class serialized entity; authored content stays
+out of state, resolved via an installed roster) — the class-naming collision and
+its resolution are implementation, not a new design decision.
+
+### JC-033 · 2026-07-04 · TKT-P1-0P · Spawn fires once on the exact tick a spawning keyframe's range is ENTERED (`frame_in_state == frame_start`), not once per covered frame — provisional
+**Decided.** `StepPhases._process_spawn` (phase 3) fires a keyframe's `spawn`
+action only on the tick `frame_in_state` equals that keyframe's `frame_start` —
+a one-shot per keyframe range. A `spawn` keyframe spanning multiple frames (e.g.
+frames 3..5) still spawns exactly once, on frame 3.
+**Serves.** move-format.md → `Keyframe.spawn` ("Optional. Spawns a projectile
+this range") + AD-021/combat-resolution.md phase 3 ("process any spawn actions
+firing this tick"). The format says a spawn action is attached to a frame
+RANGE, not a single frame, but does not say whether it fires once (at the
+range's start) or on every frame the range covers.
+**Alternatives passed over.** Firing on EVERY covered frame (rejected outright:
+a 3-frame spawn range would spawn 3 projectiles from one authored action,
+silently defeating the whole per-owner cap mechanism the ticket names — an
+author writing "this attack releases one fireball, active for a few frames of
+authoring convenience" would get a burst instead); firing only once per MOVE
+regardless of how many spawn keyframes it has (rejected: this format already
+supports multiple DISTINCT spawn keyframes in one move's timeline for a
+multi-projectile attack — e.g. a double-fireball special — and collapsing to
+"once per move" would break that authorable case for no reason the format
+implies).
+**Why.** A keyframe range is authoring convenience (move-format.md: "Keyframed,
+not per-frame ... compact to author"), not a per-frame repeat instruction — this
+matches how hitboxes work (a hitbox authored across frames 4..6 does not deal
+damage three times; it is one hit, collapsed by `id_group`). Firing once at
+`frame_start` is the projectile-spawn analogue: an author names "release on
+frame N, and the geometry/keyframe range around it is just how long that
+authoring block covers," which is exactly what "this attack releases a fireball
+on frame N" means in fighting-game authoring convention. If the Architect
+intends spawn ranges to matter differently (e.g. "spawns once, but may occur
+anywhere the tick first enters the range after a cancel/rewind" edge case), that
+is a one-line change to the trigger condition in `_process_spawn`.
+**Boundary.** Implementation of an under-specified mechanism; no field renamed
+or added beyond what move-format.md already names (`has_spawn`, `spawn_offset_*`,
+`spawn_velocity_*`). Recorded as latitude, not a flag, because move-format.md's
+"per-owner cap" and "if the cap is full the spawn is suppressed" language already
+presumes a single discrete spawn EVENT per firing, which the once-per-range
+reading is the natural way to produce.
+
+### JC-034 · 2026-07-04 · TKT-P1-0P · A projectile does not integrate (move) or age (lifetime decrement) on the same tick it spawns — mirrors the existing `was_frozen` hitstop convention — provisional
+**Decided.** `SimState.step` captures `existing_projectile_count` (how many
+projectiles existed in the PRE-step state, before phase 3 can append new ones)
+alongside the existing `was_frozen` hitstop capture. Phase 3's "integrate every
+live projectile" loop only integrates projectiles at index `< pre_spawn_count`
+(captured locally at the top of `phase3_movement`, before that tick's spawns are
+appended); phase 7's lifetime/despawn pass only decrements/off-stage-checks
+projectiles at index `< existing_projectile_count` (the value threaded from
+`step`). A projectile spawned this tick appears at its exact authored spawn
+position, with its full authored lifetime, and starts integrating/aging on the
+FOLLOWING tick.
+**Serves.** combat-resolution.md phase 3 ("Integrate live projectiles' positions
+too ... and process any spawn actions firing this tick") + AD-021 ("integrates
+each tick independently of the owner") + "despawns when lifetime elapses." The
+spec fixes THAT integration and spawn happen in phase 3 and that lifetime/
+despawn happens as counters advance; it is silent on whether a projectile
+spawned THIS tick is also integrated/aged THIS SAME tick.
+**Alternatives passed over.** Integrating/aging a projectile the same tick it
+spawns (this was the FIRST implementation and was caught by this ticket's own
+tests: with the fireball's authored spawn offset landing exactly at a stage
+wall in one test, the projectile would integrate one more step and immediately
+register as off-stage the SAME tick it appeared — an artifact of applying two
+different "advance" operations to the same tick's data, not a real gameplay
+result. It also silently shortens the authored lifetime by one tick relative to
+what a frame-data reader would expect from the authored value, and depends on
+spawn-vs-integration ORDER within phase 3 in a way nothing pins).
+**Why.** This is the exact same "a freshly set N does not count down/advance the
+same tick it is set" principle AD-010 already establishes for hitstop (a
+freeze of N frames must hold for N FOLLOWING ticks, not N-1) — `was_frozen`
+already exists in `step` for precisely this reason. Applying the identical
+convention to projectile spawn/lifetime keeps the mental model uniform: "a
+newly-created countdown/position starts exactly at its authored value and only
+changes starting the next tick," rather than projectiles being a special case
+with their own off-by-one rule. Implemented via the same technique (`step`
+captures a PRE-phase-3 count, threaded through to the phases that need to
+distinguish new-this-tick from pre-existing).
+**Boundary.** Internal step-pipeline sequencing; does not change any authored
+field's meaning (a `lifetime` of 40 still means "40 ticks of life," now measured
+starting the tick AFTER it spawns, matching how `hitstop` is already measured).
+Recorded as latitude because it is filling an unstated edge case using an
+already-established, spec-adjacent convention (AD-010's own reasoning), not
+inventing a new rule from nothing — flag-worthy only if the Architect wants
+spawn-tick integration to behave differently for feel reasons.

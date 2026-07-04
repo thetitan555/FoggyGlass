@@ -26,15 +26,16 @@ extends RefCounted
 ## and is NEVER a field of a truth view — it is excluded from every
 ## golden/determinism snapshot.
 ##
-## SCOPE (TKT-P0-04). This ticket lands the FULL API SHAPE (so P1 compiles against
-## it) implemented minimally over the current SimState. `tick()` and the core
-## PlayerView fields are live now. `frame_data()`, `advantage()`, and `last_hit()`
-## return typed-but-empty results until TKT-P0-05 (move format / frame data) and
-## TKT-P0-07 (hit/stun/advantage) fill them (this file is edited then to wire them
-## through the sim's one derivation/one function — never a re-implementation). The
-## complete implementation of resolved `boxes` (BoxView) and `projectiles()` is
-## TKT-P1-01. This ticket exists so the seam is an interface from day one and
-## TKT-P0-10 / TKT-P0-11 read through it.
+## SCOPE (TKT-P0-04, since extended). TKT-P0-04 landed the FULL API SHAPE (so
+## later tickets compile against it) implemented minimally over the current
+## SimState. `tick()` and the core PlayerView fields were live from the start.
+## `frame_data()`/`advantage()`/`last_hit()` were wired at TKT-P0-05/07 (move
+## format / hit-stun-advantage) through the sim's one derivation/one function —
+## never a re-implementation. Resolved `boxes` (BoxView) landed at TKT-P0-05/06;
+## the projectile RUNTIME (spawn/integrate/resolve/despawn) that fills
+## `projectiles()` with non-empty results is TKT-P1-0P (the read shape itself was
+## already fixed here at P0-04). This surface existing early is what let
+## TKT-P0-10 / TKT-P0-11 and the P1 tickets read through one seam from day one.
 ##
 ## CHARACTER-AGNOSTIC (inspection-surface.md criterion 5). No character-specific
 ## code lives here; the surface reads whatever character/state exists.
@@ -73,9 +74,10 @@ func player(i: int) -> PlayerView:
 	return PlayerView.new(_state, i, _roster)
 
 
-## Live projectiles (AD-021). Full implementation is TKT-P1-01; the P0 sim spawns
-## none, so this returns an empty typed array. The shape is fixed here so callers
-## compile against it now.
+## Live projectiles (AD-021). Projects whatever SimState.projectiles currently
+## holds (populated/drained by the TKT-P1-0P spawn/integrate/resolve/despawn
+## runtime); empty when none are out. The shape was fixed at P0 so callers could
+## compile against it before the runtime landed.
 func projectiles() -> Array[ProjectileView]:
 	var out: Array[ProjectileView] = []
 	for idx in range(_state.projectiles.size()):

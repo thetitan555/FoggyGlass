@@ -39,6 +39,17 @@ static func _world_x(local_x: int, local_w: int, facing: int, pos_x: int) -> int
 	return pos_x - (local_x + local_w)
 
 
+## PUBLIC world-space x for a character-local, ZERO-WIDTH offset (a point, not a
+## box) given facing and the character's world x — the same local->world
+## convention resolve_box/resolve_hit_box use, exposed for callers that need to
+## flip a bare offset (not a box) by facing, e.g. a projectile spawn point
+## (TKT-P1-0P, StepPhases._try_spawn_projectile). A point has no width to account
+## for in the mirror, so this is `_world_x(local_x, 0, facing, pos_x)` named for
+## its call site's intent.
+static func world_offset_x(local_x: int, facing: int, pos_x: int) -> int:
+	return _world_x(local_x, 0, facing, pos_x)
+
+
 ## Resolve one authored Box (hurt / throw / push) to a world-space ResolvedBox of the
 ## given kind. y is not flipped (vertical is facing-independent).
 static func resolve_box(b: Box, kind: int, facing: int, pos_x: int, pos_y: int) -> ResolvedBox:

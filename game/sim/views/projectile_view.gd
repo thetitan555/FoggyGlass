@@ -6,8 +6,8 @@ extends RefCounted
 ##
 ## Plain-data projection of SimState.projectiles[idx]. Fixed-point position (sim
 ## truth; snapshot-able, no floats — AD-019); the hitbox is a BoxView (HIT) drawn by
-## the geometry overlay. P0 spawns no projectiles; the shape is fixed here so P1
-## (TKT-P1-0P) fills the runtime with no seam change.
+## the geometry overlay. The runtime is filled by TKT-P1-0P (spawn/integrate/
+## resolve/despawn); this view's shape was fixed at P0 so the seam never changed.
 
 var owner: int = 0
 var position: Dictionary = {"x": 0, "y": 0}   # fixed-point

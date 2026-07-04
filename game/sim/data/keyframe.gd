@@ -32,8 +32,11 @@ extends Resource
 
 # --- Optional projectile spawn (move-format.md → Keyframe.spawn; AD-021) -----
 ## If `has_spawn`, spawn `spawn_projectile` this range (subject to the owner's cap).
+## Only the FIRST frame of this keyframe's range that is reached while `has_spawn`
+## is true actually spawns (StepPhases fires the spawn action once per keyframe
+## entry, not once per covered frame — see the spawn action, TKT-P1-0P).
 @export var has_spawn: bool = false
-@export var spawn_projectile: Resource = null   # a Projectile resource shell
+@export var spawn_projectile: ProjectileData = null   # the authored projectile shell
 @export var spawn_offset_x: int = 0
 @export var spawn_offset_y: int = 0
 @export var spawn_velocity_x: int = 0

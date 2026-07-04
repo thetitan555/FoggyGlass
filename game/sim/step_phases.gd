@@ -249,10 +249,19 @@ static func _last_active_frame_local(move: MoveState) -> int:
 # Phase 3: Movement integration (combat-resolution.md phase 3; AD-014). Apply per-
 # keyframe motion (velocity sets) to velocity, integrate velocity into position
 # (integer add), then resolve stage bounds and pushbox collisions. Fixed-point ints
-# only. Projectiles integrate here too (AD-021) — none at P0.
+# only. Projectiles integrate here too (AD-021), and any `spawn` actions firing
+# this tick are processed here (TKT-P1-0P), subject to the owner's live cap.
 # ---------------------------------------------------------------------------
 
 static func phase3_movement(next: SimState) -> void:
+	# Projectiles PRE-EXISTING at the start of this phase (before any spawn below
+	# can append new ones) integrate this tick; a projectile spawned THIS tick
+	# starts exactly at its authored spawn position and does not ALSO take an
+	# integration step the same tick (mirrors the "a freshly spawned/frozen thing
+	# does not immediately age/move again this tick" convention already used for
+	# hitstop and lifetime — TKT-P1-0P).
+	var pre_spawn_count: int = next.projectiles.size()
+
 	for i in range(2):
 		var p: PlayerState = next.players[i]
 		# Frozen under hitstop: no movement (AD-010).
@@ -271,9 +280,69 @@ static func phase3_movement(next: SimState) -> void:
 		p.pos_x = p.pos_x + p.vel_x
 		p.pos_y = p.pos_y + p.vel_y
 
+		# Process any spawn action firing this tick (AD-021; move-format.md
+		# Keyframe.spawn), subject to the owner's live-projectile cap.
+		if move != null:
+			_process_spawn(next, i, p, move)
+
 	# Resolve stage bounds and pushbox AFTER both players integrated, so mutual pushout
 	# reads both post-move positions (order-independent for a single symmetric pushout).
 	_resolve_stage_and_pushboxes(next)
+
+	# Integrate every PRE-EXISTING live projectile's own position independently of
+	# its owner (AD-021: "integrates each tick independently of the owner"). Order
+	# is fixed (list order) so integration is deterministic. New spawns are always
+	# APPENDED, so index < pre_spawn_count is exactly "existed before this tick."
+	for idx in range(pre_spawn_count):
+		var pr: Projectile = next.projectiles[idx]
+		pr.pos_x += pr.vel_x
+		pr.pos_y += pr.vel_y
+
+
+## Fire a keyframe's `spawn` action on the EXACT tick its range is entered
+## (frame_in_state == kf.frame_start) — a one-shot per keyframe range, not once
+## per covered frame (a keyframe may span several frames; the projectile spawns
+## once at the start of that range, matching an author's "this attack releases a
+## fireball on frame N" intent). Subject to the owner's live-projectile cap
+## (move-format.md: "if the cap is full the spawn is suppressed").
+static func _process_spawn(next: SimState, owner: int, p: PlayerState, move: MoveState) -> void:
+	for kf in move.timeline:
+		if not kf.has_spawn or kf.spawn_projectile == null:
+			continue
+		if p.frame_in_state != kf.frame_start:
+			continue
+		_try_spawn_projectile(next, owner, p, kf)
+
+
+## Spawn one projectile from a firing keyframe, if the owner is under its cap
+## (AD-021, "one live projectile per owner" for the slice fireball; the cap is
+## authored per-ProjectileData via max_per_owner, not hardcoded to 1, so a future
+## character/projectile can differ). Registers the projectile in ProjectileRegistry
+## by data_id (AD-024) — the runtime entity carries only the id, never the HitBox
+## itself (see projectile.gd).
+static func _try_spawn_projectile(next: SimState, owner: int, p: PlayerState, kf: Keyframe) -> void:
+	var data: ProjectileData = kf.spawn_projectile
+	var data_id: int = data.id
+	var live_count: int = 0
+	for pr in next.projectiles:
+		if pr.owner == owner and pr.data_id == data_id:
+			live_count += 1
+	if live_count >= data.max_per_owner:
+		return   # cap full: spawn suppressed (move-format.md Keyframe.spawn)
+
+	# Spawn position: the owner's world position plus the keyframe's character-local
+	# offset, flipped by facing (the same local->world convention MoveData uses for
+	# boxes) so a spawn offset authored "in front of" the character stays in front
+	# regardless of which way they face.
+	var spawn_x: int = MoveData.world_offset_x(kf.spawn_offset_x, p.facing, p.pos_x)
+	var spawn_y: int = p.pos_y + kf.spawn_offset_y
+	# Spawn velocity: authored forward-relative (like keyframe motion), applied
+	# along facing for the horizontal component; vertical is facing-independent.
+	var vel_x: int = kf.spawn_velocity_x * p.facing
+	var vel_y: int = kf.spawn_velocity_y
+
+	var pr := Projectile.spawn(owner, data_id, data, spawn_x, spawn_y, vel_x, vel_y, p.facing)
+	next.projectiles.append(pr)
 
 
 ## Apply a keyframe's authored motion for the current frame to the player's velocity.
@@ -370,9 +439,13 @@ static func _pushbox_world(p: PlayerState) -> ResolvedBox:
 # ---------------------------------------------------------------------------
 
 ## Detect all hitbox-vs-hurtbox contacts this tick. Returns an Array of contact dicts:
-##   { attacker, defender, hitbox: HitBox } — one per (attacker id_group) that touches
-## the defender's hurtbox. id_group single-hit is enforced in phase 5, not here (here
-## we may report multiple boxes of one group; phase 5 collapses them).
+##   { attacker, defender, hitbox: HitBox, projectile_index: int (-1 if none) } —
+## one per (attacker id_group) that touches the defender's hurtbox. id_group
+## single-hit is enforced in phase 5, not here (here we may report multiple boxes
+## of one group; phase 5 collapses them). Also tests every LIVE PROJECTILE's
+## hitbox against its non-owner's hurtbox (AD-021; combat-resolution.md
+## "Projectiles" — "its hitbox is tested against the opponent's hurtbox"); a
+## projectile contact carries `projectile_index` so phase 5 can consume it.
 static func phase4_overlap(next: SimState) -> Array:
 	var contacts: Array = []
 	for attacker in range(2):
@@ -400,7 +473,31 @@ static func phase4_overlap(next: SimState) -> Array:
 					"attacker": attacker,
 					"defender": defender,
 					"hitbox": rb.hit,
+					"projectile_index": -1,
 				})
+
+	# Projectile-vs-opponent-hurtbox (AD-021). Each live projectile is tested
+	# against the NON-OWNER's hurtboxes only (a projectile never hits its own
+	# owner — no projectile-vs-projectile either, deferred per AD-021). Fixed list
+	# order (next.projectiles order) keeps this deterministic.
+	for idx in range(next.projectiles.size()):
+		var pr: Projectile = next.projectiles[idx]
+		var rb: ResolvedBox = pr.resolve_hitbox()
+		if rb == null:
+			continue
+		var defender: int = 1 - pr.owner
+		var def_boxes: Array = _resolved_boxes_for(next.players[defender])
+		for hb in def_boxes:
+			if hb.kind != BoxView.KIND_HURT:
+				continue
+			if rb.overlaps(hb):
+				contacts.append({
+					"attacker": pr.owner,
+					"defender": defender,
+					"hitbox": rb.hit,
+					"projectile_index": idx,
+				})
+				break   # one contact per projectile per tick is enough; phase 5 consumes it
 	return contacts
 
 
@@ -432,7 +529,9 @@ static func phase5_hit_resolution(next: SimState, contacts: Array) -> void:
 		return
 	# Throw clash-to-tech (AD-016): if BOTH players' throwboxes connect this tick
 	# (simultaneous ground throws within the window), resolve as a tech (clash) — no
-	# throw, both pushed to neutral — instead of one throwing the other.
+	# throw, both pushed to neutral — instead of one throwing the other. Only a
+	# character throwbox can set is_throw (a projectile is never a throw), so this
+	# scan is unaffected by projectile contacts mixed into the same list.
 	if _both_throwboxes_connect(contacts):
 		_resolve_throw_clash(next, contacts)
 		return
@@ -445,13 +544,37 @@ static func phase5_hit_resolution(next: SimState, contacts: Array) -> void:
 	#     (active_hit_ids) does not re-hit — a multi-frame active window lands ONE hit,
 	#     not one per active frame. A rehit_interval hitbox re-hits only once the interval
 	#     has elapsed since its last connect (active_hit_frames); no hit between (AD-016).
+	#
+	# PROJECTILE CONTACTS (AD-021) bypass the character's per-move active_hit_ids/
+	# rehit memory entirely: a projectile's "move" is its own lifecycle, not the
+	# owner's current character state (the owner may have long since recovered
+	# and be in an unrelated state by the time the projectile connects). Single-
+	# hit-per-contact is enforced instead by CONSUMING the projectile on connect
+	# (despawn_pending, applied after this pass) — a despawned projectile cannot
+	# contact again, which is the projectile-equivalent of "one hit per contact."
 	var seen: Dictionary = {}   # key "attacker:id_group" -> true (this tick)
+	var consumed_projectiles: Dictionary = {}   # projectile_index -> true (this tick)
 	for c in contacts:
 		var hb: HitBox = c["hitbox"]
 		if hb == null:
 			continue
 		var attacker: int = int(c["attacker"])
 		var defender: int = int(c["defender"])
+		var projectile_index: int = int(c["projectile_index"])
+
+		if projectile_index >= 0:
+			# A projectile contact: single-hit-per-contact via consumption, not
+			# active_hit_ids (that memory belongs to the OWNER's current move, which
+			# a traveling projectile has already outlived). Skip if this projectile
+			# already resolved a contact this same tick (defensive; phase 4 emits at
+			# most one contact per projectile per tick already).
+			if consumed_projectiles.has(projectile_index):
+				continue
+			consumed_projectiles[projectile_index] = true
+			_resolve_one_hit(next, attacker, defender, hb)
+			next.projectiles[projectile_index].lifetime_remaining = 0   # consumed on hit/block (AD-021)
+			continue
+
 		# THROWBOX connect (AD-016): take the throw path (bypasses block; opens a tech
 		# window). A throw is single-per-contact by id_group like any hit.
 		if hb.is_throw:
@@ -831,7 +954,8 @@ static func _actionable(next: SimState, i: int) -> bool:
 # "hold constant for exactly `hitstop` ticks").
 # ---------------------------------------------------------------------------
 
-static func phase7_advance_counters(next: SimState, was_frozen: Array) -> void:
+static func phase7_advance_counters(next: SimState, was_frozen: Array,
+		existing_projectile_count: int = -1) -> void:
 	for i in range(2):
 		var p: PlayerState = next.players[i]
 		if p.hitstop > 0:
@@ -855,7 +979,42 @@ static func phase7_advance_counters(next: SimState, was_frozen: Array) -> void:
 			p.throw_tech_window -= 1
 			if p.throw_tech_window == 0:
 				p.thrown_by = -1
+	_advance_and_despawn_projectiles(next, existing_projectile_count)
 	next.tick = next.tick + 1
+
+
+## Decrement every PRE-EXISTING live projectile's lifetime and remove any that are
+## due to despawn this tick (AD-021, combat-resolution.md "Projectiles" --
+## "despawns when lifetime elapses or it leaves the stage"). Three despawn causes:
+##   - CONSUMED: phase 5 already set lifetime_remaining to 0 on a hit/block connect.
+##   - LIFETIME: the countdown reaches 0 this tick.
+##   - OFF-STAGE: the projectile's position has left [wall_left, wall_right].
+## Filtering (not decrementing-in-place-then-filtering-elsewhere) keeps this the
+## ONE place a projectile leaves SimState.projectiles, deterministic list order
+## preserved for the survivors (stable filter, no reordering).
+##
+## `existing_count`: how many projectiles were already live BEFORE this tick's
+## phase 3 could spawn new ones (SimState.step captures this; -1 means "treat
+## every projectile as pre-existing," the safe default for any caller that does
+## not track spawns). New spawns are always APPENDED (phase 3), so index
+## `>= existing_count` is a same-tick spawn and is NOT decremented this tick —
+## mirrors `was_frozen`'s "a freeze/lifetime of N frames lasts N FOLLOWING ticks"
+## rule (AD-010's reasoning applied to projectile lifetime).
+static func _advance_and_despawn_projectiles(next: SimState, existing_count: int = -1) -> void:
+	var survivors: Array[Projectile] = []
+	for idx in range(next.projectiles.size()):
+		var pr: Projectile = next.projectiles[idx]
+		var newly_spawned: bool = existing_count >= 0 and idx >= existing_count
+		# A projectile consumed by phase 5 already has lifetime_remaining == 0; a
+		# pre-existing projectile that hasn't connected counts down normally. A
+		# projectile spawned THIS tick is not aged the same tick it appears.
+		if pr.lifetime_remaining > 0 and not newly_spawned:
+			pr.lifetime_remaining -= 1
+		var off_stage: bool = pr.pos_x < next.stage.wall_left or pr.pos_x > next.stage.wall_right
+		if pr.lifetime_remaining <= 0 or off_stage:
+			continue   # despawned: not added to survivors
+		survivors.append(pr)
+	next.projectiles = survivors
 
 
 # ---------------------------------------------------------------------------

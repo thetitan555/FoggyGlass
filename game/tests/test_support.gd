@@ -25,6 +25,7 @@ const STATE_THROW: int = 13        # a throw (throwbox connect, TKT-P0-09)
 const STATE_THROWN: int = 22       # forced throw reaction (defender)
 const STATE_MULTI: int = 14        # sequential multi-hit (two id_groups) (TKT-P0-09)
 const STATE_REHIT: int = 15        # cadenced rehit (one id_group, rehit_interval) (TKT-P0-09)
+const STATE_FIREBALL: int = 16     # spawns a projectile (TKT-P1-0P)
 
 # --- Cancel tag (special-cancel gate) ---------------------------------------
 const TAG_SPECIAL: int = 100       # LIGHT's hitbox grants this; SPECIAL requires it
@@ -40,6 +41,18 @@ const MULTI_DAMAGE: int = 20
 const REHIT_DAMAGE: int = 15
 const REHIT_INTERVAL: int = 4      # frames between cadenced re-hits
 const SPECIAL_DAMAGE: int = 60
+
+# --- Fireball / projectile tuning (TKT-P1-0P) --------------------------------
+const PROJECTILE_DATA_ID: int = 1
+const FIREBALL_SPAWN_FRAME: int = 3     # the keyframe frame the projectile releases on
+const FIREBALL_DAMAGE: int = 30
+const FIREBALL_HITSTUN: int = 14
+const FIREBALL_BLOCKSTUN: int = 8
+const FIREBALL_HITSTOP: int = 6
+const FIREBALL_ID_GROUP: int = 50
+const FIREBALL_LIFETIME: int = 40
+const FIREBALL_MAX_PER_OWNER: int = 1
+const FIREBALL_SPEED: int = 4           # units/tick, forward-relative
 
 # --- Hand-computed frame data for STATE_LIGHT -------------------------------
 # timeline: frames 1..3 startup (hurt only), 4..6 active (hitbox), 7..12 recovery.
@@ -90,6 +103,7 @@ static func build_test_character() -> Character:
 		_build_thrown(),
 		_build_multi(),
 		_build_rehit(),
+		_build_fireball(),
 	]
 
 	# button_map (evaluated in authored order; first satisfied buffered command wins):
@@ -97,11 +111,14 @@ static func build_test_character() -> Character:
 	#     dragon-punch motion is recognized before a bare BUTTON_2 falls through.
 	#   - BUTTON_1        -> SPECIAL (special-cancel target; also a raw press in neutral).
 	#   - BUTTON_2 + DOWN -> THROW (a throw command; DOWN-gated to avoid clashing REVERSAL).
+	#   - UP + BUTTON_0   -> FIREBALL (spawns a projectile, TKT-P1-0P; UP-gated so it does
+	#     not clash the bare-BUTTON_0 LIGHT command).
 	#   - BUTTON_0        -> LIGHT (the normal; special-cancellable into SPECIAL).
 	c.button_map = [
 		_map(-1, 0, InputBuffer.MOTION_623, STATE_REVERSAL, 2),   # 623 + B2
 		_map(1, 0, 0, STATE_SPECIAL),                             # B1
 		_map(2, InputFrame.DOWN, 0, STATE_THROW),                 # B2 + down
+		_map(0, InputFrame.UP, 0, STATE_FIREBALL),                # B0 + up
 		_map(0, 0, 0, STATE_LIGHT),                               # B0
 	]
 	return c
@@ -407,7 +424,77 @@ static func _build_rehit() -> MoveState:
 	return m
 
 
+## FIREBALL (spawns a projectile, TKT-P1-0P): startup 1..2, releases the
+## projectile on frame FIREBALL_SPAWN_FRAME (a keyframe covering that one frame
+## carries the spawn action), then recovers. The move itself carries NO hitbox of
+## its own — all damage comes from the spawned projectile — so a connect can only
+## be attributed to the projectile, not the move's own (nonexistent) hitbox.
+static func _build_fireball() -> MoveState:
+	var m := MoveState.new()
+	m.id = STATE_FIREBALL
+	m.category = MoveState.CATEGORY_GROUNDED
+	m.duration = 14
+	m.loop = false
+
+	var kf_start := Keyframe.new()
+	kf_start.frame_start = 1
+	kf_start.frame_end = FIREBALL_SPAWN_FRAME - 1
+	kf_start.hurtboxes = [_hurt()]
+
+	var kf_spawn := Keyframe.new()
+	kf_spawn.frame_start = FIREBALL_SPAWN_FRAME
+	kf_spawn.frame_end = FIREBALL_SPAWN_FRAME
+	kf_spawn.hurtboxes = [_hurt()]
+	kf_spawn.has_spawn = true
+	kf_spawn.spawn_projectile = build_projectile_data()
+	kf_spawn.spawn_offset_x = FP.from_int(20)   # released in front of the character
+	kf_spawn.spawn_offset_y = FP.from_int(40)
+	kf_spawn.spawn_velocity_x = FP.from_units(float(FIREBALL_SPEED))
+	kf_spawn.spawn_velocity_y = 0
+
+	var kf_rec := Keyframe.new()
+	kf_rec.frame_start = FIREBALL_SPAWN_FRAME + 1
+	kf_rec.frame_end = 14
+	kf_rec.hurtboxes = [_hurt()]
+
+	m.timeline = [kf_start, kf_spawn, kf_rec]
+	return m
+
+
+## The authored ProjectileData shell for the test fireball (TKT-P1-0P). A forward
+## hitbox, hand-computable damage/hitstun/blockstun, capped at
+## FIREBALL_MAX_PER_OWNER live per owner.
+static func build_projectile_data() -> ProjectileData:
+	var data := ProjectileData.new()
+	data.id = PROJECTILE_DATA_ID
+	data.lifetime = FIREBALL_LIFETIME
+	data.max_per_owner = FIREBALL_MAX_PER_OWNER
+	var hb := HitBox.new()
+	hb.box = Box.make(FP.from_int(-10), FP.from_int(-10), FP.from_int(20), FP.from_int(20))
+	hb.damage = FIREBALL_DAMAGE
+	hb.hitstun = FIREBALL_HITSTUN
+	hb.blockstun = FIREBALL_BLOCKSTUN
+	hb.hitstop = FIREBALL_HITSTOP
+	hb.pushback_hit = FP.from_units(2.0)
+	hb.pushback_block = FP.from_units(1.0)
+	hb.hit_reaction = STATE_HITSTUN
+	hb.block_reaction = STATE_BLOCKSTUN
+	hb.id_group = FIREBALL_ID_GROUP
+	hb.rehit_interval = 0
+	data.hitbox = hb
+	return data
+
+
 ## A roster dict mapping character_id -> Character for the inspection surface / sim.
 static func build_roster() -> Dictionary:
 	var c := build_test_character()
 	return {c.id: c}
+
+
+## A ProjectileRegistry roster (data_id -> ProjectileData) matching the fireball
+## authored above. Tests that spawn projectiles must ProjectileRegistry.install()
+## this (mirroring MoveRegistry.install(build_roster())) so a restored/hashed
+## projectile's hitbox re-attaches correctly (AD-024).
+static func build_projectile_registry() -> Dictionary:
+	var data := build_projectile_data()
+	return {data.id: data}

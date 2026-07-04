@@ -19,8 +19,9 @@ extends RefCounted
 ##                 end-to-end now and later randomness draws from an already-
 ##                 serialized source.
 ##   players[2]  — per-player state (PlayerState).
-##   projectiles — live projectile entities (AD-021). Empty in P0 (none spawn yet);
-##                 present as a list so the shape is fixed and 05+/P1 fill it.
+##   projectiles — live projectile entities (AD-021). Populated/drained by the
+##                 spawn/integrate/resolve/despawn runtime (TKT-P1-0P); empty
+##                 when none are currently out.
 ##   stage       — stage bounds / walls / ground affecting the sim.
 
 var tick: int = 0
@@ -100,7 +101,7 @@ func clone() -> SimState:
 		cloned_players.append(p.clone())
 	s.players = cloned_players
 	# Deep-copy projectiles element-wise (AD-004): each is its own plain-data object,
-	# so a shallow array duplicate would alias the entities. Empty in P0.
+	# so a shallow array duplicate would alias the entities.
 	var cloned_projectiles: Array[Projectile] = []
 	for pr in projectiles:
 		cloned_projectiles.append(pr.clone())
@@ -240,7 +241,8 @@ func hash_state() -> int:
 			h = _fold(h, f)
 
 	# Projectiles: count then each projectile's fields (order-committing, AD-023).
-	# P0 spawns none, so the loop is empty and only the count (0) is folded.
+	# Empty when none are out (e.g. no roster installed); TKT-P1-0P spawns/despawns
+	# populate and drain this list over a run.
 	h = _fold(h, projectiles.size())
 	for pr in projectiles:
 		var prd: Dictionary = pr.to_dict()
@@ -317,6 +319,17 @@ static func step(state: SimState, in_p1: int, in_p2: int) -> SimState:
 	# freeze of N frames must last N following ticks (AD-010).
 	var was_frozen: Array = [state.players[0].hitstop > 0, state.players[1].hitstop > 0]
 
+	# Capture how many projectiles ALREADY existed at tick start (before phase 3
+	# can spawn new ones), so phase 7 does not decrement the lifetime of a
+	# projectile first spawned THIS tick — mirrors the was_frozen convention
+	# above: an authored lifetime of N frames must last N FOLLOWING ticks, not
+	# N-1, so a projectile spawned this tick is not immediately aged by one on the
+	# same tick it appears (TKT-P1-0P). `next` is a clone of `state` with the SAME
+	# list order/length at this point (clone() preserves order), so an index
+	# count is a stable "was this slot already live" marker; new spawns are always
+	# APPENDED (phase 3), so every index >= this count is a same-tick spawn.
+	var existing_projectile_count: int = state.projectiles.size()
+
 	# --- Phase 1: read inputs (AD-009) --------------------------------------
 	# Push raw frames into history (recorded every tick, incl. hitstop — AD-017).
 	# Raw stays raw in history; buffering/SOCD/facing are derived sim-side from history
@@ -341,6 +354,6 @@ static func step(state: SimState, in_p1: int, in_p2: int) -> SimState:
 	StepPhases.phase6_advantage_neutral(next, prev_both_actionable)
 
 	# --- Phase 7: advance counters (decrement stun/hitstop; tick += 1) ------
-	StepPhases.phase7_advance_counters(next, was_frozen)
+	StepPhases.phase7_advance_counters(next, was_frozen, existing_projectile_count)
 
 	return next
