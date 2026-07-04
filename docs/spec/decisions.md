@@ -40,6 +40,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-028** Buffer/cancel + throw/rehit mutable SimState fields (TKT-P0-08/09) — settled
 - **AD-029** Dedicated `HitBox.tech_window` field; throw tech-window is not `blockstun` reuse — settled
 - **AD-030** Projectile authored format: `ProjectileData` + `ProjectileRegistry`; runtime `data_id`; spawn timing — settled
+- **AD-031** Invulnerability consumed in phase 4; `HitBox.hit_kind` gates strike/throw/projectile; whiff is observable — settled
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -761,3 +762,86 @@ silently shortens authored lifetime by one; JC-034).
 `ProjectileRegistry` install-generation invariant is the same one AD-024/F-009 make a
 checkable precondition; QA asserts it the same way. If a future feel need wants spawn-tick
 integration to behave differently, that is a revision to this AD, not a silent code change.
+
+### AD-031 · Invulnerability is consumed in phase 4; `HitBox.hit_kind` gates it; the whiff is observable — settled (2026-07-04, resolves the invuln flag)
+**Decision.** Authored invulnerability (`Keyframe.invuln_strike` / `invuln_throw`,
+move-format.md, present but inert since P0) becomes a real, enforced mechanic. Three
+coupled parts, all move-format / combat-resolution contract the Architect owns,
+surfaced by character A's structural need for it (`2H` anti-air invuln, DP strike-invuln,
+`623H` throw-invuln, back-dash invuln — `character-a.md` criteria 4 and 6, Movement table):
+
+- **`HitBox` gains a `hit_kind` (STRIKE / THROW / PROJECTILE).** A defender's
+  `invuln_strike` must gate against strikes and `invuln_throw` against throws, so an
+  incoming box must declare *which kind* it is. `hit_kind` is the canonical category:
+  `invuln_strike` whiffs `STRIKE` **and** `PROJECTILE` (a projectile is a strike at
+  range — one immunity beats both); `invuln_throw` whiffs `THROW`. The legacy
+  `is_throw`/`throwbox` flag is exactly `hit_kind == THROW` — the same fact under two
+  names for continuity with the shipped throw path (which keys on `is_throw`); authoring
+  may set either but they must agree. Default `STRIKE`; a projectile's carried hitbox is
+  `PROJECTILE`.
+- **Consumed in phase 4 (suppress the contact), not phase 5 (record-then-no-op).** The
+  geometric overlap still computes, but a gated overlap is **not appended to the
+  phase-4 contact list**, so phase 5 never sees it. This keeps invuln out of every
+  phase-5 mechanism (`id_group` single-hit memory, the throw-clash scan, combo/scaling,
+  `last_hit`) — correct, because a whiffed box is not a hit and must touch none of them.
+  A phase-5 veto would instead have to *un-do* bookkeeping a recorded contact triggers;
+  suppress-at-record is the clean cut. The gate reads the **defender's covering keyframe**
+  for its current `frame_in_state` (invuln is a property of the frame the defender is in).
+- **Projectiles gate but are not consumed.** A projectile contact carries
+  `hit_kind == PROJECTILE` and is gated by the defender's `invuln_strike` like any strike.
+  Because the gate suppresses the *contact*, the phase-5 "consume the projectile on
+  connect" path never runs — so a projectile whiffed by invuln **passes through** and may
+  still connect on a later vulnerable frame. This is the one operational difference from a
+  character strike (which simply misses that frame and may connect on a later active
+  frame of its own), and it falls out of suppress-in-phase-4 with no special case; it is
+  the correct behavior (invuln makes the defender immune this frame, it does not destroy
+  the projectile — the character-A fireball vs. a DP's invuln reads as "the fireball
+  passed through the invulnerable startup," not "the fireball vanished").
+- **The whiff is observable (charter legibility, principles "no knowledge checks").** A
+  suppressed contact is not dropped silently. The attacker's `move_contact` resolves to
+  `WHIFF` on the existing whiff edge (last active frame passes with no recorded connect,
+  AD-028) — invuln produces a whiff through the *same* path a spatial miss does, no new
+  attacker state. The **defender's** current invuln is surfaced read-only as
+  `PlayerView.invuln` (`{ strike, throw }` bools, AD-031), a derived projection of the
+  covering keyframe (like box geometry, AD-001) — **not** a new serialized `SimState`
+  field. Together they let the training mode show "this frame was invulnerable" and
+  attribute a whiff to it. This is what makes A's core anti-air read (`623` vs `2H`) and
+  the back-dash escape *legible as why the hit didn't land*, satisfying criteria 4/6's
+  "the training mode shows" clause, not just their mechanical half.
+
+**Why.** Invuln is genuine combat-resolution contract (multiple roles build against
+phase 4/5) and legibility-relevant, so it is an owned AD, not a dev latitude call —
+the same bar F-002/F-005/AD-028 set for combat-resolution shape. Gating in phase 4 is
+the unique reading that keeps a whiff from polluting phase-5 single-hit/throw/combo
+bookkeeping while staying deterministic. `hit_kind` as the canonical category (with
+`is_throw` folded into it) avoids a second, drifting throw-vs-strike discriminator.
+Adding **no serialized field** (deriving invuln from the keyframe, reusing `move_contact`
+for the whiff) keeps `SimState` minimal (AD-001) and the hash unchanged — invuln is
+authored content resolved each tick, exactly like the boxes it sits beside.
+**Rejected.** Recording the contact in phase 4 and vetoing it in phase 5 (forces phase 5
+to un-do `id_group`/combo bookkeeping a recorded contact implies — invuln bleeds into
+every phase-5 mechanism; rejected for the clean phase-4 cut). Consuming a projectile that
+whiffs on invuln (would make invuln *destroy* projectiles, contradicting "immune this
+frame, not projectile-killing," and would silently shorten a fireball's threat against a
+DP; rejected). A single `invuln` bool (loses the strike-vs-throw distinction `623H`'s
+throw-invuln and `2H`'s strike-only invuln both need). A new serialized `invuln` SimState
+field (redundant — the covering keyframe already carries it; adding state would grow the
+hash for a derivable value, an AD-001 violation). Silent suppression with no observable
+whiff (violates the charter's "find out what happened and why" and principles' "no
+knowledge checks" — a jump-in eaten by an invuln anti-air must read as *why*, not as an
+inexplicable non-hit).
+**Consequence (Developer, via the engine ticket).** `hit_box.gd` gains a `hit_kind` field
+(default STRIKE) with `is_throw` reconciled to `hit_kind == THROW`; a projectile's carried
+hitbox is authored/marked `PROJECTILE`. `step_phases.gd` phase 4 (`phase4_overlap`) gates
+each candidate contact — character hitbox and projectile alike — against the defender's
+covering-keyframe invuln before appending it, using the same `MoveData` keyframe resolution
+the box resolver uses. `inspection_view.gd`/`player_view.gd` gain the derived `invuln`
+read. No `SimState` shape change, no new hash field.
+**Note (deferred, Tenet 3).** Per-hitbox *armor* (absorb-a-hit-and-continue) and
+directional/partial invuln (upper-body-only as a geometric rather than whole-character
+property) are **not** in the slice — `2H`'s "upper-body invuln 1–8" is modeled as
+whole-character `invuln_strike` over frames 1–8 (the spec's structural claim is "beats a
+jump-in during startup," which whole-character strike-invuln satisfies; the "upper-body"
+framing is flavor the geometry does not yet encode). If a later character needs true
+partial/geometric invuln, that is a revision to this AD (a per-box or per-region invuln),
+not a silent code change. The `hit_kind` enum and the `invuln_*` flags leave that door open.

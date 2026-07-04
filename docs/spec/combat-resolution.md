@@ -26,6 +26,10 @@
    live projectile hitboxes vs. the opponent's hurtbox (AD-021). Overlap is
    **strict**: boxes that merely *touch* (share an edge, `a.x + a.w == b.x`) do
    **not** overlap — a box exactly adjacent to a hurtbox does not register (AD-027).
+   **Invulnerability gates here** (AD-031): a geometric overlap against a defender
+   whose covering keyframe has the matching `invuln_*` flag set does **not** become a
+   recorded contact — the incoming box *whiffs*. The whiff is recorded observably on
+   the *attacker* (invuln whiff, see "Invulnerability" below), never dropped silently.
 5. **Hit resolution.** For each confirmed hit (respecting `id_group` single-hit,
    or `rehit_interval` for cadenced multi-hit), apply damage (after scaling), set
    the defender's `hit_reaction`/`block_reaction` state, set stun, set hitstop on
@@ -60,6 +64,49 @@ blocking direction (raw input resolved to "back" relative to the attacker) in a
 blockable state. On block, the defender enters a `BLOCKSTUN` state and takes
 `blockstun`/`pushback_block`; on hit, a `HITSTUN` state and `hitstun`/
 `pushback_hit`/`launch`. Block correctness is readable (input history + state).
+
+## Invulnerability (AD-031)
+
+Invulnerability is a **defender-frame** property authored per keyframe
+(`move-format.md` → `Keyframe.invuln`) and consumed in **phase 4**, so an
+invulnerable frame never produces a recorded contact for phase 5 to resolve.
+
+- **Kind-gated.** Each incoming box carries a `hit_kind` (`STRIKE` / `THROW` /
+  `PROJECTILE`, `move-format.md` → `HitBox.hit_kind`). A defender frame with
+  `invuln_strike` set whiffs a `STRIKE` **or** a `PROJECTILE` (a projectile is a
+  strike delivered at range — the same immunity beats both); a frame with
+  `invuln_throw` set whiffs a `THROW`. Both flags may be set (full invuln). The
+  gate reads the **defender's covering keyframe** for its current `frame_in_state`
+  — invuln is a property of the frame the defender is *in*, not of the attacker.
+- **Suppress-in-phase-4, don't record-then-no-op.** The geometric overlap still
+  computes; but a gated overlap is **not appended to the contact list**. It never
+  reaches phase 5, so it interacts with nothing there — no `id_group` single-hit
+  bookkeeping, no throw-clash scan, no combo/scaling — because a whiffed box is not
+  a hit. This is why the check lives in phase 4, at the point contacts are recorded,
+  rather than as a phase-5 veto.
+- **Projectiles too.** A projectile contact is gated by the defender's
+  `invuln_strike` exactly like a character strike (its `hit_kind` is `PROJECTILE`).
+  A projectile whiffed by invuln is **not consumed** — it passes through the
+  invulnerable frames and may still connect on a later, vulnerable frame (invuln
+  makes the *defender* immune this frame; it does not destroy the projectile). This
+  is the one place invuln differs operationally from a character strike, and it
+  falls out of the suppress-in-phase-4 rule: no contact is recorded, so the phase-5
+  "consume on connect" path (which despawns the projectile) never runs.
+- **Observable — the whiff has a reason (charter: "find out what happened and
+  why").** A hit suppressed by invuln is not dropped silently. The attacker's
+  move-contact resolves to **whiff** on the normal whiff edge (its last active frame
+  passing with no recorded connect — `move_contact` becomes `WHIFF`, AD-028), and
+  the *defender's* current invuln state is directly readable through the inspection
+  surface (`PlayerView.invuln`, `inspection-surface.md`). Together these let the
+  training mode show "this frame was strike-invulnerable" and attribute a whiff to
+  it — the DP beating a jump-in, `2H`'s anti-air invuln, the back dash's escape are
+  each legible as *why the hit didn't land*, not just *that it didn't*.
+
+Invuln adds **no new serialized `SimState` field**: it is derived each tick from
+the defender's authored keyframe (like box geometry — AD-001), and the whiff it
+produces is already carried by the existing `move_contact` truth (AD-028). The
+inspection read (`PlayerView.invuln`) is a projection of that derived keyframe
+property, not new state.
 
 ## Hitstop (AD-010)
 
@@ -233,3 +280,11 @@ deterministic, serializable sim.
     window; a command buffered up to 6 frames executes on the first actionable
     frame (a `623` held through blockstun fires frame-1) and within a cancel window
     fires at the cancel point (AD-022). Deterministic across input sources.
+12. **Invulnerability (AD-031).** A `STRIKE` overlapping a defender frame with
+    `invuln_strike` set records **no** hit (the box whiffs) and deals no damage/stun;
+    the same frame is still hit by a `THROW` unless `invuln_throw` is also set (and
+    vice-versa). A `PROJECTILE` overlapping an `invuln_strike` frame whiffs and the
+    projectile is **not** consumed (it may connect on a later vulnerable frame). The
+    attacker's `move_contact` resolves to `WHIFF` on an all-invuln whiff, and the
+    defender's live invuln state is readable through the inspection surface — the
+    whiff is attributable, not silent.

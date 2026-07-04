@@ -59,7 +59,7 @@ is the consistency guard that lets character B be *content, not engineering*.
 | `hitboxes` | List of `HitBox` active this range. |
 | `throwboxes` | List of `Box` for throws (optional). |
 | `motion` | Per-range movement deltas / velocity sets (optional). |
-| `invuln` | Optional invulnerability flags (e.g. throw-invuln, strike-invuln) for this range. |
+| `invuln` | Optional invulnerability flags for this range: `invuln_strike` and `invuln_throw` (AD-031). A frame with `invuln_strike` set cannot be contacted by a `hit_kind` of `STRIKE` or `PROJECTILE`; a frame with `invuln_throw` set cannot be contacted by a `THROW`. Enforced in phase 4 (the contact is not recorded — the incoming box **whiffs**), and the whiff is *observable* through the inspection surface so the training mode can show a frame was invulnerable and that a hit whiffed *because of* invuln (see `combat-resolution.md` → phase 4, and `inspection-surface.md`). Invuln gates on the **defender's covering keyframe** for the current `frame_in_state`; both flags may be set (full invuln). Unset ⇒ vulnerable. |
 | `spawn` | Optional (AD-021, AD-030). Spawns a projectile this range: `{ projectile, offset, velocity }` — `projectile` names a `ProjectileData` by `data_id`, `offset`/`velocity` are the fixed-point spawn position/velocity supplied to the runtime entity. **Fires once**, on the tick `frame_in_state == frame_start` for this range (AD-030 / JC-033) — *not* once per covered frame; a spawn authored across several frames spawns one projectile. Subject to the owner's live-projectile cap; if the cap is full the spawn is suppressed. |
 
 ### `ProjectileData` (authored projectile shell — AD-021, AD-030)
@@ -119,6 +119,7 @@ per-keyframe unless a move overrides it.
 | Field | Meaning |
 |---|---|
 | `box` | The AABB. |
+| `hit_kind` | The contact category (AD-031): `STRIKE` \| `THROW` \| `PROJECTILE`. Determines which of a defender's `invuln_*` flags gates it (a `STRIKE` is whiffed by `invuln_strike`; a `THROW` by `invuln_throw`; a `PROJECTILE` by `invuln_strike` — a projectile is a strike delivered at range). The **canonical** category field; the legacy `throwbox` flag is exactly `hit_kind == THROW` (see below). Default `STRIKE`. |
 | `damage` | Base damage. |
 | `hitstun`, `blockstun` | Frames of stun inflicted on hit / on block. |
 | `hitstop` | Freeze frames applied to both parties on contact (AD-010). |
@@ -128,7 +129,7 @@ per-keyframe unless a move overrides it.
 | `cancel_tags` | Tags this hitbox grants for the attacker's cancels (e.g. enables special-cancel). |
 | `id_group` | Groups hitboxes of one attack so a single attack hits once (no multi-count from overlapping boxes). |
 | `rehit_interval` | Optional (AD-016). If set, this `id_group` may hit the same target again after this many frames — the cadenced multi-hit form. Unset ⇒ one hit per contact. |
-| `throwbox` flag | A `HitBox`/`Box` may be marked a throw (AD-016): on connect it bypasses blockstun and enters the throw resolution path (see `combat-resolution.md`). |
+| `throwbox` flag | A `HitBox`/`Box` may be marked a throw (AD-016): on connect it bypasses blockstun and enters the throw resolution path (see `combat-resolution.md`). **Equivalent to `hit_kind == THROW`** (AD-031) — the same fact under two names for continuity; the throw resolution path keys on it either way. Authoring may set either; they must agree. |
 | `tech_window` | Throw-only (AD-029). Frames the thrown defender may tech after this throwbox connects (AD-016 tech window). Meaningful only when the throwbox flag is set — a throw is never blocked, so it carries no `blockstun`; the tech window is its own authored feel value, **not** `blockstun` reuse. `0` on a non-throw box. |
 
 ## Derived frame data (one canonical definition — AD-008)

@@ -55,6 +55,7 @@ InspectionView (read-only over the current SimState):
 | `cancel_tags` | The cancel tags this player currently holds as attacker (AD-017/028) — i.e. an *open cancel window*: the set of tags a buffered cancel can consume this tick. Snapshot-able `PackedInt32Array` (empty ⇒ no cancel window open). |
 | `throw_tech_window` | Frames remaining in which this player (as thrown defender) may still tech the throw (AD-016/028). `0` ⇒ not in a tech window; `> 0` ⇒ the live count of tech frames left. |
 | `thrown_by` | The attacker index that threw this player, or `-1` if not currently thrown (AD-028). |
+| `invuln` | This player's **current-frame** invulnerability, as read from its covering keyframe (AD-031): `{ strike, throw }` bools. Backs "this frame is invulnerable" and — with `move_contact == whiff` on the opponent — "the hit whiffed *because of* invuln" (charter legibility). A **derived** projection of the defender's authored keyframe (like box geometry), not a serialized `SimState` field; snapshot-able (two plain bools, no float). |
 | `input_current` | The raw `InputFrame` this player's source emitted this tick (Tenet 2). |
 | `input_history` | Last N raw `InputFrame`s (ring buffer view). |
 | `boxes` | The resolved `BoxView`s active this tick (below). |
@@ -117,7 +118,9 @@ snapshots them. The single source of truth that QA snapshots stays fixed-point.
    who threw them (`thrown_by`), an open cancel window (`cancel_tags` non-empty),
    and a move's connect/whiff outcome (`move_contact`) are each readable through
    `PlayerView` — no legibility-relevant serialized `SimState` field is truth the
-   seam cannot surface (F-013).
+   seam cannot surface (F-013). A defender frame's **invulnerability** (`invuln`,
+   AD-031) is likewise readable through `PlayerView`, so a whiff-by-invuln is
+   attributable in the training mode (charter: "find out what happened and why").
 2. **Read-only.** No method on the surface mutates `SimState`; after any sequence
    of inspection calls, the state hash is unchanged. No mutator is exposed.
 3. **Single source.** `advantage()` returns the value from the sim's one advantage
