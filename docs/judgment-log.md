@@ -1275,7 +1275,7 @@ No code change (build matches AD-030).
 
 ---
 
-### JC-A-01 · 2026-07-04 · TKT-P1-10 · Jump arc authored as a hand-baked triangular vel_y profile (no gravity primitive) — provisional
+### JC-A-01 · 2026-07-04 · TKT-P1-10 · Jump arc authored as a hand-baked triangular vel_y profile (no gravity primitive) — ratified
 **Decided.** Character A's ~45-frame jump (`STATE_JUMP_N/F/B`, `game/content/
 character_a.gd`) is authored as one-frame `Keyframe`s carrying an explicit
 per-frame `motion_vel_y`: a constant rise velocity for the first 22 frames, a
@@ -1312,7 +1312,7 @@ to assert the keyframe motion integrates correctly.
 
 ---
 
-### JC-A-02 · 2026-07-04 · TKT-P1-10 · Six concrete `CancelRule`s per cancellable normal, not one group-targeted rule — provisional
+### JC-A-02 · 2026-07-04 · TKT-P1-10 · Six concrete `CancelRule`s per cancellable normal, not one group-targeted rule — ratified
 **Decided.** Each of A's four special-cancellable normals (`5L`/`5M`/`2L`/`2M`)
 carries **six** `CancelRule`s (one per concrete target: fireball L/M/H, DP L/M/H),
 all sharing `condition = ON_CONTACT`, `requires_tag = TAG_SP`, default window,
@@ -1339,7 +1339,7 @@ if/when group targets land.
 
 ---
 
-### JC-A-03 · 2026-07-04 · TKT-P1-10 · DP blockstun authored as a small placeholder value, not back-solved to the spec's approximate on-block number — provisional
+### JC-A-03 · 2026-07-04 · TKT-P1-10 · DP blockstun authored as a small placeholder value, not back-solved to the spec's approximate on-block number — ratified
 **Decided.** Each shoryuken's `blockstun` is authored as a small flat value
 (`DP_BLOCKSTUN = 10`) rather than back-solved so the derived static on-block
 advantage matches `character-a.md`'s approximate on-block figures
@@ -1363,7 +1363,7 @@ section defers exact numbers to the training mode.
 
 ---
 
-### JC-A-04 · 2026-07-04 · TKT-P1-10 · Air-normal hitstun authored as one flat value, not height-dependent — provisional
+### JC-A-04 · 2026-07-04 · TKT-P1-10 · Air-normal hitstun authored as one flat value, not height-dependent — ratified (mechanism scope raised as F-014)
 **Decided.** `j.L`/`j.M`/`j.H`'s `HitBox.hitstun` is authored as one flat value
 (14) rather than varying by the defender's height at contact.
 **Serves.** `character-a.md` → Normals table ("height-dep." hitstun/advantage
@@ -1384,7 +1384,7 @@ ticket adds a height-dependent hitstun mechanism to the format.
 
 ---
 
-### JC-A-05 · 2026-07-04 · TKT-P1-10 · `2L` authored to hitstun 15 (internally consistent), not back-solved to the spec's stated +3 on-hit — provisional
+### JC-A-05 · 2026-07-04 · TKT-P1-10 · `2L` authored to hitstun 15 (internally consistent), not back-solved to the spec's stated +3 on-hit — ratified (spec fixed to +6)
 **Decided.** `2L`'s `HitBox.hitstun` is authored as **15** (character-a.md's
 Damage & stun table value) even though this derives, via the one canonical
 formula (`hitstun − (recovery + active − 1)` = `15 − (7+3−1)` = `15 − 9` =
