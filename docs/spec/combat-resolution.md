@@ -90,15 +90,23 @@ route 2 (`j.H , 5M > 623M`) real behaviorally, not just structurally.
   is the reference (how deep the *jumping* attacker is), not the defender's — a jump-in is
   "deep" when the attacker connects low.
 - **The scaling — one definition, `AirHeightScaling` (mirrors `DamageScaling`).** A single
-  sim-wide definition maps `depth` → a signed hitstun delta, linearly interpolated and
-  clamped: at `depth ≈ 0` (deepest) it returns the maximum bonus (`+DEEP_BONUS`); at or
-  above a reference height (`HIGH_REF_DEPTH`, ~the jump apex) it returns the maximum
-  penalty (`−HIGH_PENALTY`); between, it interpolates linearly. The final hitstun is
-  `clamp(base_hitstun + delta, MIN_HITSTUN, base_hitstun + DEEP_BONUS)` so a deep hit is
-  meaningfully plus and a high hit still leaves the defender in a real (if brief) hitstun,
-  never zero or negative. **Single-sourced, no per-move/per-character variant** — the
-  consistency guard (an air normal on character B scales the same way). Integer/fixed-point
-  only (AD-014); the interpolation is integer FP math, no float.
+  sim-wide definition maps `depth` → a signed hitstun **delta** (a pure function of `depth`
+  alone, independent of the base — so the surfaced `air_height_hitstun_delta` is exactly
+  what height contributed): linearly interpolated and clamped so at `depth ≤ 0` (deepest,
+  at/below ground) it returns the maximum bonus (`+DEEP_BONUS`); at or above a reference
+  height (`HIGH_REF_DEPTH`, ~the jump apex) it returns the maximum penalty (`−HIGH_PENALTY`);
+  between, it interpolates linearly. The final applied hitstun is
+  `max(base_hitstun + delta, MIN_HITSTUN)` — a floor so a high hit still leaves the defender
+  in a real (if brief) hitstun, never zero or negative. (No separate upper clamp is needed:
+  `delta ≤ +DEEP_BONUS` by construction, so the deep-hit ceiling is `base + DEEP_BONUS`
+  automatically.) **Single-sourced, no per-move/per-character variant** — the consistency
+  guard (an air normal on character B scales the same way). The numbers (`DEEP_BONUS`,
+  `HIGH_PENALTY`, `HIGH_REF_DEPTH`, `MIN_HITSTUN`) are **slice-provisional placeholder
+  tuning** (feel is the Strategist's via the spec, exactly like `DamageScaling`'s
+  step/floor — JC-016); the **mechanism** (single definition, depth→delta, applied
+  pre-stun, clamped, surfaced) is the contract. Integer/fixed-point only (AD-014); the
+  interpolation is integer FP math, no float — the `depth` and interpolation reference
+  points are fixed-point, the returned delta a whole frame count.
 - **The gate — attacker is airborne (`category == AIRBORNE`) and the hit is on-hit.** The
   rule applies exactly when the connecting attacker's current state category is `AIRBORNE`
   and the contact is a hit (not block, not throw). A grounded normal is untouched (its
@@ -118,8 +126,13 @@ route 2 (`j.H , 5M > 623M`) real behaviorally, not just structurally.
 No new **per-player** serialized `SimState` field: the scaling is computed in phase 5 from
 the attacker's `pos_y` (already serialized) and the authored base hitstun, and its result
 flows into the defender's `stun` (already serialized). The two surfaced values live on the
-existing `last_hit`/`HitRecord` (already serialized, already hashed — two added int fields,
-AD-033), the same home the other hit-legibility reads use.
+existing `last_hit`/`HitRecord` — a **`HitRecord` shape addition** (two `int` fields:
+`contact_depth`, `air_height_hitstun_delta`) that is Architect-owned like every other
+serialized-shape change (the AD-024/AD-028 precedent), added to `HASH_FIELDS`/`to_dict`/
+`from_dict`/`clone` and covered by the canonical hash (AD-023). On a non-air-normal hit both
+are `0` (deterministic default), so ground hits do not perturb the record's meaning — the
+fields read "no height scaling applied." This is the same home the other hit-legibility
+reads use (`damage_dealt`, `scaling_applied_pct`, …).
 
 ## Invulnerability (AD-031)
 
@@ -344,3 +357,14 @@ deterministic, serializable sim.
     attacker's `move_contact` resolves to `WHIFF` on an all-invuln whiff, and the
     defender's live invuln state is readable through the inspection surface — the
     whiff is attributable, not silent.
+13. **Air-normal height-dependent advantage (AD-033).** An airborne attacker's on-hit
+    air normal inflicts hitstun scaled by contact depth via the one `AirHeightScaling`
+    definition: a *deeper* contact (attacker closer to the ground, smaller `depth`)
+    yields **more** hitstun than a *higher* one for the same authored base, so the live
+    advantage (AD-008) is more plus for the deep hit — verified by two contacts of the
+    same air normal at different heights producing different, correctly-ordered live
+    advantages. A grounded normal's hitstun is unscaled (the gate is attacker
+    `AIRBORNE` + on-hit). The applied hitstun never drops below `MIN_HITSTUN`. The
+    resolved `contact_depth` and `air_height_hitstun_delta` are readable through the
+    inspection surface (`0`/`0` on a non-air-normal hit), so *why* a deep jump-in is
+    more plus is observable. Deterministic and integer/fixed-point only.
