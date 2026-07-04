@@ -65,6 +65,62 @@ blockable state. On block, the defender enters a `BLOCKSTUN` state and takes
 `blockstun`/`pushback_block`; on hit, a `HITSTUN` state and `hitstun`/
 `pushback_hit`/`launch`. Block correctness is readable (input history + state).
 
+## Air-normal height-dependent advantage (AD-033)
+
+An **airborne attacker's** connecting strike scales the **hitstun it inflicts** by the
+attacker's **contact height** — a *deep* jump-in (attacker close to the ground when the
+air normal lands) inflicts more hitstun and so leaves the attacker more plus after
+landing; a *high/early* air hit inflicts less and is far less plus (or minus). This is the
+mechanism `character-a.md` promises ("deep jump-in = very plus, enabling the grounded
+links … sim truth the training mode reads out, not a fixed number"), and it is what makes
+route 2 (`j.H , 5M > 623M`) real behaviorally, not just structurally.
+
+- **Where it lives — phase 5, on `hitstun`, through the one advantage formula.** The rule
+  scales the **hitstun input** to hit resolution, *not* advantage directly: advantage is
+  derived from hitstun by the single AD-008 formula, so scaling the input keeps one
+  advantage computation and one place the number comes from (the consistency guard). The
+  authored base `HitBox.hitstun` (one flat value — JC-A-04) is the reference; height scales
+  a **signed frame delta** on top of it. Block is unaffected (a blocked air normal uses
+  `blockstun` as authored — height-scaled *hitstun* only applies on hit; a defender who
+  blocks in the air is out of P1 scope anyway).
+- **Height reference — the attacker's depth above ground.** `depth = ground_y −
+  attacker.pos_y` in fixed-point (screen convention: up is `−y`, so an airborne attacker
+  has `pos_y < ground_y` and `depth > 0`; `depth == 0` at the ground). Depth, not raw
+  `pos_y`, so the rule is stage-relative and character-agnostic. The **attacker's** height
+  is the reference (how deep the *jumping* attacker is), not the defender's — a jump-in is
+  "deep" when the attacker connects low.
+- **The scaling — one definition, `AirHeightScaling` (mirrors `DamageScaling`).** A single
+  sim-wide definition maps `depth` → a signed hitstun delta, linearly interpolated and
+  clamped: at `depth ≈ 0` (deepest) it returns the maximum bonus (`+DEEP_BONUS`); at or
+  above a reference height (`HIGH_REF_DEPTH`, ~the jump apex) it returns the maximum
+  penalty (`−HIGH_PENALTY`); between, it interpolates linearly. The final hitstun is
+  `clamp(base_hitstun + delta, MIN_HITSTUN, base_hitstun + DEEP_BONUS)` so a deep hit is
+  meaningfully plus and a high hit still leaves the defender in a real (if brief) hitstun,
+  never zero or negative. **Single-sourced, no per-move/per-character variant** — the
+  consistency guard (an air normal on character B scales the same way). Integer/fixed-point
+  only (AD-014); the interpolation is integer FP math, no float.
+- **The gate — attacker is airborne (`category == AIRBORNE`) and the hit is on-hit.** The
+  rule applies exactly when the connecting attacker's current state category is `AIRBORNE`
+  and the contact is a hit (not block, not throw). A grounded normal is untouched (its
+  hitstun is the authored value, unscaled). This is the character-agnostic definition of
+  "air normal": an airborne strike, not a named move list.
+- **Observable — the live advantage reflects it, and contact height is legible (AD-033).**
+  The live advantage read (`AdvantageView`, AD-008) already reflects the scaled hitstun
+  because it reads the defender's *actual* remaining stun — so a deep jump-in shows a
+  larger plus, live, with no extra plumbing. To answer *why* (charter: "find out what
+  happened and why"), the resolved contact height and the hitstun delta it produced are
+  surfaced on the hit record: `HitEvent.air_height_hitstun_delta` and
+  `HitEvent.contact_depth` (`inspection-surface.md`), so the training mode can show "this
+  jump-in connected deep (depth X) → +N hitstun → this much more plus." Without this the
+  scaling would be real but invisible — exactly the least-observable thing in most fighting
+  games, which is why the Strategist ruled it a legibility win worth building.
+
+No new **per-player** serialized `SimState` field: the scaling is computed in phase 5 from
+the attacker's `pos_y` (already serialized) and the authored base hitstun, and its result
+flows into the defender's `stun` (already serialized). The two surfaced values live on the
+existing `last_hit`/`HitRecord` (already serialized, already hashed — two added int fields,
+AD-033), the same home the other hit-legibility reads use.
+
 ## Invulnerability (AD-031)
 
 Invulnerability is a **defender-frame** property authored per keyframe
