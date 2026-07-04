@@ -997,3 +997,65 @@ the sim `StateBlob`.
 as latitude because input.md fixes the `InputSource` interface and reproducibility
 contract precisely, and every choice here is in service of satisfying that contract
 uniformly — not inventing new contract surface.
+
+### JC-031 · 2026-07-04 · TKT-P1-03 · `TrainingHarness` (new class) owns snapshot/restore + the single reset slot, sits above `TickHost`, and is the "driver" that produces registered dummies before stepping — provisional
+**Decided.** A new `game/sim/training_harness.gd` (`class_name TrainingHarness`)
+holds a `TickHost` reference and a `{id -> RecordPlaybackSource}` registry.
+`snapshot()`/`restore()` thin-wrap `SimHarness.dump_state`/`load_state` (the
+existing StateBlob format — no second serialization path). `capture_reset()`/
+`do_reset()` bundle the sim StateBlob with every registered source's
+`get_playback_position()`/`set_playback_position()` into ONE reset-point
+Dictionary (single slot, overwritten wholesale each capture — training-mode.md).
+`TrainingHarness.step_once()` additionally calls `produce_next()` on every
+registered source BEFORE calling `TickHost.step_once()` — i.e. this harness is
+the "driver" input.md's produce-before-query ordering names as owned by
+"whatever layer holds both the sources and the runner," which training-mode.md /
+AD-020 already identify as this harness for the reset coordination.
+**Serves.** training-mode.md "Control layer" (snapshot/restore, single reset
+slot, restores sim AND playback position — AD-020) + input.md's owned
+produce-before-query invariant (criterion 7: "the ordering is owned by the layer
+that drives the tick... not by the sources themselves"). The spec fixes WHAT the
+reset point bundles and WHO coordinates it (this harness); it does not fix the
+harness's class shape or that it also has to double as the tick driver for a
+source with no engine-side production hook of its own.
+**Alternatives passed over.** Making `RecordPlaybackSource` self-driving (e.g.
+producing its own frame lazily inside `get_input` the first time a tick is
+queried) — this would violate input.md's explicit "no future reads" / "sources
+never know if a query is current or future" design (input.md: "a source cannot
+know whether the frame it is asked for is current or future; only the driver
+knows") and would silently reintroduce per-source ordering assumptions; pushing
+production into `TickHost._advance` itself — rejected for the same reason
+JC-009/F-001 already rejected it for device sources: the host holds only the
+abstract `InputSource` (no `produce_next`), and coupling it to a concrete source
+type breaks "nothing in the sim knows which concrete source it holds"; requiring
+the CALLER to manually call `produce_next()` on every dummy before every
+`TickHost.step_once()` (works, but duplicates exactly the bookkeeping this
+harness already does for reset — the registry that knows "which sources exist"
+is the natural single owner of "which sources need producing this tick").
+**Why.** `TrainingHarness` already sits in the one place AD-020 names as owning
+reset coordination — above the sim, holding both the runner and the sources — so
+it is also the natural, already-justified owner of produce-before-query for
+those SAME sources (a second location would duplicate the registry). A caller
+driving a 2P-local match with a real device for P1 still produces that device's
+frame however it already does (tree order / explicit poll, JC-009's precedent);
+`TrainingHarness.step_once()` only drives the sources IT owns (registered
+dummies), so it composes with an externally-produced device source rather than
+assuming exclusive control of the tick. This surfaced empirically: a test
+driving `TickHost.step_once()` directly with a `RecordPlaybackSource` in
+PLAYBACK asserted (future-read) because nothing had called `produce_next()` for
+that tick — confirming the ordering must be owned somewhere, and this harness is
+where AD-020 already put the coordinating authority.
+**Alternatives for the class shape.** Folding this directly into `TickHost`
+(rejected: `TickHost` is sim-clock-only per its own docs — "the host owns only
+the sim clock," reset/source coordination explicitly deferred to "the
+training-mode harness above the sim," AD-020's own words); a bare set of static
+functions instead of an instantiable class (rejected: the reset slot and source
+registry are genuinely per-match-instance state, not stateless computation —
+unlike `Advantage`/`MoveData`'s static-namespace pattern, which have no instance
+state to hold).
+**Boundary.** New harness class above the sim; no sim-facing contract changed
+(`SimState`, `step`, `InputSource`, `TickHost`'s existing frame-control API are
+all unchanged). Recorded as latitude because training-mode.md/AD-020 already
+name what this class must do and who is responsible for it; the class's shape
+and its `step_once()` driver responsibility are the implementation filling that
+already-owned mandate.
