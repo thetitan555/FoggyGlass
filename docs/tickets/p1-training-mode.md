@@ -40,14 +40,16 @@ sim-facing interfaces (and the projectile) that Batch 3's overlays read downstre
 - **Batch 2:** TKT-P1-10 — character A authoring, against the move format (needs 0P's
   fireball from Batch 1). *Checkpoint:* A is playable vs a dummy (the record/playback
   dummy from Batch 1's TKT-P1-04) — the **P1 done-bar** (Strategist's flag resolution).
-- **Batch 2E (engine, content-surfaced):** TKT-P1-11, 12 — the two engine builds
-  character-A authoring surfaced as flags (invuln consumption + `hit_kind`; command-schema
-  jump/chord), resolved by the Architect as AD-031/AD-032. They unblock the part of A's
-  done-bar (criteria 4, 6, 8) that inert authored data cannot reach. Independent of each
-  other; both depend on Batch 1 (0P for the projectile invuln gate) and the Batch-2
-  authored data. *Checkpoint:* A's invuln beats a jump-in end-to-end and jump/throw are
-  reachable by live input. (Sequenced after Batch 2 because they consume its authored data;
-  the Strategist scopes this session — see the flag resolutions.)
+- **Batch 2E (engine, content-surfaced):** TKT-P1-11, 12, 13 — the three engine builds
+  character-A authoring surfaced as flags (invuln consumption + `hit_kind`, AD-031;
+  command-schema jump/chord, AD-032; air-normal height-dependent advantage, AD-033),
+  resolved by the Architect. They unblock the part of A's done-bar (criteria 4, 6, 8, 11)
+  that inert authored data cannot reach. All three are **independent of each other** (each a
+  distinct phase-4/5/recognizer touch); all depend on Batch 1 (0P for the projectile invuln
+  gate) and the Batch-2 authored data. *Checkpoint:* A's invuln beats a jump-in end-to-end,
+  jump/throw are reachable by live input, and a deep `j.H` is more plus than a high one.
+  (Sequenced after Batch 2 because they consume its authored data; the Strategist scopes this
+  session — see the flag resolutions.)
 - **Batch 3:** TKT-P1-05, 06, 07, 08, 09 — the training-mode shell plus the four
   overlays (all downstream of Batch 1's interfaces; 06–09 depend on 05). *Checkpoint:*
   the mode shows, live, what the sim is doing. Note: `PlayerView.invuln` (a derived read,
@@ -132,14 +134,15 @@ TKT-P0-08; criterion 10 is verified at the feature audit, in-mode).
 
 ## Engine (content-surfaced P1 work — flag resolutions)
 
-> These two tickets are P1 **engine** work that character-A authoring (TKT-P1-10)
-> surfaced as flags the Architect resolved (AD-031, AD-032). They unblock the part of
-> `character-a.md`'s done-bar that authored-but-inert data cannot reach on its own. No
-> content authoring here beyond the small `character_a.gd` `button_map` additions TKT-P1-12
-> names; the durable design is the ADs. Sequencing: both are independent of the Batch-3
-> overlays' *interfaces* (they touch the sim, not the seam shape); `PlayerView.invuln`
-> (TKT-P1-11's read) is a derived projection addable in TKT-P1-01 with no dependency on the
-> phase-4 change landing.
+> These three tickets are P1 **engine** work that character-A authoring (TKT-P1-10)
+> surfaced as flags the Architect resolved (AD-031, AD-032, AD-033). They unblock the part
+> of `character-a.md`'s done-bar (criteria 4, 6, 8, 11) that authored-but-inert data cannot
+> reach on its own. No content authoring here beyond the small `character_a.gd` `button_map`
+> additions TKT-P1-12 names (TKT-P1-11/13 are character-agnostic sim rules); the durable
+> design is the ADs. Sequencing: all three are independent of the Batch-3 overlays'
+> *interfaces* (they touch the sim, not the seam shape); the derived/`HitEvent` reads they add
+> (`PlayerView.invuln`, `HitEvent.contact_depth`/`air_height_hitstun_delta`) are addable in
+> TKT-P1-01 with no dependency on the phase-4/5 changes landing.
 
 ### TKT-P1-11 · Consume invulnerability (phase 4) + `HitBox.hit_kind`
 **Serves:** AD-031; `combat-resolution.md` (phase 4 + Invulnerability + criterion 12),
@@ -189,6 +192,41 @@ press (the chord does not shadow them). The recognizer stays a pure function of
 `input_history` (deterministic across sources, `input.md` criterion 2). A test must show a
 bare `L` reaching `5L`, and a same-frame `L+H` reaching the throw, with the throw entry
 ordered first.
+
+### TKT-P1-13 · Air-normal height-dependent advantage (phase-5 `AirHeightScaling`)
+**Serves:** AD-033; `combat-resolution.md` (Air-normal height-dependent advantage +
+criterion 13), `inspection-surface.md` (`HitEvent.contact_depth` /
+`air_height_hitstun_delta`), `character-a.md` (criterion 11, route 2). **Depends:** P0 phase
+pipeline (`step_phases.gd` phase 5, `hit_record.gd`); the character-A air normals + jump arc
+authored at TKT-P1-10 (for the airborne attacker to exist). **Independent of TKT-P1-11/12.**
+**Scope:**
+- Add `AirHeightScaling` (`game/sim/air_height_scaling.gd`, all-static, mirroring
+  `damage_scaling.gd`): four slice-provisional constants (`DEEP_BONUS`, `HIGH_PENALTY`,
+  `HIGH_REF_DEPTH` [fixed-point], `MIN_HITSTUN`) and a `hitstun_delta(depth: int) -> int`
+  that linearly interpolates the signed delta (`+DEEP_BONUS` at `depth ≤ 0` → `−HIGH_PENALTY`
+  at `depth ≥ HIGH_REF_DEPTH`), integer FP math only, delta a whole frame count.
+- In `step_phases.gd` `_resolve_one_hit`, on the **hit** branch only (not block, not throw):
+  when the attacker's resolved move `category == CATEGORY_AIRBORNE`, compute
+  `depth = next.stage.ground_y − atk.pos_y`, get the delta, and set
+  `stun_frames = max(hb.hitstun + delta, AirHeightScaling.MIN_HITSTUN)` **before** it is
+  written to the defender's `stun`. Record `contact_depth` (= depth) and
+  `air_height_hitstun_delta` (= delta) on the `HitRecord`. On any non-air-normal hit both are
+  `0`.
+- Add `contact_depth` / `air_height_hitstun_delta` (both `int`, default `0`) to
+  `hit_record.gd`: `HASH_FIELDS`, `to_dict`, `from_dict`, `clone` — a serialized `HitRecord`
+  shape addition covered by the canonical hash (AD-023). Project both onto
+  `hit_event.gd` (and `inspection_view.gd`'s `last_hit()`).
+- **No character-A engine code** — the rule is character-agnostic (gated on `AIRBORNE`, not a
+  move list). No `players[i]` field, no new phase.
+**Acceptance:** `combat-resolution.md` criterion 13 and `character-a.md` criterion 11: the
+same air normal connecting at two different attacker heights yields **different,
+correctly-ordered** live advantages (deeper = more plus) through the one AD-008 formula; a
+grounded normal's hitstun is unscaled; applied hitstun never drops below `MIN_HITSTUN`;
+`HitEvent.contact_depth` / `air_height_hitstun_delta` are readable (both `0` on a non-air
+hit); deterministic and float-free (`simulation.md` round-trip/hash hold with the two new
+`HitRecord` fields). QA goldens the *ordering/floor/observability*, not the provisional curve.
+A test must show two `j.H` contacts at different `pos_y` producing ordered advantages, and a
+deep `j.H` linking `5M` (route 2).
 
 ## Player-facing (downstream of the interfaces)
 
