@@ -10,14 +10,14 @@ extends SceneTree
 ## Run:  godot --headless --path game -s res://tests/test_character_a.gd
 ## Exits non-zero on any failure so a harness/CI can gate on it.
 ##
-## SCOPE NOTE. Jump/prejump and the throw command have NO button_map entry in
-## this batch (flagged, docs/flags.md -- the command-recognition schema can't
-## express a directionless command or a two-button chord without an engine
-## change). Those two are tested by driving the player DIRECTLY into the
-## state (state_id set, then step) so their RESOLUTION (throw connect/tech/
-## knockdown; jump arc integration) is still verified end-to-end; everything
-## else (all 9 normals, both specials, cancels, links) is driven through real
-## button-press input, exactly as a player would.
+## SCOPE NOTE (superseded 2026-07-04, TKT-P1-12/AD-032). Jump and the throw
+## command now DO have live-input button_map entries (a pure-direction jump —
+## held UP, no button — and an L+H chord), verified end-to-end by
+## game/tests/test_command_recognition.gd. The tests below that drive the
+## player DIRECTLY into STATE_THROW / prejump (state_id set, then step) predate
+## that and remain as-is: they exercise RESOLUTION (throw connect/tech/
+## knockdown; jump arc integration) independent of recognition, which is still
+## a valid, narrower thing to assert here.
 
 var _failures: int = 0
 var _checks: int = 0

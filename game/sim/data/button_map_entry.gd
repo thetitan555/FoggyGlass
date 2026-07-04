@@ -10,8 +10,18 @@ extends Resource
 ## this to turn a raw InputFrame into a legal transition. Authored as `.tres` data.
 
 ## Which generic button triggers this (InputFrame.BUTTON_0..7 bit index 0..7).
-## -1 = no button required (a pure motion command).
+## -1 = no button required (a pure motion command, OR — with motion == 0 too —
+## a pure-direction command like jump, AD-032).
 @export var button_index: int = 0
+
+## Optional SECOND required button (AD-032), forming a two-button CHORD with
+## `button_index`: both bits must be held on the SAME buffered frame (not merely
+## both somewhere within the window — see InputBuffer.entry_satisfied). -1 = no
+## chord (a plain single-button or pure-direction command). Lets a chord (throw,
+## L+H) be authored without stealing either bare button — the chord entry must be
+## listed BEFORE the bare-button entries it shares a button with so first-match-
+## wins routes the simultaneous press to the chord (move-format.md).
+@export var chord_button_index: int = -1
 
 ## Optional required direction (raw InputFrame direction bits, e.g. DOWN for a
 ## crouching normal). 0 = any/none. Directions are RAW here; the sim resolves

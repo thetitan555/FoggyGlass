@@ -149,12 +149,57 @@ static func _required_direction_held(frame: int, required_direction: int, facing
 	return true
 
 
+## Whether a pure-direction command (AD-032: no button, no motion — e.g. jump,
+## `UP`) is held within the command buffer window. True iff `required_direction`
+## is satisfied on ANY of the last COMMAND_BUFFER frames (the same leniency
+## `button_buffered` gives a button press). Reuses `_required_direction_held`
+## (facing-resolved forward/back, absolute up/down) over each SOCD-normalized
+## history frame.
+static func direction_buffered(hist: InputHistory, required_direction: int, facing: int) -> bool:
+	if required_direction == 0:
+		return false
+	for age in range(COMMAND_BUFFER):
+		var frame: int = StepPhases.socd_normalize(hist.at(age))
+		if _required_direction_held(frame, required_direction, facing):
+			return true
+	return false
+
+
+## Whether a two-button CHORD (AD-032: `button_index` + `chord_button_index`, e.g.
+## throw `L+H`) is satisfied within the command buffer window. "Same frame" is
+## load-bearing (move-format.md): both bits must be held on ONE buffered frame,
+## not merely each appearing somewhere in the window (which would falsely fire on
+## an `L` then a separate `H` six frames apart). Optional `required_direction`
+## additionally gates that same frame.
+static func chord_buffered(hist: InputHistory, button_index: int, chord_button_index: int,
+		required_direction: int, facing: int) -> bool:
+	if button_index < 0 or chord_button_index < 0:
+		return false
+	var bit_a: int = 1 << (4 + button_index)
+	var bit_b: int = 1 << (4 + chord_button_index)
+	var both_bits: int = bit_a | bit_b
+	for age in range(COMMAND_BUFFER):
+		var raw: int = hist.at(age)
+		if (raw & both_bits) != both_bits:
+			continue
+		if required_direction == 0:
+			return true
+		var frame: int = StepPhases.socd_normalize(raw)
+		if _required_direction_held(frame, required_direction, facing):
+			return true
+	return false
+
+
 ## The full recognition for one ButtonMapEntry against a player's history: true iff the
 ## entry's command is satisfied within its buffer window. A motion entry (motion != 0)
 ## requires the motion recognized within MOTION_WINDOW AND (if it also names a button)
-## the button pressed within COMMAND_BUFFER. A plain button entry requires the button
-## (+ optional direction) within COMMAND_BUFFER. This is the ONE recognizer phase 2 and
-## the buffered-command executor both call, so there is a single buffering definition.
+## the button pressed within COMMAND_BUFFER. A CHORD entry (chord_button_index set)
+## requires both buttons held on the SAME buffered frame (AD-032). A PURE-DIRECTION
+## entry (button_index == -1, no motion, no chord) requires only `required_direction`
+## held within COMMAND_BUFFER (AD-032; e.g. jump). A plain button entry requires the
+## button (+ optional direction) within COMMAND_BUFFER. This is the ONE recognizer
+## phase 2 and the buffered-command executor both call, so there is a single
+## buffering definition.
 static func entry_satisfied(hist: InputHistory, entry: ButtonMapEntry, facing: int) -> bool:
 	if entry.motion != MOTION_NONE:
 		if not motion_recognized(hist, entry.motion, facing):
@@ -164,5 +209,12 @@ static func entry_satisfied(hist: InputHistory, entry: ButtonMapEntry, facing: i
 		if entry.button_index < 0:
 			return true
 		return button_buffered(hist, entry.button_index, 0, facing)
+	if entry.chord_button_index >= 0:
+		# Two-button chord (AD-032): both bits required on the same frame.
+		return chord_buffered(hist, entry.button_index, entry.chord_button_index,
+			entry.required_direction, facing)
+	if entry.button_index < 0:
+		# Pure-direction command (AD-032): no button at all, held direction only.
+		return direction_buffered(hist, entry.required_direction, facing)
 	# Plain button command (+ optional required direction).
 	return button_buffered(hist, entry.button_index, entry.required_direction, facing)

@@ -158,31 +158,14 @@ static func build_character() -> Character:
 
 
 # =============================================================================
-# Button map (move-format.md -> Character.button_map; AD-018/022).
+# Button map (move-format.md -> Character.button_map; AD-018/022/032).
 #
 # Evaluated in authored order; first satisfied buffered command wins. Motion
 # commands are listed BEFORE their prefix's plain-button fallbacks so e.g. a 236L
-# motion is recognized before a bare 5L. Throw (L+H) is listed before the plain
-# L/M normals so a simultaneous L+H press resolves as a throw, not 5L.
-#
-# THROW COMMAND (flagged, docs/flags.md, same schema gap as jump below).
-# character-a.md's L+H is a two-button CHORD; ButtonMapEntry has no way to
-# require two button bits at once (button_index names ONE bit;
-# required_direction only inspects direction bits, never button bits) --
-# InputBuffer/ButtonMapEntry simply have no chord grammar. Unlike jump, there
-# is NO safe single-button stand-in: A's kit already uses all three buttons for
-# standing normals (5L/5M/5H), so aliasing the throw to any bare button would
-# make that normal unreachable (button_map's first-match-wins evaluation means
-# whichever entry is listed first always wins the button, permanently shadowing
-# the normal). Rather than break 5H (central to the kit -- the pressure-reset
-# normal and the 3-frame-link route) to manufacture a reachable throw command,
-# STATE_THROW is authored (full frame data, throwbox, tech window, hard
-## knockdown reaction) but carries NO button_map entry in this batch -- the
-# throw's RESOLUTION mechanics (connect bypasses block, tech window, damage) are
-# exercised directly in dev tests by driving a player into STATE_THROW, matching
-# character-a.md criterion 7's actual claim (throw connect/tech/knockdown
-# behavior), independent of the command-recognition gap. Revisit once the format
-# gains chord support.
+# motion is recognized before a bare 5L. The throw CHORD (L+H, AD-032) is listed
+# before the plain L/M/H normals so a simultaneous L+H press resolves as the
+# throw, not 5L/5H -- the chord does not shadow either bare button (a bare L or H
+# alone does not satisfy a chord), so 5L/5M/5H all stay reachable.
 # =============================================================================
 static func _build_button_map() -> Array[ButtonMapEntry]:
 	var map: Array[ButtonMapEntry] = []
@@ -196,21 +179,21 @@ static func _build_button_map() -> Array[ButtonMapEntry]:
 	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_0, STATE_FIREBALL_L))
 	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_1, STATE_FIREBALL_M))
 	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_2, STATE_FIREBALL_H))
+	# Throw (L+H chord, AD-032) -- listed BEFORE the bare standing normals below
+	# so first-match-wins routes a same-frame L+H to the throw while a bare L or
+	# H alone still falls through to 5L/5H (the chord requires BOTH bits on one
+	# frame; a lone press never satisfies it).
+	map.append(_map_chord(InputFrame.BUTTON_0, InputFrame.BUTTON_2, STATE_THROW))
 	# Crouching normals (DOWN + button) before standing so a held DOWN routes low.
 	map.append(_map(1, InputFrame.DOWN, 0, STATE_2M))   # 2M before 2L/2H so authored order picks the more specific gate first (all DOWN-gated -- direction alone does not disambigguate button index, so button_index is what actually selects the move; order is for readability)
 	map.append(_map(0, InputFrame.DOWN, 0, STATE_2L))
 	map.append(_map(2, InputFrame.DOWN, 0, STATE_2H))
-	# NOTE: no button_map entry for jump/prejump (STATE_PREJUMP/JUMP_*). A jump
-	# is a pure-direction command (UP, no button) and BOTH existing recognition
-	# paths require a button: InputBuffer.button_buffered returns false outright
-	# for button_index < 0, and a directionless "UP" MOTION would need a new
-	# entry in InputBuffer._motion_tokens' fixed match (input_buffer.gd), which
-	# is engine code this ticket may not touch. The jump/prejump MoveStates
-	# below ARE fully authored (frame data, timeline, the hand-baked arc) so
-	# the data is ready the moment recognition gains a no-button command path
-	# -- flagged (docs/flags.md) rather than patched around. Not reachable via
-	# input in this batch; the throw/normals/specials/movement-without-jump
-	# are unaffected and fully playable.
+	# Jump (pure-direction command, AD-032): held UP, no button, routes to the
+	# prejump lead-in (whose own ALWAYS cancel carries it into the neutral jump
+	# arc -- see _build_movement's PREJUMP note). Listed before the bare standing
+	# normals so it does not need to compete with a button press at all (jump has
+	# no button to shadow).
+	map.append(_map(-1, InputFrame.UP, 0, STATE_PREJUMP))
 	# Standing normals.
 	map.append(_map(0, 0, 0, STATE_5L))
 	map.append(_map(1, 0, 0, STATE_5M))
@@ -218,13 +201,26 @@ static func _build_button_map() -> Array[ButtonMapEntry]:
 	return map
 
 
-## One ButtonMapEntry for a plain (non-motion) command.
+## One ButtonMapEntry for a plain (non-motion, non-chord) command.
 static func _map(button_index: int, required_direction: int, motion: int,
 		target_state_id: int) -> ButtonMapEntry:
 	var e := ButtonMapEntry.new()
 	e.button_index = button_index
 	e.required_direction = required_direction
 	e.motion = motion
+	e.target_state_id = target_state_id
+	return e
+
+
+## A two-button CHORD entry (AD-032): both `button_bit_a` and `button_bit_b` must
+## be held on the same buffered frame. Bits are InputFrame.BUTTON_* constants;
+## ButtonMapEntry wants bit INDICES, so this converts (mirrors _map_motion).
+static func _map_chord(button_bit_a: int, button_bit_b: int, target_state_id: int) -> ButtonMapEntry:
+	var e := ButtonMapEntry.new()
+	e.button_index = _bit_to_index(button_bit_a)
+	e.chord_button_index = _bit_to_index(button_bit_b)
+	e.required_direction = 0
+	e.motion = 0
 	e.target_state_id = target_state_id
 	return e
 
@@ -377,11 +373,21 @@ static func _build_movement() -> Array[MoveState]:
 	pj_kf.frame_end = 4
 	pj_kf.hurtboxes = [_hurt_stand()]
 	prejump.timeline = [pj_kf]
+	# Window is the LAST frame BEFORE duration (3, not 4): Actionability.is_actionable
+	# treats a committed once-through move as actionable once frame_in_state >= duration
+	# (the reasonable "recovery has ended" reading elsewhere), which on frame 4 itself
+	# would make phase 2 take the actionable/buffered-command branch INSTEAD of the
+	# cancel branch (see phase2_state_machine's fixed priority order) -- the ALWAYS
+	# cancel would then never be reached and PREJUMP would loop forever re-satisfying
+	# the held-UP jump command back into itself. Firing one frame earlier, on 3 (still
+	# unambiguously committed), reaches JUMP_N before that race window opens, while
+	# PREJUMP's own duration/timeline stay the spec's authored 4f (TKT-P1-12 latitude;
+	# logged, docs/judgment-log.md).
 	var pj_cancel := CancelRule.new()
 	pj_cancel.target = STATE_JUMP_N
 	pj_cancel.condition = CancelRule.CONDITION_ALWAYS
-	pj_cancel.window_start = 4
-	pj_cancel.window_end = 4
+	pj_cancel.window_start = 3
+	pj_cancel.window_end = 3
 	pj_cancel.input = 0
 	prejump.cancels = [pj_cancel]
 	out.append(prejump)

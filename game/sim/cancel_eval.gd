@@ -106,12 +106,18 @@ static func _has_tag(p: PlayerState, tag: int) -> bool:
 	return false
 
 
-## Whether the rule's `input` command is buffered. The cancel's `input` is a command id
+## Whether the rule's `input` command is buffered. `input == 0` means NO input is
+## required (move-format.md → CancelRule.input: "0 = none") — an ALWAYS-condition,
+## window-gated transition with no button/motion gate at all (e.g. PREJUMP's lead-in
+## into the neutral jump arc), so it is satisfied unconditionally and short-circuits
+## before any button_map/raw-bit lookup. Otherwise the cancel's `input` is a command id
 ## that must match a button_map entry (so the same recognizer resolves it); we find the
 ## button_map entry whose target is the rule's target and check its command is buffered.
 ## If no matching entry exists, fall back to treating `input` as a raw button index so a
 ## cancel can name a bare button without a button_map round-trip. Deterministic.
 static func _input_buffered(rule: CancelRule, p: PlayerState, character: Character) -> bool:
+	if rule.input == 0:
+		return true
 	if character != null:
 		for entry in character.button_map:
 			if entry.target_state_id == rule.target:

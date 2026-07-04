@@ -1575,3 +1575,94 @@ this ticket's end-to-end phase-4 gate proof on the shared mechanism; the specifi
 choreography-level "2H beats this exact jump-in" interaction-level claim is
 character-a.md content tuning, not this engine ticket's contract.
 **Serves.** TKT-P1-11 (`game/tests/test_invuln.gd`).
+
+### JC-037 · 2026-07-04 · TKT-P1-12 · `CancelEval._input_buffered` honors `CancelRule.input == 0` as "no input gate" — provisional, FLAGGING FOR ARCHITECT ATTENTION
+**Decided.** `CancelEval._input_buffered` (`game/sim/cancel_eval.gd`) now short-
+circuits `return true` when `rule.input == 0`, BEFORE the button_map-lookup /
+raw-bit fallback. Previously `input == 0` fell through both: no button_map entry
+targets a rule by "no input" (there is nothing to look up), and the raw-bit fallback
+(`rule.input >= InputFrame.BUTTON_0`, i.e. `>= 16`) is false for `0` — so an
+`input == 0` cancel could NEVER fire, contradicting `CancelRule.input`'s own doc
+comment ("Required command...; 0 = none").
+**Discovered via.** Making jump reachable by live input (this ticket) exposed it:
+character A's `STATE_PREJUMP` carries exactly one `CancelRule` (`condition ALWAYS,
+input = 0`) into `STATE_JUMP_N` — the ONLY `input == 0` cancel anywhere in the
+codebase (checked: no other rule in `character_a.gd` or `test_support.gd` uses
+`input = 0`). Before this fix, holding UP drove the player into PREJUMP correctly
+(the new recognizer path works) but the ALWAYS cancel into JUMP_N never fired —
+PREJUMP looped on itself instead (see JC-038 for the OTHER half of that bug).
+**Serves.** TKT-P1-12 acceptance ("jump is reachable by live input... UP -> jump").
+Also `move-format.md`'s `CancelRule.input` contract (the doc says 0 = none; the
+implementation now matches it).
+**Alternatives passed over.** Leaving `cancel_eval.gd` untouched and instead
+authoring PREJUMP's cancel with a nonzero synthetic `input` matched by a dummy
+button_map entry (would need a button_map entry with no real button, i.e. exactly
+the pure-direction shape this ticket already adds for jump itself — circular, and
+still wouldn't fix `_input_buffered`'s failure to honor its own documented "0 =
+none" for any FUTURE always-cancel authored the same way). Escalating this as a
+flag instead of fixing it inline (considered, given `cancel_eval.gd` is
+combat-resolution/phase-2 contract multiple roles build against) — see below for
+why I did not.
+**Why I fixed rather than flagged.** This is a one-line correction that makes the
+implementation match `CancelRule.input`'s ALREADY-DOCUMENTED meaning ("0 = none");
+it changes no character's behavior except PREJUMP's (verified: grep confirms no
+other authored cancel anywhere uses `input = 0`), and it does not introduce, remove,
+or redefine any contract surface — `input`'s meaning is unchanged, only now
+correctly implemented. I am flagging this entry prominently for the Architect's
+attention anyway (not filing to `flags.md`, since I am not asking for a decision —
+there is only one correct reading of the existing doc comment) so the ratification
+pass can confirm this reasoning holds and, if desired, fold "input == 0 always
+means no input gate" explicitly into `move-format.md`'s `CancelRule.input` row
+(currently only in the class doc comment, not the spec table).
+**Serves.** TKT-P1-12 (`game/sim/cancel_eval.gd`).
+
+### JC-038 · 2026-07-04 · TKT-P1-12 · PREJUMP's ALWAYS-cancel window moved to frame 3 (one frame before duration) — provisional
+**Decided.** Character A's `STATE_PREJUMP` cancel window (`window_start`/
+`window_end`) changed from `[4, 4]` (== `duration`) to `[3, 3]` (one frame before
+`duration`). `duration` itself, and the rest of PREJUMP's timeline, are UNCHANGED
+(still the spec's authored 4f, `character-a.md`'s Movement table).
+**Discovered via.** Same investigation as JC-037. Even after that fix, holding UP
+still looped PREJUMP on itself: `Actionability.is_actionable` treats a committed,
+non-looping move as actionable once `frame_in_state >= duration` (4 >= 4) — but
+`phase2_state_machine`'s FIXED transition priority (combat-resolution.md / the order
+documented at the top of `step_phases.gd`) checks "is this player actionable ->
+run the buffered command" BEFORE it checks cancels. On frame 4, PREJUMP is
+simultaneously "not yet past duration" (so the once-through-ended->idle transition
+does not fire either) and "actionable" (so the buffered-command branch runs
+instead of the cancel branch) — the ALWAYS cancel into JUMP_N is structurally
+unreachable on the one frame its window covered. The held-UP jump command then
+re-satisfies immediately (same button_map entry, targeting PREJUMP), the
+same-state guard blocks a redundant re-entry, and the state cycles frame 1-4
+forever without ever reaching the cancel check.
+**Serves.** TKT-P1-12 acceptance (jump reachable by live input, end-to-end, not
+just into PREJUMP).
+**Alternatives passed over.** Changing `Actionability.is_actionable`'s `>=` to `>`
+so a committed move is only actionable strictly after its duration (would make the
+cancel branch reachable on frame 4 too) — REJECTED as out of this ticket's bounds:
+`is_actionable` is a foundational, single-sourced function (`combat-resolution.md`
+"Stun & actionability"; feeds `PlayerView.actionable`, the live-advantage formula,
+AD-008's frames-to-actionable, and every character's cancel/actionable gating
+project-wide) — a project-wide semantic shift belongs to the Architect, not a
+one-ticket side effect. Reordering `phase2_state_machine`'s fixed transition
+priority (cancels before buffered-commands) — REJECTED, that order is itself
+documented contract (combat-resolution.md criterion 2 test literally asserts
+reordering phases changes results) and touches every character, not just A's
+PREJUMP. Extending PREJUMP's `duration` to 5 — REJECTED, `character-a.md`'s
+Movement table states "Prejump | 4f," a Strategist-owned feel value I am not
+authorized to change via an engine ticket.
+**Why.** Moving the window one frame earlier is the minimal, ticket-local fix: it
+changes ONLY the authored cancel window of ONE state (a `character_a.gd` content
+edit, arguably within "the small button_map additions" the ticket scopes, though
+technically outside it — logged for that reason) and does not touch the
+`Actionability`/phase-2-order contract at all. Verified end-to-end (holding UP
+now reaches `STATE_JUMP_N` and the jump arc integrates normally,
+`test_command_recognition.gd`).
+**Flagging for Architect attention:** the underlying interaction (a once-through
+move's OWN "reached duration" frame is simultaneously eligible for the actionable/
+buffered-command branch AND is the natural place to author an ALWAYS-cancel window)
+is a general authoring hazard, not unique to PREJUMP — any future move chaining
+into another via an ALWAYS cancel timed at exactly `window_end == duration` will hit
+the same race. Worth a `move-format.md`/`combat-resolution.md` note (or an
+`Actionability` contract clarification) so a future author does not have to
+rediscover this by hand-tracing `step_phases.gd` again.
+**Serves.** TKT-P1-12 (`game/content/character_a.gd`, `STATE_PREJUMP`).
