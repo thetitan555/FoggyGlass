@@ -953,3 +953,47 @@ one determinism/serialization test file the single place those criteria are exer
 the teardown `clear()` keeps the per-run token semantics clean between test files.
 **Boundary.** TEST-ONLY. No sim code touched by THIS call (the sim change is JC-028's
 accessor). Provisional pending QA's TKT-P0-11 harness, which may supersede or relocate it.
+
+### JC-030 · 2026-07-04 · TKT-P1-04 · `RecordPlaybackSource` production model: one `produce_next()` per tick feeding a uniform `_answers` reproducibility history, distinct from the mode-specific `_buffer` script — provisional
+**Decided.** `RecordPlaybackSource` (`game/sim/record_playback_source.gd`) tracks TWO
+parallel arrays: `_buffer` (the RECORDING artifact / PLAYBACK script — what training-
+mode.md calls "the buffer") and `_answers` (every frame this source has actually
+produced, in order, regardless of mode — the InputSource reproducibility history
+`get_input(frame)` answers from). `produce_next()` is the one driver-facing method
+that advances both mode-specific behavior and the answer history in lockstep; a
+looped PLAYBACK re-reads `_buffer` at a wrapped cursor but still appends a NEW entry
+to `_answers` each call, so `get_input` stays a simple, uniformly-growing indexed
+read (mirroring `LocalDeviceSource`/`ReplaySource`) even though PLAYBACK's underlying
+script is fixed-length and reread.
+**Serves.** TKT-P1-04 (`RecordPlaybackSource : InputSource` with PASSTHROUGH/
+RECORDING/PLAYBACK over a raw InputFrame buffer, looping) + input.md's `InputSource`
+contract (frame-indexed, reproducible, no-future-reads) which every producer —
+including this one — must satisfy uniformly. The ticket fixes the three modes and
+looping; it does not fix the internal storage split.
+**Alternatives passed over.** A single array serving both roles (in PLAYBACK, once the
+cursor loops, `get_input(frame)` for two different `frame` values would have to map to
+the same buffer slot by `frame % buffer.size()` — correct for the contract, but it
+makes `get_input`'s indexing mode-dependent, which the training-mode reset harness
+(TKT-P1-03) and any QA replay tooling would then need to know about instead of
+treating every `InputSource` identically); recomputing `produced_count` from
+mode+cursor arithmetic instead of storing it (fragile across the restore path — AD-020
+needs `produced_count`/history restored atomically as one position, not re-derived).
+**Why.** Keeping `get_input` a plain, uniformly-growing indexed read over `_answers` —
+never a modulo/branch on mode — means this source honors the InputSource contract
+exactly like `LocalDeviceSource`/`ReplaySource` do, so nothing downstream (the tick
+host, a rollback re-simulation, QA's replay runner) needs mode-aware special-casing.
+The cost is a second parallel array, which is cheap (frame counts are small) and
+mirrors the `active_hit_ids`/`active_hit_frames` parallel-array pattern already
+ratified in `SimState` (AD-028). If the Architect prefers a single derived-index
+scheme instead, it is a localized change to `get_input` + the position dict shape.
+**Restorable position (AD-020).** `get_playback_position()`/`set_playback_position()`
+snapshot `{playback_cursor, produced_count, answers}` as one plain Dictionary (no
+floats, no live refs) — deliberately NOT `_buffer` (the recorded/authored script is
+not part of "position"; AD-020 restores the reset point's sim state and *playback
+position*, not the recording itself). This is external to `SimState` throughout
+(Tenet 2); TKT-P1-03's reset harness is the one place this position is bundled with
+the sim `StateBlob`.
+**Boundary.** New sim-facing source type; no existing contract file touched. Recorded
+as latitude because input.md fixes the `InputSource` interface and reproducibility
+contract precisely, and every choice here is in service of satisfying that contract
+uniformly — not inventing new contract surface.
