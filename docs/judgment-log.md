@@ -1666,3 +1666,37 @@ the same race. Worth a `move-format.md`/`combat-resolution.md` note (or an
 `Actionability` contract clarification) so a future author does not have to
 rediscover this by hand-tracing `step_phases.gd` again.
 **Serves.** TKT-P1-12 (`game/content/character_a.gd`, `STATE_PREJUMP`).
+
+### JC-039 · 2026-07-04 · TKT-P1-13 · `AirHeightScaling`'s four provisional numbers — provisional, slice tuning
+**Decided.** `DEEP_BONUS = 6`, `HIGH_PENALTY = 8`, `HIGH_REF_DEPTH = FP.from_int(105)`
+(baked as the literal `6881280`), `MIN_HITSTUN = 4` (`game/sim/air_height_scaling.gd`).
+`HIGH_REF_DEPTH` (105 units) is set a bit below character A's full jump-arc apex
+(~132 units: `RISE_FRAMES(22) * RISE_SPEED(6.0)`, `character_a.gd`'s jump-arc
+constants) so a jump-in connecting anywhere near the TOP of the arc reads as "high,"
+without requiring the attacker to connect at the exact single peak frame (which
+would almost never happen against a grounded, actionable-height defender anyway —
+by the time a jump normal's hitbox is active and within pushbox range of a
+standing opponent, the attacker has usually descended somewhat from the frame-1
+apex).
+**Serves.** AD-033 ("the numbers... are slice-provisional placeholder tuning...
+the mechanism... is the contract"); character-a.md criterion 11 + route 2 (a deep
+`j.H` must be plus enough to link `5M`, startup 5 — verified: a `pos_y = -5`
+contact yields live advantage `+15`, comfortably above the `>= 4` a link needs).
+**Alternatives passed over.** Deriving `HIGH_REF_DEPTH` from the EXACT apex height
+(132) — passed over because a defender is grounded and the jump normal's own
+active window is well after frame 1, so the true worst-case "still connects" depth
+at the literal apex is not really reachable in practice; picking a reference a
+little inside the arc (105) makes the "high" end of the curve reachable by an
+actually-testable contact instead of an unreachable theoretical extreme. Backing
+into a value that hits some specific target advantage number exactly — REJECTED,
+same reasoning as `DamageScaling`'s step/floor (JC-016) and DP's blockstun
+(judgment-log, DP entry): manufacturing a number to a target end-state trades a
+legible, mechanism-first value for false precision the Strategist has not signed
+off on.
+**Why.** These are exactly the "four provisional numbers" AD-033 names as the
+Developer's to pick (mechanism-first, feel-later, same bar as `DamageScaling`).
+Verified end-to-end: two `j.H` contacts at different heights produce different,
+correctly-ordered advantages (`test_air_height_scaling.gd`), the floor holds, and
+route 2's deep-link claim is satisfied with room to spare — QA goldens the
+ordering/floor/observability per the ticket's own acceptance, not this curve.
+**Serves.** TKT-P1-13 (`game/sim/air_height_scaling.gd`).
