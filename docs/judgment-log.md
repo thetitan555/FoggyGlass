@@ -1700,3 +1700,151 @@ correctly-ordered advantages (`test_air_height_scaling.gd`), the floor holds, an
 route 2's deep-link claim is satisfied with room to spare — QA goldens the
 ordering/floor/observability per the ticket's own acceptance, not this curve.
 **Serves.** TKT-P1-13 (`game/sim/air_height_scaling.gd`).
+
+### JC-040 · 2026-07-04 · TKT-P1-05..09 · Recovering an interrupted Batch 3: verification approach + view/view-model split adopted as the batch's structure — provisional
+**Context.** This session recovered a Batch 3 left uncommitted and unverified by
+a prior interrupted session (`training_mode.gd`, `main.gd`/`main.tscn`,
+`overlays/geometry_overlay.gd` + `_model.gd`, `overlays/frame_data_panel.gd` +
+`_model.gd`, `overlays/live_state_panel_model.gd` — no view). Two calls recorded
+together since both concern how the batch as a whole is structured, not one
+ticket's content.
+**Decided (1).** `main.gd`/`main.tscn` are the PRE-EXISTING P0 scaffold (committed
+at TKT-P0-01/03, unmodified — confirmed via `git log`/`git diff HEAD`), not part of
+this batch's uncommitted work; no reconciliation was needed. `training_mode.gd` is
+genuinely additive (its own header already says so) and is the real TKT-P1-05
+artifact. Recorded because the brief asked to "verify this is consistent... and
+reconcile or fold in" — the finding is that there was nothing to reconcile.
+**Decided (2).** Adopted the salvaged view/(pure)view-model split — a Node-based
+view (`_draw()`/`Label.text`, `set_source(TrainingMode)`, `@onready` node paths)
+backed by a static, Node-free `*Model` class doing all `InspectionView` reads and
+producing plain display data — as the structural pattern for ALL FOUR overlays
+(06, 07, and the two built this session: 08's view, 09 from scratch), matching the
+instruction's own suggestion. Every model is headlessly unit-tested; every view is
+a thin, untested-by-unit-test render/format layer (smoke-verified in this session
+by loading `training_mode.tscn` for real, not committed as a test — pixel-exact
+rendering stays a QA in-mode visual check per each ticket's note).
+**Alternatives passed over.** Testing the Node-based views directly (would require
+a running scene tree per assertion and couples the test to Godot's Control/draw
+API — the existing salvaged code already avoided this for 06/07, so extending the
+same shape to 08/09 keeps one convention project-wide rather than two). Skipping
+the view/model split for 09 (built from scratch, so a monolithic `_draw()`-and-
+compute view was an option) — REJECTED for consistency with 05/06/07's established
+shape and because 09's recognizer projection (JC-041) benefits from the same
+headless-testability the other three models get.
+**Why.** Both are batch-shape latitude — no design/contract consequence, cheaply
+reversible, invisible across the seam. Flagged for Architect attention per the
+task's own instruction ("If you adopt it as the batch's structure, record that").
+**Serves.** TKT-P1-05, 06, 07, 08, 09 (`game/scenes/training_mode.gd`,
+`game/scenes/overlays/*.gd`).
+
+### JC-041 · 2026-07-04 · TKT-P1-05 · Missing `.tscn` scenes built; overlays auto-wired by duck-typed `set_source` convention — provisional
+**Discovered via.** Verification, not authored-fresh: the interrupted session left
+`training_mode.gd` (`extends Node2D`, `@onready var _tick_host: TickHost = $TickHost`)
+and every overlay script (`@onready var _label: Label = $Label` in
+`frame_data_panel.gd`; `extends Node2D` in `geometry_overlay.gd`) with NO backing
+`.tscn` anywhere in the tree (confirmed: `find game/scenes -iname "*.tscn"` found
+only the pre-existing `main.tscn`). Without a scene file naming the child nodes
+these `@onready` lookups need, nothing could actually be opened in the Godot editor
+and run — the entire point of a "mode a developer or QA opens to observe the sim"
+(training-mode.md "what it is"). A smoke test confirmed the `.gd` logic itself was
+sound in isolation (hand-building a `TickHost` child and calling `add_child`
+before entering the tree resolves `$TickHost` fine) — the gap was specifically the
+missing scene-file wiring, not a code defect.
+**Decided.** Built `game/scenes/training_mode.tscn` mounting `TickHost` plus all
+four overlay nodes (`GeometryOverlay`, `FrameDataPanel` + child `Label`,
+`LiveStatePanel` + child `Label`, `InputHistoryPanel` + child `Label`) as direct
+children of `TrainingMode`. Added `TrainingMode._wire_overlays()` (called at the
+end of `_ready()`): iterates `get_children()` and calls `set_source(self)` on any
+child exposing that method (duck-typed on the method name, not a shared base
+class/interface) — so mounting an overlay as a scene child is sufficient to wire
+it to the shell's `inspection_view()`, with no test or future scene author having
+to wire each overlay by hand.
+**Alternatives passed over.** A common `TrainingOverlay` base class/interface all
+overlays extend (adds a new shared type across `Node2D` AND `Control` overlays —
+GDScript has no interfaces, and a shared base would either force a common ancestor
+type unrelated to the actual Node kind each overlay needs, or add an abstract
+`RefCounted`-based marker that buys nothing the duck-type check doesn't already
+get). Requiring each session/test to call `set_source` on every overlay by hand
+(works, and is what the existing per-overlay tests still do for isolation — but
+would make the SHIPPED `.tscn` non-self-sufficient, silently requiring an external
+wiring step every time the scene is opened, which defeats "provides the surface
+the overlays render into").
+**Why.** The `.tscn` is what turns the verified `.gd` logic into something actually
+open-able/runnable in the editor (training-mode.md's whole point); auto-wiring by
+duck-type keeps the shell as the one place overlay-to-shell wiring happens (mirrors
+the read-only/control-only seam discipline already documented in `training_mode.gd`'s
+header) without inventing a new shared type. Both are structural, invisible outside
+this scene's own wiring, and cheaply reversible (a future overlay just needs
+`set_source(TrainingMode)` and a mount point). Smoke-verified end-to-end (loading
+`training_mode.tscn` for real): all mounted overlays report `_source == tm` after
+one process frame and render live text/geometry through the one shell.
+**Serves.** TKT-P1-05 (`game/scenes/training_mode.gd`, `game/scenes/training_mode.tscn`).
+
+### JC-042 · 2026-07-04 · TKT-P1-06 · Projectile hitbox given its own draw color instead of a `hit_kind`-based BoxView split — provisional (ratifies the interrupted session's own documented call)
+**Found already made,** with its reasoning already written in-file
+(`geometry_overlay_model.gd`'s header comment) by the interrupted session; this
+entry is the Architect-facing log record that call never got, plus this session's
+independent confirmation it is correct.
+**Decided.** `GeometryOverlayModel` gives a projectile's carried hitbox
+(`ProjectileView.box`, always `BoxView.KIND_HIT` per inspection-surface.md) its own
+distinct draw color (`COLOR_PROJECTILE`) rather than branching `BoxView.kind` on
+`HitBox.hit_kind` (AD-031). Verified against the actual seam contract
+(`inspection-surface.md`'s `BoxView` table has `kind` = HURT/HIT/THROW/PUSH only,
+no `hit_kind` field) and against AD-031's own consequence section (`docs/spec/
+decisions.md` line 835-841: "`inspection_view.gd`/`player_view.gd` gain the
+derived `invuln` read" — no mention of adding `hit_kind` to `BoxView`) — confirming
+`BoxView` genuinely does not carry `hit_kind`, so branching on it from the overlay
+would require reaching past the seam's own returned type.
+**Alternatives passed over.** Adding a `hit_kind` field to `BoxView` (touches the
+seam contract `inspection-surface.md` owns — out of Developer latitude per the
+project's own escalation line: "anything that touches a contract other roles
+depend on"; also unnecessary here since `kind` distinguishes HIT boxes already and
+`ProjectileView.box` already identifies "this HIT box is a projectile's" without a
+new field). Leaving projectile hitboxes visually identical to character hitboxes
+(would not satisfy the ticket's invitation to use `hit_kind` "for finer coding" —
+a projectile whiffing/connecting is a distinct thing worth reading at a glance,
+per the charter's clarity standard).
+**Why.** Satisfies the ticket's "available for finer coding" invitation without
+inventing a seam field AD-031 did not add — the finer coding happens at the
+draw-list level (this overlay's own concern), leaving `BoxView`'s shape exactly as
+inspection-surface.md specifies it. Verified end-to-end
+(`test_geometry_overlay.gd`: a projectile's hitbox draws in `COLOR_PROJECTILE`,
+distinct from `COLOR_HIT`, while still reporting `kind == BoxView.KIND_HIT`).
+**Serves.** TKT-P1-06 (`game/scenes/overlays/geometry_overlay_model.gd`).
+
+### JC-043 · 2026-07-04 · TKT-P1-09 · Recognized-command projection reconstructs `InputHistory` from `PlayerView.input_history` to call the sim's own recognizer — provisional
+**Decided.** `InputHistoryPanelModel.recognized_commands(pv: PlayerView)` calls
+`InputBuffer.entry_satisfied(hist, entry, facing)` — the SAME static recognizer
+function the sim's phase 2 and buffered-command executor call — over an
+`InputHistory` object reconstructed via `InputHistory.from_dict({"frames":
+pv.input_history})` (that class's own documented round-trip shape), rather than
+either (a) re-implementing a second, panel-local recognizer, or (b) skipping
+recognized-command display entirely. The two `ButtonMapEntry` query shapes
+(pure-direction UP = jump; `BUTTON_0`+`BUTTON_2` same-frame chord = throw) encode
+only AD-032's generic schema — not any character's authored `button_map` — so no
+`CharacterA` reference enters the overlay layer (character-agnostic, matching
+`inspection-surface.md` criterion 5's spirit even though this is a training-mode
+overlay, not the seam itself).
+**Alternatives passed over.** Re-implementing jump/throw detection as new,
+panel-local bit-matching logic (would be a SECOND recognizer alongside
+`InputBuffer`'s — exactly the "debug mode and QA can't disagree because they read
+the same numbers" single-source-of-truth principle `inspection-surface.md` states
+for the seam proper, extended here on the training-mode side: better to call the
+existing recognizer than risk two definitions of "is this a jump" drifting apart).
+Adding a new `InspectionView`/`PlayerView` field for "recognized commands" (would
+touch the seam contract — out of Developer latitude; unnecessary here since
+`entry_satisfied` is already callable client-side against seam-legal data with no
+sim-internal access, so no seam change is needed to get this behavior).
+**Why.** `input_history` is already the seam's own exposed raw-frame array
+(`inspection-surface.md`'s `PlayerView.input_history`); `InputHistory.from_dict`
+is a plain, public, already-existing round-trip constructor (not a new backdoor);
+`InputBuffer.entry_satisfied` is a static, state-free function safe to call from
+player-facing code without importing anything sim-internal beyond the plain
+`ButtonMapEntry`/`InputHistory` data classes themselves (which are move-format
+data types, not `SimState`/`PlayerState`). This makes "jump/throw/chord decode
+from the same frames" (the ticket's own phrase) literally true — same function,
+same frames — rather than merely similar-looking. Verified: a bare `L` press does
+NOT recognize as throw (`test_input_history_panel.gd`,
+`_test_bare_l_still_reaches_light_not_shadowed_by_chord_recognition`), matching
+TKT-P1-12's own "the chord does not shadow" acceptance.
+**Serves.** TKT-P1-09 (`game/scenes/overlays/input_history_panel_model.gd`).
