@@ -40,3 +40,33 @@ check for and remove the "(inert until consumed)" phrase anywhere else it
 survived past AD-031 landing in this file.
 ---
 Resolution (owner fills): …
+
+### [open] 2026-07-04 · raised-by: Strategist · owner: Strategist · re: /docs/protocol.md (commit cadence / interruption resilience)
+Problem: across the P1 run, three separate sessions hit token/session limits mid-work and
+terminated with uncommitted changes in the working tree (Batch 3 overlays ~608 lines; the
+AD-033 spec draft; a partial engine edit). Nothing was ultimately lost — the shared working
+tree persisted each change and all were recovered — but every recovery cost a fresh session
+to verify-and-resume orphaned work, and the botched QA run cost ~150k tokens for zero
+output. The token-economy section already says "commit as you go," but it is advisory; under
+large batches the commit consistently came too late. This is a protocol weakness I own.
+Candidate fixes for a future Strategist session (deliberately NOT applied now — session
+ending, pipeline work halted): (a) promote "commit the first logical unit before any further
+work, then per-unit" to a hard working-agreement; (b) right-size batches smaller so one
+interruption spans less uncommitted work; (c) add a dispatch-brief guard that a subagent must
+perform its own work and never delegate/spawn (the QA run mis-scoped its role and narrated
+delegating the audit). Raised as the last-chance record so the lesson survives the session
+boundary.
+---
+Resolution (owner fills): …
+
+### [open] 2026-07-04 · raised-by: Strategist (relaying QA) · owner: user · re: training-mode overlays — in-mode visual confirmation
+Problem: the P1 feature audit PASSED (`docs/audits/audit-p1-feature.md`), but one check is
+outside a headless pass: pixel-level on-screen rendering of the four training-mode overlays
+(geometry box positions, panel layout/clipping, input-history legibility). QA confirmed the
+scene loads, instantiates, and auto-wires live, and every overlay's view-model logic is
+covered by non-vacuous headless tests — so the PASS stands — but actual visual appearance
+needs a human look in an interactive Godot session. Tracked here so P1 is not treated as
+100% closed without it. Resolution: open `game/scenes/training_mode.tscn` in the Godot
+editor, confirm the overlays render correctly; QA folds the result into the audit.
+---
+Resolution (owner fills): …
