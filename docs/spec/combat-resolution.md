@@ -251,6 +251,12 @@ the pressure/combo cases legibility most depends on. The static value answers
 
 - Positive ⇒ attacker is actionable first (plus); negative ⇒ defender acts first
   (the punish window).
+- **Defender identification (live value, AD-008/JC-012).** The live value reads the
+  current situation: the **defender is the player with `stun > 0`**, the attacker
+  the other. Neither stunned ⇒ no interaction (value `0`, no plus-player). Both
+  stunned (a trade) ⇒ the greater-remaining-stun player is the read-defender (a
+  deterministic tiebreak). Roles are **not** read from `last_hit` — the live value
+  must track the continuing situation, not the last discrete hit.
 - **Neutral restored** = the *rising edge* — the tick at which *both* players
   *become* actionable (both-actionable now AND not both-actionable at the start of
   this tick), not merely any tick both happen to be actionable (AD-025). The

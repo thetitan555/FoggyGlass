@@ -270,7 +270,7 @@ criterion 7. So tree-order in `main.gd` is ratified as *one valid way to satisfy
 the invariant, no longer a contract resting on an accident. See flags.md F-001
 (resolved). No code change required; the scaffold already satisfies the invariant.
 
-### JC-010 · 2026-07-02 · TKT-P0-04/05 · Inspection views + serialized-state backing fields packaged as plain-data classes — provisional
+### JC-010 · 2026-07-02 · TKT-P0-04/05 · Inspection views + serialized-state backing fields packaged as plain-data classes — ratified (packaging latitude; the SimState fields were F-002/AD-024)
 **Decided.** The inspection-surface returns are small `RefCounted` plain-data view
 classes (`PlayerView`, `BoxView`, `ProjectileView`, `FrameData`, `AdvantageView`,
 `HitEvent`) that COPY sim values out at construction, under `game/sim/views/`. The
@@ -298,8 +298,20 @@ spec, not invented). **The serialized-state fields these views require
 (`character_id`, `stun_kind`, `combo_damage`, `last_hit`, `neutral_restored_this_tick`)
 are NOT latitude — they change the owned SimState shape and are raised as flag
 F-002.** This entry covers only the packaging of the views/schema classes.
+**Ratified as latitude** (Architect, 2026-07-04). The packaging this entry covers —
+RefCounted copy-out view classes under `game/sim/views/`, `Resource` schema types
+under `game/sim/data/` (AD-006 `.tres`), the runtime `Projectile` as a plain
+`RefCounted` — is internal packaging of API/schema shapes the Architect already owns
+(inspection-surface.md fixes the API shape + "no live node refs"; move-format.md fixes
+the schema). Copy-out-by-construction is what makes the surface read-only structurally
+(inspection-surface.md crit 2); fixed-point-only fields keep views golden-able (crit 4).
+The one part that was NOT latitude — the serialized `SimState` fields the views require
+(`character_id`, `stun_kind`, `combo_damage`, `last_hit`, `neutral_restored_this_tick`)
+— was correctly escalated as **F-002** and is owned via **AD-024** (and AD-025 for the
+neutral flag). So this entry's own scope is pure packaging latitude; nothing to fold. No
+spec change, no code change.
 
-### JC-011 · 2026-07-02 · TKT-P0-05 · "First actionable frame" for derived recovery = duration+1 (recovery = total − last_active) — provisional
+### JC-011 · 2026-07-02 · TKT-P0-05 · "First actionable frame" for derived recovery = duration+1 (recovery = total − last_active) — ratified INTO the spec
 **Decided.** In the one canonical frame-data derivation (MoveData.frame_data),
 recovery = `move.duration − last_active_frame`, i.e. the first actionable frame of a
 once-through move is `duration + 1` (the frame after the state ends). Startup =
@@ -322,8 +334,20 @@ consistent and hand-verifiable. If the Architect intends a different actionable-
 edge convention it is a one-line change here — flagging-adjacent, but recorded as
 latitude because it is the unique internally-consistent reading of the stated
 definitions, not a new choice.
+**Ratified INTO the spec** (Architect, 2026-07-04). Contract-adjacent, not bare
+latitude: frame data is read by the frame-data panel and QA (acceptance criterion 2
+tests startup/active/recovery against hand-specified values), so the exact arithmetic
+must be unambiguous, not left to a dev to re-derive. move-format.md's "Derived frame
+data" section named the parts but not the arithmetic; the ratified reading — startup =
+`first_active − 1`, active = `last_active − first_active + 1`, recovery =
+`duration − last_active` (first actionable = `duration + 1`), total = `duration`, so the
+three parts sum to total — is the unique internally-consistent reading and is now folded
+into **move-format.md → "Derived frame data"** with the formulas inline. It is consistent
+with the 1-indexed frame model (JC-011/14/19) already ratified in the JC-013..021 block
+(`duration + 1` = the `frame_in_state > duration` end edge). Implementation matches; no
+code change.
 
-### JC-012 · 2026-07-02 · TKT-P0-07(pre-wired at 05) · Live-advantage party identification reads defender = the player in stun — provisional
+### JC-012 · 2026-07-02 · TKT-P0-07(pre-wired at 05) · Live-advantage party identification reads defender = the player in stun — ratified INTO the spec
 **Decided.** The live advantage (Advantage.live) identifies the defender as the
 player with `stun > 0` and the attacker as the other; when neither is stunned there
 is no interaction, so value = 0 / plus_player = none. If BOTH are stunned (a trade),
@@ -346,6 +370,18 @@ case (no true trades in the slice's single-hit done-bar) made deterministic so t
 hash is stable. If the Architect wants explicit role tracking, it is a localized
 change in Advantage.live. Recorded as latitude; escalate to a flag if role
 identification turns out to be feel-bearing beyond the formula's plain meaning.
+**Ratified INTO the spec** (Architect, 2026-07-04). Scrutinized as contract-adjacent,
+not bare latitude: multiple roles (debug mode, QA harness, player-facing UI) read the
+live advantage, so "which player is the defender" is a semantics they must agree on —
+the JC-007/JC-018 pattern (contract-adjacent → owned rule). AD-008 owned the formula
+and the two surfaced values but was **silent on defender identification**; the
+`stun > 0` reading is the formula's own meaning (`defender_remaining_stun` IS the
+stunned party's count), the neither-stunned ⇒ 0/none is the "no interaction" reading,
+and the both-stunned ⇒ greater-remaining-stun tiebreak keeps the hash deterministic.
+Folded into **AD-008** ("Defender identification for the live value") and surfaced in
+**combat-resolution.md**'s Advantage section. The `last_hit`-role-tracking alternative
+is now explicitly rejected in the AD (it couples a continuing per-tick situation to the
+last discrete hit). Implementation as written matches; no code change.
 
 ### JC-013 · 2026-07-02 · TKT-P0-06 · Phase pipeline packaged as a `StepPhases` static module; each AD-009 phase a named function — ratified
 **Decided.** The intra-tick phase order (AD-009) is implemented as `StepPhases`
@@ -635,7 +671,7 @@ parse failure had blocked. Tests exactly criterion 2's "each phase is a named fu
 intent, matches an existing codebase idiom, no sim code touched. Note for QA: F-007 is
 Developer-owned; this covers only the JC latitude. No spec change.
 
-### JC-022 · 2026-07-03 · TKT-P0-08 · Motion recognition = greedy ordered-token scan over the 9-frame window; a motion-id→token-sequence table — provisional
+### JC-022 · 2026-07-03 · TKT-P0-08 · Motion recognition = greedy ordered-token scan over the 9-frame window; a motion-id→token-sequence table — ratified
 **Decided.** `InputBuffer.motion_recognized` recognizes a motion by scanning the last
 `MOTION_WINDOW` (= 9, AD-022) frames of `input_history` oldest→newest, greedily advancing
 a cursor through the motion's ordered direction-token list each time a frame satisfies the
@@ -671,7 +707,7 @@ motions (`236`, `623`) and their token sequences are implementation the recogniz
 uniformly — golden the "in-order-within-9f" behavior, not a specific motion's internal
 token list as a locked contract. No spec change, no code change.
 
-### JC-023 · 2026-07-03 · TKT-P0-08 · A CancelRule's `input` command is resolved via the button_map entry whose target == the rule target (raw-button fallback); group targets deferred — provisional
+### JC-023 · 2026-07-03 · TKT-P0-08 · A CancelRule's `input` command is resolved via the button_map entry whose target == the rule target (raw-button fallback); group targets deferred — ratified
 **Decided.** `CancelEval._input_buffered` resolves a cancel rule's required `input` command
 by finding the character's `button_map` entry whose `target_state_id` equals the rule's
 `target`, then checking that entry's command is buffered through the ONE recognizer
@@ -710,7 +746,7 @@ fallback keeps a bare-button cancel authorable, and deferring group targets matc
 "leave the field, don't build the unused path" (no group cancels are authored in the slice).
 Disposition in decisions.md (JC-022..027 block). No spec change, no code change.
 
-### JC-024 · 2026-07-03 · TKT-P0-09 · Throw tech-window length authored via the throwbox's (otherwise-unused) `blockstun` field; tech = undo-damage-both-to-idle — provisional (FORMAT-FIELD question for Architect)
+### JC-024 · 2026-07-03 · TKT-P0-09 · Throw tech-window length authored via the throwbox's (otherwise-unused) `blockstun` field; tech = undo-damage-both-to-idle — overturned (folded into AD-029: dedicated `HitBox.tech_window`)
 **Decided.** The throw tech-window length (frames the defender may tech, AD-016) is read
 from the throw `HitBox.blockstun` field, which is otherwise unused on a throwbox (a throw
 is never blocked, so it has no blockstun semantics). The tech itself (`_try_throw_tech`)
@@ -752,7 +788,7 @@ reversible; the 8f length stays placeholder tuning. This is a schema question ra
 the format, not dev latitude, and it is *not* a code defect (the sim behavior was correct) —
 it is a durability/legibility improvement to where the value lives.
 
-### JC-025 · 2026-07-03 · TKT-P0-09 · Rehit cadence via a parallel `active_hit_frames` run + produced-tick comparison; clash detected when both throwboxes connect the same tick — provisional
+### JC-025 · 2026-07-03 · TKT-P0-09 · Rehit cadence via a parallel `active_hit_frames` run + produced-tick comparison; clash detected when both throwboxes connect the same tick — ratified
 **Decided.** Cadenced re-hit (`HitBox.rehit_interval`, AD-016) is tracked with an
 `active_hit_frames` PackedInt32Array kept PARALLEL to `active_hit_ids` (AD-026): index i is
 the tick `active_hit_ids[i]` last connected. `_rehit_ready` allows a re-hit only when
@@ -792,7 +828,7 @@ freezes `frame_in_state` but not the intended real-time cadence, so absolute tic
 "simultaneous ground throw attempts" — a throw whose box misses shouldn't clash. Disposition
 in decisions.md (JC-022..027 block). No spec change beyond AD-028's field; no code change.
 
-### JC-026 · 2026-07-03 · F-011 (test fix) · `_test_cancel_requires_tag` isolates the tag gate to LIGHT's COMMITTED window; adds a gate-liveness assertion — provisional (test-only latitude)
+### JC-026 · 2026-07-03 · F-011 (test fix) · `_test_cancel_requires_tag` isolates the tag gate to LIGHT's COMMITTED window; adds a gate-liveness assertion — superseded by JC-027
 **Decided.** Rewrote `test_buffer_cancels._test_cancel_requires_tag` so it only feeds/inspects
 BUTTON_1 while the whiffed LIGHT is still a *committed* move (state == LIGHT AND not
 `Actionability.is_actionable`), stopping before LIGHT recovers to idle. Added one check — a
@@ -834,7 +870,7 @@ positive control). No independent ratification: this entry is superseded, not ra
 JC-027 is the ruled disposition. The sim was spec-correct throughout (no code defect); the
 under-count was purely in the test's reachability premise.
 
-### JC-027 · 2026-07-03 · F-011 recurrence (test fix) · `_test_cancel_requires_tag` gate isolation via committed-window CONTRAST + positive control — provisional (test-only latitude) — SUPERSEDES/CORRECTS JC-026
+### JC-027 · 2026-07-03 · F-011 recurrence (test fix) · `_test_cancel_requires_tag` gate isolation via committed-window CONTRAST + positive control — ratified (test-only latitude) — SUPERSEDES/CORRECTS JC-026
 **Decided.** Rewrote `test_buffer_cancels._test_cancel_requires_tag` so it proves the tag
 gate by a whiff-vs-hit CONTRAST asserted at a committed, NON-actionable frame — never by
 observing "did P0 reach SPECIAL." Negative: a whiffed LIGHT is fed BUTTON_1 and asserted
@@ -901,7 +937,7 @@ command buffer and a move's recovery boundary (a held button firing frame-1 on t
 actionable frame) is intended AD-022 and is *not* a leak — worth a glance in the drift sweep
 but it is spec-correct. No spec change, no code change.
 
-### JC-028 · 2026-07-03 · AD-024 / F-009 (simulation.md crit 11) · `MoveRegistry` install-generation token packaged as a static `int` counter with an `install_generation()` accessor — provisional
+### JC-028 · 2026-07-03 · AD-024 / F-009 (simulation.md crit 11) · `MoveRegistry` install-generation token packaged as a static `int` counter with an `install_generation()` accessor — ratified
 **Decided.** The install-generation token AD-024/F-009 requires is a process-wide static
 `int` counter (`MoveRegistry._install_generation`) incremented by one on every `install`
 and every `clear`, exposed read-only through a static `install_generation() -> int`
@@ -930,8 +966,18 @@ touches no `SimState` shape, no contract the seam exposes. If QA (harness) prefe
 different read path or identity form, it is a localized change here.
 **Boundary.** Wiring/precondition state only — NOT `SimState`. Explicitly not serialized,
 cloned, or hashed.
+**Ratified as latitude** (Architect, 2026-07-04). The load-bearing contract — the token
+exists, is a monotonic counter bumped on every `install`/`clear`, is observable-not-
+serialized, and the per-run stability invariant is assertable — is ALREADY owned in
+**AD-024** and **simulation.md** (crit 11 + the install-generation invariant text). AD-024
+explicitly leaves "a monotonic counter, **or equivalent identity**" and the read-path
+packaging to implementation. So a static `int` counter + a static `install_generation()`
+accessor on the globally-reachable `MoveRegistry` namespace is the minimal packaging of an
+already-pinned token — genuine latitude, nothing new to fold. Correctly kept OFF the
+inspection surface / out of `SimState` (Tenet 2 / AD-001 / AD-024), so it can never enter a
+golden hash. Verified passing under the TKT-P0-11 audit. No spec change, no code change.
 
-### JC-029 · 2026-07-03 · simulation.md crit 11 · The crit-11 install-generation assertion lives in `test_sim_state.gd` — provisional (test-only latitude)
+### JC-029 · 2026-07-03 · simulation.md crit 11 · The crit-11 install-generation assertion lives in `test_sim_state.gd` — ratified (test-only latitude)
 **Decided.** The acceptance-criterion-11 check (token stable across a run's steps; bumps
 on install/clear; NOT in the state hash) is added as `_test_roster_install_generation_
 stable()` in `test_sim_state.gd` — the existing determinism/serialization test file that
@@ -953,8 +999,17 @@ one determinism/serialization test file the single place those criteria are exer
 the teardown `clear()` keeps the per-run token semantics clean between test files.
 **Boundary.** TEST-ONLY. No sim code touched by THIS call (the sim change is JC-028's
 accessor). Provisional pending QA's TKT-P0-11 harness, which may supersede or relocate it.
+**Ratified as test-only latitude — the pending condition is now met** (Architect,
+2026-07-04). The blocking condition ("provisional pending QA's TKT-P0-11 harness") is
+resolved: TKT-P0-11 landed and PASSED (`docs/audits/audit-tkt-p0-batch1.md`: TKT-P0-11
+PASS, all 9 test files pass). Verified the harness did **not** relocate or supersede the
+assertion — `_test_roster_install_generation_stable()` still lives in `test_sim_state.gd`
+(lines 178+) alongside the sibling determinism crits (1/3/4/8/9), which is the correct home
+for a determinism-precondition. Co-locating there (rather than a standalone runner or
+`test_done_bar`) is sound test latitude; the surface-read alternative is correctly rejected
+(the token is deliberately not on the surface, JC-028). No sim code touched; no spec change.
 
-### JC-030 · 2026-07-04 · TKT-P1-04 · `RecordPlaybackSource` production model: one `produce_next()` per tick feeding a uniform `_answers` reproducibility history, distinct from the mode-specific `_buffer` script — provisional
+### JC-030 · 2026-07-04 · TKT-P1-04 · `RecordPlaybackSource` production model: one `produce_next()` per tick feeding a uniform `_answers` reproducibility history, distinct from the mode-specific `_buffer` script — ratified
 **Decided.** `RecordPlaybackSource` (`game/sim/record_playback_source.gd`) tracks TWO
 parallel arrays: `_buffer` (the RECORDING artifact / PLAYBACK script — what training-
 mode.md calls "the buffer") and `_answers` (every frame this source has actually
@@ -1011,7 +1066,7 @@ and stays external to `SimState` (Tenet 2). No contract surface moves; nothing t
 the `InputSource`/AD-020 contracts already own everything this call satisfies. No spec
 change, no code change.
 
-### JC-031 · 2026-07-04 · TKT-P1-03 · `TrainingHarness` (new class) owns snapshot/restore + the single reset slot, sits above `TickHost`, and is the "driver" that produces registered dummies before stepping — provisional
+### JC-031 · 2026-07-04 · TKT-P1-03 · `TrainingHarness` (new class) owns snapshot/restore + the single reset slot, sits above `TickHost`, and is the "driver" that produces registered dummies before stepping — ratified
 **Decided.** A new `game/sim/training_harness.gd` (`class_name TrainingHarness`)
 holds a `TickHost` reference and a `{id -> RecordPlaybackSource}` registry.
 `snapshot()`/`restore()` thin-wrap `SimHarness.dump_state`/`load_state` (the
@@ -1089,7 +1144,7 @@ it keeps one StateBlob format. It composes with an externally-produced device so
 facing contract moves; nothing to fold beyond noting this harness is the concrete "driver"
 input.md criterion 7 and AD-020 already name. No spec change, no code change.
 
-### JC-032 · 2026-07-04 · TKT-P1-0P · Authored projectile shell named `ProjectileData` (not `Projectile`), resolved through a new `ProjectileRegistry` by `data_id` — mirrors `Character`/`MoveRegistry` exactly — provisional
+### JC-032 · 2026-07-04 · TKT-P1-0P · Authored projectile shell named `ProjectileData` (not `Projectile`), resolved through a new `ProjectileRegistry` by `data_id` — mirrors `Character`/`MoveRegistry` exactly — ratified INTO the spec (AD-030)
 **Decided.** move-format.md's authored `Projectile` table is implemented as
 `game/sim/data/projectile_data.gd`, `class_name ProjectileData extends Resource`
 — NOT named `Projectile`, because the runtime SimState entity already owns that
@@ -1168,7 +1223,7 @@ an owned format is ratified into an owned rule, not left a standing dev decision
 built matches AD-030; no code change required — the ruling folds the contract into the spec
 where authors and QA read it.
 
-### JC-033 · 2026-07-04 · TKT-P1-0P · Spawn fires once on the exact tick a spawning keyframe's range is ENTERED (`frame_in_state == frame_start`), not once per covered frame — provisional
+### JC-033 · 2026-07-04 · TKT-P1-0P · Spawn fires once on the exact tick a spawning keyframe's range is ENTERED (`frame_in_state == frame_start`), not once per covered frame — ratified INTO the spec (AD-030)
 **Decided.** `StepPhases._process_spawn` (phase 3) fires a keyframe's `spawn`
 action only on the tick `frame_in_state` equals that keyframe's `frame_start` —
 a one-shot per keyframe range. A `spawn` keyframe spanning multiple frames (e.g.
@@ -1217,7 +1272,7 @@ range" directly in the format. Ratified-into-spec, not bare latitude, precisely 
 character-A authoring (Batch 2) tunes the fireball's release frame against it. No code
 change (build matches AD-030).
 
-### JC-034 · 2026-07-04 · TKT-P1-0P · A projectile does not integrate (move) or age (lifetime decrement) on the same tick it spawns — mirrors the existing `was_frozen` hitstop convention — provisional
+### JC-034 · 2026-07-04 · TKT-P1-0P · A projectile does not integrate (move) or age (lifetime decrement) on the same tick it spawns — mirrors the existing `was_frozen` hitstop convention — ratified INTO the spec (AD-030)
 **Decided.** `SimState.step` captures `existing_projectile_count` (how many
 projectiles existed in the PRE-step state, before phase 3 can append new ones)
 alongside the existing `was_frozen` hitstop capture. Phase 3's "integrate every

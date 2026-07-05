@@ -263,6 +263,21 @@ attacker_remaining_recovery`, but two clearly-distinct values are surfaced:
 So `attacker_remaining_recovery` is defined as actual frames-to-actionable, not
 raw move-state recovery — the live number stays correct in the pressure/combo
 cases legibility depends on. Neutral is "restored" when both players are actionable.
+
+**Defender identification for the live value (ratified from JC-012).** The live
+advantage reads the CURRENT situation from state, so the **defender is the player
+with `stun > 0`** (`defender_remaining_stun` is definitionally the stunned party's
+count) and the attacker is the other. When **neither** is stunned there is no
+interaction to read: value `0`, no plus-player. On a **trade** (both stunned — not
+reachable in the slice's single-hit content, but pinned for determinism) the
+defender is the player with the **greater remaining stun** (a deterministic
+tiebreak so the hash is stable). Advantage is expressed from the attacker's POV
+(positive ⇒ attacker plus / actionable first), matching this AD. The live value
+must **not** read roles from `last_hit` — that couples a per-tick continuing
+situation to the last discrete hit event, wrong once stun ticks down with no new
+hit. (If a future mechanic makes role identification feel-bearing beyond the
+formula's plain meaning, that is a revision here.)
+
 **Why.** Per-tick-only left no canonical number for content to read; raw-recovery-
 only lied once a cancel shortened recovery — exactly the legibility-critical
 cases. A pinned static value plus a cancel-aware live value resolves both while

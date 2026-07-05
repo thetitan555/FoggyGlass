@@ -189,9 +189,16 @@ per-keyframe unless a move overrides it.
 
 Computed from a `MoveState`'s timeline, exposed via the inspection surface:
 
-- **Startup** = frames before the first frame any `HitBox` is active.
-- **Active** = frames during which any `HitBox` is active (first to last active).
-- **Recovery** = frames from end of active to the first actionable frame.
+- **Startup** = frames before the first frame any `HitBox` is active
+  (`first_active − 1`).
+- **Active** = frames during which any `HitBox` is active, first to last inclusive
+  (`last_active − first_active + 1`).
+- **Recovery** = frames from end of active to the first actionable frame
+  (`duration − last_active`). Equivalently, the first actionable frame of a
+  once-through move is **`duration + 1`** — the frame after the state ends
+  (`frame_in_state > duration`; 1-indexed inclusive, consistent with the frame
+  model, JC-011/JC-014/JC-019). **Total** = `duration`, so
+  `startup + active + recovery == total` exactly. (Ratified from JC-011.)
 - **On-hit / on-block advantage** = the single formula in `combat-resolution.md`
   (`defender_remaining_stun − attacker_remaining_recovery`). Defined there, in
   one place; this format only supplies the inputs (stun values, recovery).
