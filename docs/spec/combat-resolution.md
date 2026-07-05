@@ -197,6 +197,31 @@ property, not new state.
   a committed recovery state ⇒ **actionable**.
 - A defender in stun cannot act until it expires; this is the punish/true-string
   window the debug mode surfaces.
+- **Actionable-on-the-duration-frame (pinned; ratified from JC-038).** A
+  once-through move becomes **actionable on the frame `frame_in_state == duration`**
+  itself (`is_actionable` uses `frame_in_state >= duration`), while the
+  move-*ended* → return-to-idle transition fires one frame later, on
+  `frame_in_state > duration`. This one-frame straddle is **intended and
+  load-bearing**: `frames_to_actionable` returns `0` on that same frame (`duration
+  − frame_in_state == 0`), so `is_actionable` and `frames_to_actionable` agree
+  (both say "actionable now") — the live-advantage formula (AD-008), `PlayerView.
+  actionable`, and neutral-restoration all read one consistent answer. It is
+  **not** an off-by-one bug: flipping `is_actionable` to `>` would desync it from
+  `frames_to_actionable` and shift every advantage read by a frame. This is a
+  single-sourced project-wide semantic; any change to it is an Architect contract
+  revision (re-verifying every advantage golden), never a per-ticket edit.
+- **Authoring hazard — an ALWAYS-cancel window ending at `duration` loses its last
+  frame (ratified from JC-038).** Because phase 2 checks the actionable/
+  buffered-command branch *before* the cancel branch (the fixed transition
+  priority — criterion 2), a move on its `frame_in_state == duration` frame is
+  actionable and takes the buffered-command branch, so the cancel branch is never
+  reached on that frame. Consequently an ALWAYS-cancel whose `window_end ==
+  duration` is structurally **unreachable on its own last frame**. **Rule:** author
+  such an ALWAYS (input-gateless) cancel window to end at **`duration − 1`** (or
+  earlier), not at `duration`. This is a frame-authoring constraint, not an engine
+  bug — the priority order is itself contract. (Character A's prejump→jump cancel
+  is authored `[3,3]` for exactly this reason; its `duration` stays the authored
+  4f.) See the same note in `move-format.md`.
 
 ## Advantage — one formula, two surfaced values (AD-008)
 

@@ -99,13 +99,25 @@ travelling frame F+1; author a `lifetime` and reach with that one-tick offset in
 | `target` | Destination `state_id`, or a tag/group naming a set of states. |
 | `condition` | `on_hit` \| `on_block` \| `on_contact` \| `on_whiff` \| `always`. |
 | `window` | Frame range within the move the cancel is allowed; default first-active→end. |
-| `input` | Required command (button/motion) to take the cancel. |
+| `input` | Required command (button/motion) to take the cancel. **`0` = none** — no input gate at all: the cancel is satisfied on input unconditionally (still subject to `condition`/`window`/`requires_tag`). Used for an `always`, window-gated transition that carries a state into the next with no button/motion (e.g. a prejump into the neutral jump arc). Mirrors the `ButtonMapEntry` sentinel convention (`motion 0 = none`, `button_index -1 = no button`). A nonzero `input` is resolved through the one recognizer via the `button_map` entry targeting the same state (raw-button fallback) — JC-023/AD-015. |
 | `requires_tag` | Optional cancel tag that must be present (granted by a connecting `HitBox.cancel_tags`). |
 
 Move classes are expressed, not special-cased: **gatling/chain** = `on_contact`
 to another normal within a `window`; **special-cancel** = `requires_tag` granted
 by the hit; **whiff-cancel** = `on_whiff`. Rehit/multi-hit is *not* a cancel —
 see `HitBox.rehit_interval` and AD-016.
+
+**Authoring rule — don't end an ALWAYS-cancel window at `duration` (JC-038).** A
+once-through move is *actionable on its `frame_in_state == duration` frame*, and
+phase 2 runs the actionable/buffered-command branch **before** the cancel branch
+(fixed transition priority, `combat-resolution.md` criterion 2). So a cancel whose
+`window` ends exactly at `duration` is unreachable on its own last frame — the
+buffered-command branch preempts it. **Author an ALWAYS (input-gateless,
+`input = 0`) chaining cancel to end at `duration − 1` or earlier.** This is a
+frame-authoring constraint for character authors (it will bite character-B
+authoring in P2 otherwise); the priority order and the actionable-on-`duration`
+semantics are pinned contract — see `combat-resolution.md` → "Stun &
+actionability".
 
 ### `ButtonMapEntry` (one entry in `Character.button_map`) — command recognition contract (AD-018, AD-032)
 

@@ -1519,7 +1519,7 @@ way). Ratified as-built; no code change; the height mechanism is a raise, below.
 (Disposition recorded in the JC-A-05 entry: hitstun 15 authoritative, spec fixed to
 +6, authored value correct as-built.)
 
-### JC-035 · 2026-07-04 · TKT-P1-11 · `HitBox.is_throw` reconciled to `hit_kind` as a computed property — provisional
+### JC-035 · 2026-07-04 · TKT-P1-11 · `HitBox.is_throw` reconciled to `hit_kind` as a computed property — ratified
 **Decided.** `is_throw` becomes a GDScript computed property (`get`/`set`) backed by
 the new `hit_kind` field, rather than a second stored bool kept in sync by
 convention: `get` returns `hit_kind == HIT_KIND_THROW`; `set` writes `hit_kind` to
@@ -1544,8 +1544,17 @@ discipline" — AD-031 says they must agree; making disagreement structurally
 impossible is stronger than documenting the invariant. Zero-diff on every existing
 throw call site is a bonus, not the driver.
 **Serves.** TKT-P1-11 (`game/sim/data/hit_box.gd`).
+**Ratified as latitude** (Architect, 2026-07-04). Pure packaging of AD-031's
+already-owned decision ("`is_throw`/`throwbox` is exactly `hit_kind == THROW` …
+authoring may set either but they must agree" — AD-031 Decision + Consequence).
+A computed property (one storage location, `hit_kind`) makes "the same fact under
+two names" structurally true rather than discipline-maintained — strictly stronger
+than the invariant AD-031 already requires, and zero-diff on every existing throw
+call site. No contract surface moves (`hit_kind` remains the canonical field per
+AD-031); nothing to fold beyond AD-031's existing text. No spec change, no code
+change.
 
-### JC-036 · 2026-07-04 · TKT-P1-11 · dev-test scenarios state-inject a non-attacking invuln state to isolate the phase-4 gate — provisional
+### JC-036 · 2026-07-04 · TKT-P1-11 · dev-test scenarios state-inject a non-attacking invuln state to isolate the phase-4 gate — ratified
 **Decided.** `game/tests/test_invuln.gd`'s strike-whiff test uses character A's back
 dash (invuln, no hitbox of its own) as the invuln-bearing defender, not `2H` (which
 character-a.md's own matchup uses to beat a jump-in); the projectile-passes-through
@@ -1575,8 +1584,17 @@ this ticket's end-to-end phase-4 gate proof on the shared mechanism; the specifi
 choreography-level "2H beats this exact jump-in" interaction-level claim is
 character-a.md content tuning, not this engine ticket's contract.
 **Serves.** TKT-P1-11 (`game/tests/test_invuln.gd`).
+**Ratified as test-only latitude** (Architect, 2026-07-04). TEST construction, no
+sim code and no authored-content change: choosing a no-hitbox invuln state (back
+dash) and a distanced DP to isolate the phase-4 SUPPRESSION mechanism (gate →
+no-record, AD-031) is exactly what a unit test isolating that gate should do — a
+second hitbox in the scenario would confound the mechanism under test. The
+direct-`frame_in_state`-drive mirrors the existing `test_character_a.gd`
+convention. The `2H`-vs-jump-in *interaction* claim is character-a.md content
+tuning, exercised separately by that file's structural assertions — correctly not
+this engine ticket's contract. No spec change; QA owns test-verdict adequacy.
 
-### JC-037 · 2026-07-04 · TKT-P1-12 · `CancelEval._input_buffered` honors `CancelRule.input == 0` as "no input gate" — provisional, FLAGGING FOR ARCHITECT ATTENTION
+### JC-037 · 2026-07-04 · TKT-P1-12 · `CancelEval._input_buffered` honors `CancelRule.input == 0` as "no input gate" — ratified INTO the spec
 **Decided.** `CancelEval._input_buffered` (`game/sim/cancel_eval.gd`) now short-
 circuits `return true` when `rule.input == 0`, BEFORE the button_map-lookup /
 raw-bit fallback. Previously `input == 0` fell through both: no button_map entry
@@ -1615,8 +1633,30 @@ pass can confirm this reasoning holds and, if desired, fold "input == 0 always
 means no input gate" explicitly into `move-format.md`'s `CancelRule.input` row
 (currently only in the class doc comment, not the spec table).
 **Serves.** TKT-P1-12 (`game/sim/cancel_eval.gd`).
+**Ratified INTO the spec** (Architect, 2026-07-04). Scrutinized as the Developer
+asked. Two things checked and confirmed:
+1. **Correct reading of the cancel contract.** `input == 0 = none` was already the
+   documented meaning in `CancelRule.input`'s class doc comment, and it is
+   consistent with the format's own sentinel conventions (`ButtonMapEntry.motion
+   0 = none`, `button_index -1 = no button`). But it lived *only* in the code doc
+   comment, **not** in the owned spec — exactly the under-classification pattern
+   (JC-007→AD-023, JC-018→AD-025) to avoid. So it is now folded into
+   **move-format.md → CancelRule `input`** and **AD-015** (`0` = no input gate;
+   satisfied unconditionally, still subject to condition/window/requires_tag). It
+   is no longer a standing dev call — it is owned contract.
+2. **Genuinely a no-op for every other authored cancel.** Verified: the
+   short-circuit fires only when `rule.input == 0`, and PREJUMP's chaining cancel
+   is the ONLY `input == 0` cancel anywhere (grep over `game/`: the sole hits are
+   `character_a.gd:393` and its baked twin `character-a.tres:374`, both the same
+   PREJUMP cancel; `test_support.gd` uses `BUTTON_1`). Every other cancel has a
+   nonzero `input` and takes the unchanged button_map/raw-bit path. Zero behavior
+   change outside PREJUMP.
+The Developer's judgment (fix inline, flag for confirmation rather than file to
+`flags.md`) was correct — there was one correct reading of the existing doc
+comment. Implementation matches the now-owned spec; no code change required. Specs
+changed: `move-format.md` (CancelRule `input` row), `decisions.md` (AD-015).
 
-### JC-038 · 2026-07-04 · TKT-P1-12 · PREJUMP's ALWAYS-cancel window moved to frame 3 (one frame before duration) — provisional
+### JC-038 · 2026-07-04 · TKT-P1-12 · PREJUMP's ALWAYS-cancel window moved to frame 3 (one frame before duration) — ratified with a spec note; off-by-one ruled intended
 **Decided.** Character A's `STATE_PREJUMP` cancel window (`window_start`/
 `window_end`) changed from `[4, 4]` (== `duration`) to `[3, 3]` (one frame before
 `duration`). `duration` itself, and the rest of PREJUMP's timeline, are UNCHANGED
@@ -1666,8 +1706,41 @@ the same race. Worth a `move-format.md`/`combat-resolution.md` note (or an
 `Actionability` contract clarification) so a future author does not have to
 rediscover this by hand-tracing `step_phases.gd` again.
 **Serves.** TKT-P1-12 (`game/content/character_a.gd`, `STATE_PREJUMP`).
+**Ratified — the `[3,3]` window stands, the off-by-one is ruled INTENDED, and the
+hazard is now an owned spec note** (Architect, 2026-07-04). Scrutinized as the
+Developer asked. Rulings:
+1. **The off-by-one is intended, NOT a Developer-owned bug.** `is_actionable` uses
+   `frame_in_state >= duration` (actionable ON the duration frame); the move-ended
+   → idle transition uses `frame_in_state > duration` (ended one frame later). The
+   Developer read this as a possible off-by-one to fix. It is not: I checked
+   `frames_to_actionable`, which returns `duration − frame_in_state == 0` on that
+   same frame — so `is_actionable` and `frames_to_actionable` AGREE ("actionable
+   now") under `>=`. Flipping `is_actionable` to `>` would DESYNC it from
+   `frames_to_actionable` and shift every advantage read (AD-008), `PlayerView.
+   actionable`, and neutral-restoration by a frame. `is_actionable` is
+   single-sourced across the whole legibility surface, so this is an Architect
+   contract semantic, and the `>=` reading is the internally-consistent one. Pinned
+   as intended in **combat-resolution.md → "Stun & actionability"** (new
+   "Actionable-on-the-duration-frame" bullet). The Developer was right to refuse to
+   touch `is_actionable` in a one-ticket scope.
+2. **The authoring hazard is now documented (the real ask).** The interaction —
+   phase 2 checks the actionable/buffered-command branch before the cancel branch
+   (fixed priority, criterion 2), so a move on `frame_in_state == duration` is
+   actionable and preempts any cancel whose `window_end == duration` — is a general
+   authoring hazard that will bite character-B authoring in P2. Folded into
+   **combat-resolution.md → "Stun & actionability"** (new bullet) and
+   **move-format.md** (a "don't end an ALWAYS-cancel at `duration`" authoring rule
+   by the CancelRule section). The rule: author an input-gateless ALWAYS chaining
+   cancel to end at `duration − 1` or earlier.
+3. **The `[3,3]` workaround is ratified as the correct authoring.** It is the
+   minimal ticket-local fix, consistent with the now-documented rule; PREJUMP's
+   `duration` stays the Strategist-owned authored 4f (`character-a.md` Movement
+   table), untouched. The Developer correctly rejected the three alternatives that
+   would have changed contract (flip `is_actionable`, reorder phase-2 priority,
+   extend `duration`). No code change required. Specs changed:
+   `combat-resolution.md`, `move-format.md`.
 
-### JC-039 · 2026-07-04 · TKT-P1-13 · `AirHeightScaling`'s four provisional numbers — provisional, slice tuning
+### JC-039 · 2026-07-04 · TKT-P1-13 · `AirHeightScaling`'s four provisional numbers — ratified
 **Decided.** `DEEP_BONUS = 6`, `HIGH_PENALTY = 8`, `HIGH_REF_DEPTH = FP.from_int(105)`
 (baked as the literal `6881280`), `MIN_HITSTUN = 4` (`game/sim/air_height_scaling.gd`).
 `HIGH_REF_DEPTH` (105 units) is set a bit below character A's full jump-arc apex
@@ -1700,8 +1773,18 @@ correctly-ordered advantages (`test_air_height_scaling.gd`), the floor holds, an
 route 2's deep-link claim is satisfied with room to spare — QA goldens the
 ordering/floor/observability per the ticket's own acceptance, not this curve.
 **Serves.** TKT-P1-13 (`game/sim/air_height_scaling.gd`).
+**Ratified as latitude** (Architect, 2026-07-04). These are exactly the "four
+provisional numbers" AD-033 explicitly names as the Developer's to pick
+(mechanism-first, feel-later — same bar as `DamageScaling`/JC-016 and the DP
+blockstun). The MECHANISM is the owned contract (AD-033) and is built to spec; the
+numbers are placeholder tuning, correctly refusing to back into a target advantage
+(false precision the Strategist hasn't signed off — same discipline as JC-016).
+Verified end-to-end: ordering holds, floor holds, route 2's deep-link claim
+satisfied with margin. **For QA:** golden the ordering/floor/observability per the
+ticket's acceptance, NOT this specific curve (placeholder, not a locked golden). No
+spec change, no code change.
 
-### JC-040 · 2026-07-04 · TKT-P1-05..09 · Recovering an interrupted Batch 3: verification approach + view/view-model split adopted as the batch's structure — provisional
+### JC-040 · 2026-07-04 · TKT-P1-05..09 · Recovering an interrupted Batch 3: verification approach + view/view-model split adopted as the batch's structure — ratified (view/view-model split adopted as a project-wide convention)
 **Context.** This session recovered a Batch 3 left uncommitted and unverified by
 a prior interrupted session (`training_mode.gd`, `main.gd`/`main.tscn`,
 `overlays/geometry_overlay.gd` + `_model.gd`, `overlays/frame_data_panel.gd` +
@@ -1736,8 +1819,26 @@ reversible, invisible across the seam. Flagged for Architect attention per the
 task's own instruction ("If you adopt it as the batch's structure, record that").
 **Serves.** TKT-P1-05, 06, 07, 08, 09 (`game/scenes/training_mode.gd`,
 `game/scenes/overlays/*.gd`).
+**Ratified — and the view/(pure)view-model split is adopted as a project-wide UI
+convention** (Architect, 2026-07-04). Decision (1) (the recovery finding: nothing
+to reconcile, `main.gd`/`main.tscn` are unmodified P0 scaffold, `training_mode.gd`
+is additive) is verification latitude, ratified as-is. Decision (2) is more than
+batch-shape latitude: a Node-based view (`_draw()`/`Label.text`, `set_source`,
+`@onready` paths) backed by a static, Node-free `*Model` that does all
+`InspectionView` reads and produces plain display data — with the model
+headlessly unit-tested and the view a thin, visually-QA'd render layer — is a
+**structural convention future player-facing UI follows**, so I am ratifying it as
+an owned pattern, not a per-batch accident. It is exactly the seam discipline the
+Architect brief wants (player-facing UI built against the read-only inspection
+surface, never reaching into sim internals; the headless-testable model is where
+that surface is consumed). Recorded as a convention in **decisions.md** (JC-035..043
+ratifications block) so P2 UI inherits it. This is the ONE call in this batch worth
+promoting from latitude to a named convention; the rest of (2)'s reasoning
+(headless model tests, thin views smoke-verified, one pattern across all four
+overlays for consistency) is ratified as stated. No sim/contract surface moves. No
+code change.
 
-### JC-041 · 2026-07-04 · TKT-P1-05 · Missing `.tscn` scenes built; overlays auto-wired by duck-typed `set_source` convention — provisional
+### JC-041 · 2026-07-04 · TKT-P1-05 · Missing `.tscn` scenes built; overlays auto-wired by duck-typed `set_source` convention — ratified
 **Discovered via.** Verification, not authored-fresh: the interrupted session left
 `training_mode.gd` (`extends Node2D`, `@onready var _tick_host: TickHost = $TickHost`)
 and every overlay script (`@onready var _label: Label = $Label` in
@@ -1779,8 +1880,19 @@ this scene's own wiring, and cheaply reversible (a future overlay just needs
 `training_mode.tscn` for real): all mounted overlays report `_source == tm` after
 one process frame and render live text/geometry through the one shell.
 **Serves.** TKT-P1-05 (`game/scenes/training_mode.gd`, `game/scenes/training_mode.tscn`).
+**Ratified as latitude** (Architect, 2026-07-04). Building the missing
+`training_mode.tscn` is what turns the verified overlay `.gd` logic into something
+actually open-able/runnable — training-mode.md's whole point ("a mode a developer
+or QA opens to observe the sim"); a scene the overlays' `@onready` node paths need
+is required infrastructure, not a design choice. Auto-wiring by duck-typed
+`set_source` keeps the shell the single place overlay→shell wiring happens (mirrors
+the read-only/control-only seam discipline in `training_mode.gd`'s header) without
+inventing a shared base type across `Node2D`/`Control` overlays (GDScript has no
+interfaces; a marker base buys nothing the method-presence check doesn't). Scene
+wiring only — invisible outside this scene, cheaply reversible. Smoke-verified
+end-to-end. No spec/contract surface. No new decision.
 
-### JC-042 · 2026-07-04 · TKT-P1-06 · Projectile hitbox given its own draw color instead of a `hit_kind`-based BoxView split — provisional (ratifies the interrupted session's own documented call)
+### JC-042 · 2026-07-04 · TKT-P1-06 · Projectile hitbox given its own draw color instead of a `hit_kind`-based BoxView split — ratified
 **Found already made,** with its reasoning already written in-file
 (`geometry_overlay_model.gd`'s header comment) by the interrupted session; this
 entry is the Architect-facing log record that call never got, plus this session's
@@ -1811,8 +1923,20 @@ inspection-surface.md specifies it. Verified end-to-end
 (`test_geometry_overlay.gd`: a projectile's hitbox draws in `COLOR_PROJECTILE`,
 distinct from `COLOR_HIT`, while still reporting `kind == BoxView.KIND_HIT`).
 **Serves.** TKT-P1-06 (`game/scenes/overlays/geometry_overlay_model.gd`).
+**Ratified as latitude — and it correctly respects the seam contract** (Architect,
+2026-07-04). Verified against the seam I own: `inspection-surface.md`'s `BoxView`
+table carries `kind` = HURT/HIT/THROW/PUSH only, with **no `hit_kind` field**
+(confirmed by re-reading the table), and AD-031's Consequence adds `hit_kind` to
+`HitBox`/the sim, never to `BoxView`. So distinguishing a projectile's hitbox by a
+draw-list color in the overlay's OWN concern — rather than branching on a
+`BoxView.hit_kind` that does not exist, or adding one — is exactly right: it
+satisfies the ticket's "finer coding" invitation and the charter clarity standard
+(a projectile connecting/whiffing reads at a glance) WITHOUT reaching past the
+seam's returned type or touching the contract `inspection-surface.md` owns. The
+Developer correctly identified adding a `BoxView` field as out-of-latitude
+seam-contract work. No spec change (the seam stays as specified); no code change.
 
-### JC-043 · 2026-07-04 · TKT-P1-09 · Recognized-command projection reconstructs `InputHistory` from `PlayerView.input_history` to call the sim's own recognizer — provisional
+### JC-043 · 2026-07-04 · TKT-P1-09 · Recognized-command projection reconstructs `InputHistory` from `PlayerView.input_history` to call the sim's own recognizer — ratified
 **Decided.** `InputHistoryPanelModel.recognized_commands(pv: PlayerView)` calls
 `InputBuffer.entry_satisfied(hist, entry, facing)` — the SAME static recognizer
 function the sim's phase 2 and buffered-command executor call — over an
@@ -1848,3 +1972,16 @@ NOT recognize as throw (`test_input_history_panel.gd`,
 `_test_bare_l_still_reaches_light_not_shadowed_by_chord_recognition`), matching
 TKT-P1-12's own "the chord does not shadow" acceptance.
 **Serves.** TKT-P1-09 (`game/scenes/overlays/input_history_panel_model.gd`).
+**Ratified as latitude** (Architect, 2026-07-04). This is the single-source-of-truth
+principle applied on the training-mode side: the panel calls the SAME
+`InputBuffer.entry_satisfied` recognizer the sim's phase 2 uses, over an
+`InputHistory` reconstructed by that class's own public `from_dict` round-trip from
+the seam's already-exposed `PlayerView.input_history` — so "debug mode and the sim
+can't disagree about what a jump/throw is because they read the same recognizer over
+the same frames" (inspection-surface.md's stated principle for the seam, extended
+here). A second panel-local recognizer would be exactly the drift the convention
+prevents. The two `ButtonMapEntry` query shapes encode only AD-032's generic schema
+(pure-direction UP, `BUTTON_0`+`BUTTON_2` chord), no `CharacterA` reference — so the
+overlay stays character-agnostic (inspection-surface.md criterion 5's spirit). No
+seam field added (`entry_satisfied` is callable client-side against seam-legal data);
+no sim-internal access. No spec/contract change, no code change.

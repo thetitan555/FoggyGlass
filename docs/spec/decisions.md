@@ -102,6 +102,67 @@ tech-window schema — **overturned** as the durable shape and folded into an ow
 decision: the `blockstun` reuse is replaced by a dedicated `HitBox.tech_window` field
 (AD-029); the Developer migrates authoring + the read off `blockstun`.
 
+## P1 latitude ratifications (JC-035..043)
+
+The P1 judgment calls (character A + training mode), disposed at the pre-audit
+ratification pass (2026-07-04). Full reasoning in `judgment-log.md`; this records
+the disposition. All nine **ratified** (none overturned).
+
+- **JC-035** `HitBox.is_throw` reconciled to `hit_kind` as a computed property —
+  *latitude*: pure packaging of AD-031's owned "same fact under two names"; a
+  computed property makes it structurally true (one storage location) rather than
+  discipline-maintained. No contract surface moves.
+- **JC-036** dev-test scenarios inject a no-hitbox invuln state to isolate the
+  phase-4 suppression gate — *test-only latitude*: correct isolation of the AD-031
+  gate mechanism; the `2H`-vs-jump-in interaction claim is character-a.md content,
+  exercised separately.
+- **JC-037** `CancelEval` honors `CancelRule.input == 0` = "no input gate" —
+  ratified **into the spec**. The `0 = none` meaning was already documented (in the
+  class doc comment) and matches the format's sentinel conventions, but lived only
+  in code — now folded into **move-format.md → CancelRule `input`** and **AD-015**
+  (see above). Verified a genuine no-op for every other authored cancel (PREJUMP is
+  the sole `input == 0` cancel in the codebase).
+- **JC-038** PREJUMP's ALWAYS-cancel window moved `[4,4]`→`[3,3]` — ratified **with
+  a spec note; the off-by-one ruled INTENDED**. `is_actionable` (`>= duration`) and
+  the move-ended check (`> duration`) straddle by one frame *by design*:
+  `frames_to_actionable` returns `0` on the `== duration` frame, so the two agree
+  and every advantage read (AD-008) stays consistent — flipping to `>` would desync
+  them. Because phase 2's fixed priority runs the actionable/buffered-command branch
+  before the cancel branch, an ALWAYS-cancel whose `window_end == duration` is
+  unreachable on its own last frame — a general **authoring hazard** now documented
+  in **combat-resolution.md → "Stun & actionability"** and **move-format.md** (rule:
+  author an input-gateless ALWAYS chaining cancel to end at `duration − 1`). The
+  `[3,3]` workaround is the correct authoring; PREJUMP's authored 4f `duration` is
+  unchanged. This is Architect-owned contract, not a Developer bug.
+- **JC-039** `AirHeightScaling`'s four provisional numbers — *latitude*: exactly the
+  numbers AD-033 names as the Developer's to pick (mechanism-first, same bar as
+  JC-016). QA goldens ordering/floor/observability, not the curve.
+- **JC-040** view/(pure)view-model split adopted as a **project-wide UI
+  convention**: player-facing overlays are a thin Node-based view (`_draw()`/
+  `Label.text`, `set_source`, `@onready` paths) backed by a static, Node-free
+  `*Model` that does all `InspectionView` reads and produces plain display data; the
+  model is headlessly unit-tested, the view is a thin, visually-QA'd render layer.
+  This is the seam discipline the Architect brief wants (player-facing UI built
+  against the read-only inspection surface, never reaching into sim internals) made
+  structural. **Future P2 UI follows this pattern.** (The batch-recovery finding —
+  nothing to reconcile; `main.gd`/`main.tscn` are unmodified P0 scaffold — is
+  verification latitude.)
+- **JC-041** missing `.tscn` scenes built + overlays auto-wired by duck-typed
+  `set_source` — *latitude*: required infrastructure to make the mode runnable
+  (training-mode.md's point); auto-wire keeps the shell the one wiring place without
+  a shared base type. Scene-wiring only, no contract surface.
+- **JC-042** projectile hitbox given its own draw color instead of a
+  `hit_kind`-based `BoxView` split — *latitude*, and it correctly respects the seam:
+  `BoxView.kind` (inspection-surface.md) is HURT/HIT/THROW/PUSH with no `hit_kind`
+  field, and AD-031 adds `hit_kind` to the sim, not to `BoxView` — so the finer
+  coding happens at the overlay's own draw-list level, not by reaching past the seam
+  type. No seam change.
+- **JC-043** recognized-command projection reuses the sim's own recognizer
+  (`InputBuffer.entry_satisfied` over an `InputHistory` reconstructed from
+  `PlayerView.input_history`) — *latitude*: single-source-of-truth extended to the
+  training-mode side (no second panel-local recognizer to drift), character-agnostic
+  (encodes only AD-032's generic schema), no seam field added.
+
 ---
 
 ### AD-001 · State is data; the scene tree is a view — settled
@@ -308,8 +369,10 @@ a single extractor (loses the truncation callers need); saturating-clamp `mul`
 **Decision.** `MoveState.cancels` is a list of `CancelRule`s, each:
 `target` (state id or tag/group), `condition` (`on_hit` | `on_block` |
 `on_contact` | `on_whiff` | `always`), `window` (frame range within the move;
-default first-active→end), `input` (required command), `requires_tag` (optional
-cancel tag). Move classes fall out of this: gatling/chain = `on_contact` to
+default first-active→end), `input` (required command; **`0` = no input gate** —
+the cancel is satisfied unconditionally on input, still subject to
+`condition`/`window`/`requires_tag`, ratified from JC-037), `requires_tag`
+(optional cancel tag). Move classes fall out of this: gatling/chain = `on_contact` to
 another normal within a window; special-cancel = `requires_tag` granted by the
 connecting hitbox; whiff-cancel = `on_whiff`. Rehit/multi-hit is **not** a cancel
 (AD-016).
