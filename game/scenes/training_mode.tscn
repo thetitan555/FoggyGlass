@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://bfg1trainingmode1"]
+[gd_scene load_steps=7 format=3 uid="uid://bfg1trainingmode1"]
 
 [ext_resource type="Script" path="res://scenes/training_mode.gd" id="1_shell"]
 [ext_resource type="Script" path="res://sim/tick_host.gd" id="2_tickhost"]
 [ext_resource type="Script" path="res://scenes/overlays/geometry_overlay.gd" id="3_geometry"]
 [ext_resource type="Script" path="res://scenes/overlays/frame_data_panel.gd" id="4_framedata"]
 [ext_resource type="Script" path="res://scenes/overlays/live_state_panel.gd" id="5_livestate"]
+[ext_resource type="Script" path="res://scenes/overlays/input_history_panel.gd" id="6_inputhistory"]
 
 [node name="TrainingMode" type="Node2D"]
 script = ExtResource("1_shell")
@@ -38,3 +39,15 @@ script = ExtResource("5_livestate")
 layout_mode = 0
 offset_right = 504.0
 offset_bottom = 110.0
+
+[node name="InputHistoryPanel" type="Control" parent="."]
+offset_left = 16.0
+offset_top = 270.0
+offset_right = 700.0
+offset_bottom = 380.0
+script = ExtResource("6_inputhistory")
+
+[node name="Label" type="Label" parent="InputHistoryPanel"]
+layout_mode = 0
+offset_right = 684.0
+offset_bottom = 100.0
