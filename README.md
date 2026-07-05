@@ -76,6 +76,24 @@ Roles carry **no memory across sessions**, so state lives in **artifacts, not he
   and "why did that hit whiff?" are both answerable live in the training mode — audited, not
   assumed.
 
+### User's observations 
+
+(you can tell I wrote it because this markdown is probably not formatted properly)
+
+- Big asterisk on that last QA step. It tried to spawn its own subagent, which is absolutely not what it's supposed to do.
+Strategist had to correct it and say "do the audit, don't delegate". This burned 150k tokens before I could catch it, and I had to be the one to catch it. 
+This is the biggest one.
+- The Claude app UI prompted me to update stale comments due to slight semantic wrongness in godot terminology.
+That process spawned a new worktree which never properly committed and was unable to be deleted until I killed the Claude app.
+- Holy SHIT it spent a lot of tokens. This stage blasted through most of my $30 buffer!
+That was supposed to last the whole month, and it barely lasted a session!
+- I spent $42 for the progress made so far. 
+Would I have been willing to commission someone for this much well-documented well-architected self-correcting work?
+...Maybe? Unclear. It's hard to argue with the volume of results. At the same time, I don't have anything I can really look at or read.
+It's done so much so fast that truly catching up to it would take me until the next token refresh at Wednesday 7am.
+So I guess I'm waiting on a playable vertical slice, which will probably come around P3-P4. I can wait that long.
+However, the amount I've learned about this has been priceless. Thanks for continuing to elbow me about this until I did it dad <3
+
 ## Status & open threads
 
 **P1 is done (audited).** Character A and the instrumentation the whole team now uses exist
