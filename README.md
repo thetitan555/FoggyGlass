@@ -89,12 +89,10 @@ That process spawned a new worktree which never properly committed and was unabl
 That was supposed to last the whole month, and it barely lasted a session!
 - I spent $42 for the progress made so far. 
 Would I have been willing to commission someone for this much well-documented well-architected self-correcting work?
-...Maybe? Unclear. It's hard to argue with the volume of results. At cthe same time, I don't have anything I can really look at or read.
-It's done so much so fast that truly catching up to it would take me the better part of a week.
+...Maybe? Unclear. It's hard to argue with the volume of results. At the same time, I don't have anything I can really look at or read.
+It's done so much so fast that truly catching up to it would take me until the next token refresh at Wednesday 7am.
 So I guess I'm waiting on a playable vertical slice, which will probably come around P3-P4. I can wait that long.
 However, the amount I've learned about this has been priceless. Thanks for continuing to elbow me about this until I did it dad <3
-- I think the batching strategy is costing more than it's saving. Batched developer sessions regularly climb up to 100k+ tokens. There's no way that's cheaper than cold starts.
-There's probably some savings that can still be had by doing token compression of the first-read files into the role definitions. This is a drift vector. Too bad! 
 
 ## Status & open threads
 
