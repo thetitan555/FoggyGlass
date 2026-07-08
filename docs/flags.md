@@ -87,3 +87,45 @@ visible on a real running window is the **P1.1 human-inspection gate** (`audit-c
 `p1.1-finish-instrument.md`) — the user's to confirm by running `training_mode.tscn`, separate
 from and not claimed by this code fix. This flag closes the code-defect/unspecced-contract
 question the geometry finding raised; it does not itself constitute the human sign-off.
+
+### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Developer · re: arrow-key left/right movement does nothing
+Problem: first human operation of `training_mode.tscn` after TKT-P1.1-01/02 (user, 2026-07-08).
+UP works (jump straight up) but LEFT and RIGHT arrow keys produce no walk — horizontal movement
+by keyboard is impossible. Forward displacement from moves works (5H advances forward), so the
+sim-side walk is not the suspect; the gap is in the human control path: either
+`_sample_device_p1` (`game/scenes/training_mode.gd`) does not sample left/right into the emitted
+`InputFrame` the way it samples up, or the `project.godot` input-map bindings for left/right are
+missing/overridden (the `[input]` section added in TKT-P1.1-02). Diagnose which and fix so a human
+can walk both directions. **Blocks P1.1's "operable by a human" gate** — there is no neutral or
+spacing without walk. Add a headless regression asserting the device sampler encodes the left and
+right direction bits (mirroring the attack-button-bit test).
+---
+Resolution (owner fills): …
+
+### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Developer · re: player sinks ~5px below the floor on landing
+Problem: same human run. On landing from a straight-up jump, the player drops through the floor
+slightly (~5px) MOST times. First determine whether this is a SIM defect (the player's sim `pos_y`
+actually goes below `ground_y` for one or more ticks — read the Live State `pos_y` against
+`ground_y`) or a RENDER defect (sim `pos_y` is correctly clamped at `ground_y`, but the AD-035
+render framing / `geometry_overlay` seats the drawn ground line a few px off from the sim floor).
+Fix accordingly: if SIM, the landing clamp against `ground_y` (jump arc, JC-A-01) is overshooting —
+fix and note that determinism goldens change deliberately (JC-017-style, a conscious golden update);
+if RENDER, align the drawn ground line to sim `ground_y` under AD-035. **May bounce to the Architect**
+if AD-035 underspecifies where the ground line seats. The floor is a reference the player reads
+against, so this is a gate-visible legibility defect and blocks the P1.1 human gate alongside the
+movement flag.
+---
+Resolution (owner fills): …
+
+### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Strategist · re: character A crouching-normal attack heights — confirm design intent (NON-BLOCKING)
+Problem: the first visual look at character A's boxes (via the now-working geometry overlay)
+surfaced a content-design QUESTION, not a defect: 2L and 2M attack at HEAD-LEVEL while their
+hurtbox shrinks (crouch), whereas 2H attacks near the bottom; 5L/5M/5H render lower on the
+character (5H advances forward, correct). Crouching light/medium normals hitting at head height is
+unusual for a grounded shoto and may or may not be intended authored move data. This is a
+design-intent call (character A identity → brief → the user's design taste), **NOT a P1.1
+operability item, and does NOT block the P1.1 gate.** Resolve WITH THE USER on return: confirm the
+crouching-normal attack heights are intended, or route a content adjustment to the Architect (spec)
+/ Developer (move data). Recorded now so the observation isn't lost while the gate closes.
+---
+Resolution (owner fills): …
