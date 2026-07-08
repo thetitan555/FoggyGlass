@@ -39,6 +39,90 @@ func _on_ticked(_tick: int) -> void:
 	queue_redraw()
 
 
+# =============================================================================
+# TKT-P1.1-01 Part B — AD-035 render framing.
+#
+# A render-only world->screen transform applied to THIS node's own Transform2D
+# (position + scale) — the "equivalent offset/zoom applied to the
+# world-drawing node" AD-035 names as an alternative to a Camera2D. Because
+# it's a transform on this node alone (not a viewport-wide Camera2D), the four
+# screen-anchored HUD panels — SIBLINGS of this node under TrainingMode, never
+# children of it — are completely unaffected "for free": no CanvasLayer
+# restructuring needed to keep them screen-anchored (AD-035: "panels stay
+# screen-anchored HUD, not moved by the framing").
+#
+# RENDER-ONLY (Tenet 1 / AD-019 / AD-035). This only ever sets this Node2D's
+# `position`/`scale` — pure render/view state, never a SimState field. It is
+# recomputed from the viewport size and the placeholder stage geometry below,
+# and writes nothing back to the sim. The draw LIST this node renders
+# (`GeometryOverlayModel.build_draw_list`) has no parameter and no dependency
+# on this transform at all — a golden of that list, and of any SimState hash,
+# is byte-identical whether or not this framing runs (see
+# `test_geometry_overlay.gd`'s framing tests).
+#
+# PLACEHOLDER STAGE GEOMETRY (Developer's, like tuning — both the ticket and
+# AD-035 call the exact numbers placeholder). These mirror
+# `StageState.new_initial()`'s actual defaults (wall_left=-400, wall_right=400,
+# ground_y=0, game units) but are plain literals here, not a read through
+# `StageState`, because `StageState` is a sim-internal type this file's seam
+# discipline excludes (see header). Recorded in the judgment log: if the seam
+# later grows a live stage-bounds accessor, this should read it instead of
+# assuming the shell's fixed initial stage — not needed for this ticket, since
+# the acceptance bar (AD-035) is specifically the symmetric START positions,
+# which sit well inside these bounds regardless of a future non-default stage.
+const STAGE_WALL_LEFT: float = -400.0
+const STAGE_WALL_RIGHT: float = 400.0
+const STAGE_GROUND_Y: float = 0.0
+
+## Horizontal fraction of the viewport width the stage width fills — the
+## "margin" AD-035 asks for around the fitted stage width.
+const WIDTH_FILL_FRACTION: float = 0.85
+
+## Where the ground line sits vertically in the viewport, as a fraction of
+## viewport height from the top — "seated in the lower portion of the view"
+## (AD-035). Low enough that a standing character's hurtbox/pushbox (which
+## extends below `ground_y` in this engine's box convention) stays clear of
+## the panels, which occupy screen y ~16..380 (training_mode.tscn).
+const GROUND_LINE_FRACTION: float = 0.78
+
+
+func _ready() -> void:
+	_apply_world_framing()
+	var vp := get_viewport()
+	if vp != null and not vp.size_changed.is_connected(_apply_world_framing):
+		vp.size_changed.connect(_apply_world_framing)
+
+
+## Pure computation (headlessly testable without a live viewport/window,
+## `test_geometry_overlay.gd`): given a viewport size in pixels, the
+## `position`/`scale` this node should carry so the stage
+## (`STAGE_WALL_LEFT..STAGE_WALL_RIGHT`, `STAGE_GROUND_Y`) is centered
+## horizontally, the ground line sits low, and the stage width fits with
+## margin (AD-035). Returns `{"position": Vector2, "scale": Vector2}`.
+static func compute_world_framing(viewport_size: Vector2) -> Dictionary:
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return {"position": Vector2.ZERO, "scale": Vector2.ONE}
+	var stage_width: float = STAGE_WALL_RIGHT - STAGE_WALL_LEFT
+	var zoom: float = (viewport_size.x * WIDTH_FILL_FRACTION) / stage_width
+	var stage_center_x: float = (STAGE_WALL_LEFT + STAGE_WALL_RIGHT) * 0.5
+	var framed_position := Vector2(
+		viewport_size.x * 0.5 - stage_center_x * zoom,
+		viewport_size.y * GROUND_LINE_FRACTION - STAGE_GROUND_Y * zoom)
+	return {"position": framed_position, "scale": Vector2(zoom, zoom)}
+
+
+## Apply `compute_world_framing` to this node's own transform against the
+## CURRENT viewport size. Called at `_ready()` and again on `size_changed` so
+## a resized window stays framed. No-op if there is no viewport yet.
+func _apply_world_framing() -> void:
+	var vp := get_viewport()
+	if vp == null:
+		return
+	var framing: Dictionary = compute_world_framing(vp.get_visible_rect().size)
+	position = framing["position"]
+	scale = framing["scale"]
+
+
 func _draw() -> void:
 	if _source == null:
 		return

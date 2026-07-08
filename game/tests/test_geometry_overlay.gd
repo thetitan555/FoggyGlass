@@ -15,7 +15,7 @@ var _checks: int = 0
 
 
 func _init() -> void:
-	_run()
+	await _run()
 	MoveRegistry.clear()
 	ProjectileRegistry.clear()
 	if _failures == 0:
@@ -42,6 +42,9 @@ func _run() -> void:
 	_test_active_hitbox_draws_hit_color_thick_border()
 	_test_projectile_hitbox_draws_its_own_distinct_color()
 	_test_rects_match_resolved_boxes_in_world_space()
+	_test_world_framing_centers_stage_and_seats_ground_low()
+	_test_world_framing_puts_symmetric_start_boxes_on_screen_and_clear_of_panels()
+	await _test_world_framing_is_render_only_no_effect_on_draw_list_or_state_hash()
 
 
 func _install() -> void:
@@ -151,4 +154,103 @@ func _test_rects_match_resolved_boxes_in_world_space() -> void:
 				found = true
 				break
 		_true(found, "resolved box (kind %d) world-space rect appears in the draw list unmodified" % box.kind)
+	_teardown()
+
+
+# --- AD-035 render framing (TKT-P1.1-01 Part B) ------------------------------
+# training-mode.md criterion 14 / AD-035. Pixel visibility on an actual running
+# window is the human-inspection gate (not headless-checkable); what IS
+# headlessly verifiable is the FRAMING MATH itself (GeometryOverlay.
+# compute_world_framing, a pure function) and that applying it is render-only
+# -- never touches the draw-list view-model or the sim state hash.
+
+func _test_world_framing_centers_stage_and_seats_ground_low() -> void:
+	var viewport_size := Vector2(1152.0, 648.0)
+	var framing: Dictionary = GeometryOverlay.compute_world_framing(viewport_size)
+	var pos: Vector2 = framing["position"]
+	var zoom: Vector2 = framing["scale"]
+	_true(zoom.x > 0.0 and zoom.y > 0.0, "framing zoom is positive")
+	_eq(zoom.x, zoom.y, "framing zoom is uniform (no stretch)")
+
+	# World x=0 (stage center, wall_left/right are symmetric) lands at the
+	# viewport's horizontal center.
+	var screen_x_of_stage_center: float = pos.x
+	_true(abs(screen_x_of_stage_center - viewport_size.x * 0.5) < 0.01,
+		"stage center (world x=0) lands at the viewport's horizontal center")
+
+	# World y=0 (ground_y) lands low in the viewport (AD-035: "seated in the
+	# lower portion of the view"), not centered.
+	var screen_y_of_ground: float = pos.y
+	var expected_ground_screen_y: float = viewport_size.y * GeometryOverlay.GROUND_LINE_FRACTION
+	_true(abs(screen_y_of_ground - expected_ground_screen_y) < 0.01,
+		"ground line (world y=0) lands at the configured lower-portion fraction of the viewport")
+	_true(screen_y_of_ground > viewport_size.y * 0.5,
+		"ground line sits below the viewport's vertical midpoint (lower portion, not centered)")
+
+	# Zoom fits the stage width with margin -- fills a majority of the
+	# viewport width but does not overflow it.
+	var framed_stage_width_px: float = (GeometryOverlay.STAGE_WALL_RIGHT - GeometryOverlay.STAGE_WALL_LEFT) * zoom.x
+	_true(framed_stage_width_px <= viewport_size.x + 0.01,
+		"the framed stage width fits within the viewport width")
+	_true(framed_stage_width_px > viewport_size.x * 0.5,
+		"the framed stage fills a meaningful majority of the viewport width (not tiny)")
+
+
+func _test_world_framing_puts_symmetric_start_boxes_on_screen_and_clear_of_panels() -> void:
+	# training_mode.tscn's screen-anchored HUD panels (FrameDataPanel/
+	# LiveStatePanel/InputHistoryPanel) occupy roughly screen y 16..380.
+	# AD-035's acceptance bar: both characters at their SYMMETRIC START
+	# positions (pos_x = +-100, pos_y = ground_y) are fully on-screen and not
+	# occluded by that panel region.
+	const PANEL_MAX_Y: float = 380.0
+	var viewport_size := Vector2(1152.0, 648.0)
+	var framing: Dictionary = GeometryOverlay.compute_world_framing(viewport_size)
+	var pos: Vector2 = framing["position"]
+	var zoom: Vector2 = framing["scale"]
+
+	var s := _two_char_state()
+	s.players[0].pos_x = FP.from_int(-100)
+	s.players[0].pos_y = 0
+	s.players[1].pos_x = FP.from_int(100)
+	s.players[1].pos_y = 0
+	var view := InspectionView.new(s, TestSupport.build_roster())
+	var checked_any: bool = false
+	for i in range(2):
+		var pv: PlayerView = view.player(i)
+		for box in pv.boxes:
+			checked_any = true
+			var world_rect: Rect2 = InspectionView.px_rect(box.rect)
+			var screen_rect := Rect2(pos + world_rect.position * zoom, world_rect.size * zoom)
+			_true(screen_rect.position.x >= -0.01 and screen_rect.end.x <= viewport_size.x + 0.01,
+				"player %d box (kind %d) fully within the viewport horizontally" % [i, box.kind])
+			_true(screen_rect.position.y >= -0.01 and screen_rect.end.y <= viewport_size.y + 0.01,
+				"player %d box (kind %d) fully within the viewport vertically" % [i, box.kind])
+			_true(screen_rect.position.y >= PANEL_MAX_Y,
+				"player %d box (kind %d) sits clear of the HUD panel region (screen y >= %.0f)" % [i, box.kind, PANEL_MAX_Y])
+	_true(checked_any, "sanity: at least one box was checked for both symmetric-start players")
+	_teardown()
+
+
+func _test_world_framing_is_render_only_no_effect_on_draw_list_or_state_hash() -> void:
+	# AD-019 criterion 6 / AD-035: the framing never enters a snapshot or the
+	# canonical hash, and never changes the pure draw-list view-model -- "a
+	# golden taken with vs. without the camera is identical." Exercises the
+	# ACTUAL node code path (_ready()/_apply_world_framing()), not just the
+	# pure function, so this also proves the live node's transform never
+	# reaches back into sim state.
+	var s := _two_char_state()
+	var hash_before: int = s.hash_state()
+	var view := InspectionView.new(s, TestSupport.build_roster())
+	var draws_before: Array = GeometryOverlayModel.build_draw_list(view)
+
+	var overlay := GeometryOverlay.new()
+	get_root().add_child(overlay)
+	await process_frame   # let _ready() run and apply the framing transform
+
+	_true(overlay.scale.x > 0.0, "the live overlay node picked up a non-degenerate framing scale")
+	_eq(s.hash_state(), hash_before, "applying the render framing does not change the sim state hash")
+	var draws_after: Array = GeometryOverlayModel.build_draw_list(view)
+	_eq(draws_after, draws_before, "applying the render framing does not change the geometry draw list")
+
+	overlay.queue_free()
 	_teardown()

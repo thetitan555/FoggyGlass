@@ -41,7 +41,7 @@ survived past AD-031 landing in this file.
 ---
 Resolution (owner fills): …
 
-### [open] 2026-07-08 · raised-by: Strategist (from user's overlay review) · owner: Developer · re: geometry overlay renders no visible boxes
+### [resolved] 2026-07-08 · raised-by: Strategist (from user's overlay review) · owner: Developer · re: geometry overlay renders no visible boxes
 Problem: in the same human run (full report archived in `flags-archive.md`, 2026-07-08), the
 geometry overlay showed NO boxes on screen, though both players are present in sim state (the
 frame-data and live-state panels both read P0 and P1 idle at tick 0). Even without character
@@ -55,4 +55,35 @@ nothing steppable, geometry can't be confirmed in motion; but "no boxes at all, 
 independently a finding. May bounce to the Architect if the box-to-screen projection / camera
 framing turns out to be unspecced rather than a code defect.
 ---
-Resolution (owner fills): …
+Resolution (owner fills): It was **both**, as the ticket (`p1.1-finish-instrument.md` →
+"Geometry ruling") anticipated, and both are now fixed together in **TKT-P1.1-01**:
+- **Part A (pure code defect, Developer's).** `training_mode.gd`'s shell left both players at
+  `SimState.new_initial()`'s generic `character_id 0 / state_id 0` — never wired to the
+  installed roster (`CharacterA.CHAR_ID`) — so `PlayerView.move` was null and `boxes == []` for
+  both players at every tick, independent of any rendering question. Fixed: both players now
+  start as the installed character in its idle state (character-agnostic — reads
+  `_character_id` / `Character.idle_state_id`, no character-A-specific branch). Regression-
+  guarded in `test_training_mode_shell.gd`.
+- **Part B (render-framing contract, unspecced — the "may bounce to the Architect" clause).**
+  Confirmed unspecced: at `PX_PER_UNIT = 1` with no world→viewport framing, world origin sat at
+  the viewport top-left, so resolved boxes at `pos_x = ±100` rendered partly off-screen / behind
+  the HUD panel region. The Architect settled this as **AD-035** (render-only world→screen
+  framing, extending AD-019). Implemented in `geometry_overlay.gd`: a render-only
+  position/scale transform on the `GeometryOverlay` node itself (centers the stage horizontally,
+  seats the ground line low, zooms to fit stage width with margin) — the HUD panels are
+  *siblings*, not children, of that node, so they stay screen-anchored with no further change.
+  Latitude on the exact mechanism/numbers recorded at `judgment-log.md` JC-044, pending Architect
+  ratification.
+
+Both parts verified headlessly: `test_training_mode_shell.gd` (Part A: both players resolve
+`character_id`/`state_id`/a non-empty `boxes` list at tick 0) and `test_geometry_overlay.gd`
+(Part B: the framing math centers/seats/fits as specified, both symmetric-start players' boxes
+land on-screen and clear of the panel region in the framing math, and a live-node application of
+the framing changes neither the draw-list view-model nor the `SimState` hash — AD-019 criterion
+6 / AD-035's "golden with vs. without the camera is identical").
+
+**Not closed by this fix: pixel-level live confirmation.** Whether the boxes are *actually*
+visible on a real running window is the **P1.1 human-inspection gate** (`audit-criterion.md`,
+`p1.1-finish-instrument.md`) — the user's to confirm by running `training_mode.tscn`, separate
+from and not claimed by this code fix. This flag closes the code-defect/unspecced-contract
+question the geometry finding raised; it does not itself constitute the human sign-off.

@@ -79,6 +79,7 @@
 - JC-041 · 2026-07-04 · TKT-P1-05 · Missing `.tscn` scenes built; overlays auto-wired by duck-typed `set_source` convention — ratified
 - JC-042 · 2026-07-04 · TKT-P1-06 · Projectile hitbox given its own draw color instead of a `hit_kind`-based BoxView split — ratified
 - JC-043 · 2026-07-04 · TKT-P1-09 · Recognized-command projection reconstructs `InputHistory` from `PlayerView.input_history` to call the sim's own recognizer — ratified
+- JC-044 · 2026-07-08 · TKT-P1.1-01 · AD-035 render framing implemented as a position/scale transform on `GeometryOverlay` itself (not a `Camera2D`); exact zoom/ground-line/margin constants and fixed placeholder stage bounds (not a live seam read) — provisional
 
 ---
 
@@ -88,5 +89,63 @@
 > overturns them; then the status flips and the Strategist sweeps the body to the
 > archive. New entries append to this section.
 
-*None currently — every recorded call is closed and lives in
-`judgment-log-archive.md`. The next new entry (P1.1) lands here.*
+### JC-044 · 2026-07-08 · TKT-P1.1-01 (Part B, AD-035 render framing) — provisional
+
+**Decision.** Implemented AD-035's render-only world→screen framing as a
+`position`/`scale` transform applied directly to the `GeometryOverlay` Node2D
+itself (`game/scenes/overlays/geometry_overlay.gd`), computed once at `_ready()`
+against the current viewport size (and recomputed on `size_changed`), rather
+than adding a `Camera2D` node. Three sub-calls bundled under one entry since
+they're the same latitude the ticket/AD-035 both name as "placeholder, like
+tuning":
+
+1. **Mechanism: node transform, not `Camera2D`.** AD-035 explicitly names both
+   as acceptable ("`a Camera2D` on the world layer, **or** an equivalent
+   offset/zoom applied to the world-drawing node"). Chose the node transform
+   because it is *structurally* scoped to `GeometryOverlay` alone — Godot
+   applies a `Node2D`'s `position`/`scale` only to that node and its own
+   children, never to siblings — so the three HUD `Control` panels (siblings
+   of `GeometryOverlay` under `TrainingMode`, never its children) stay
+   screen-anchored "for free," with no `CanvasLayer` restructuring and no
+   dependence on Godot's `Camera2D.zoom` semantics (which invert between major
+   engine versions and are easy to get backwards). **Passed over:** a
+   `Camera2D` child on `GeometryOverlay` made `current` — equivalent in effect
+   here, but would additionally require moving the three panels into a
+   `CanvasLayer` (since a `Camera2D` transforms the whole viewport/canvas, not
+   just its own node subtree) — more surface area for the same outcome.
+2. **Exact numeric constants** (`WIDTH_FILL_FRACTION = 0.85`,
+   `GROUND_LINE_FRACTION = 0.78`) are tuning placeholders exactly as AD-035
+   invites ("exact zoom, screen anchor, and ground-line screen y are render
+   feel, not contract"). Verified against `training_mode.tscn`'s actual panel
+   extents (screen y up to 380) and both players' symmetric-start boxes
+   (`test_geometry_overlay.gd`'s new framing tests) — comfortably clear with
+   margin, not hand-waved.
+3. **Stage bounds are fixed literals, not a live seam read.** `wall_left =
+   -400`, `wall_right = 400`, `ground_y = 0` are hardcoded in
+   `geometry_overlay.gd` (matching `StageState.new_initial()`'s actual
+   defaults) rather than read from `SimState.stage` through a new
+   `InspectionView` accessor. **Why:** the inspection surface currently
+   exposes no stage-bounds view at all; adding one is a seam/contract shape
+   change (`inspection-surface.md`) — out of this ticket's scope ("bounded to
+   visible geometry... no new readouts") and arguably an Architect call, not a
+   Developer latitude one, if it's ever wanted. The acceptance bar this ticket
+   serves (AD-035) is specifically the *symmetric start positions*, which sit
+   well inside these fixed bounds regardless. **Passed over:** extending
+   `InspectionView` with a `stage()`/`StageView` read so the framing tracks a
+   live (possibly non-default) stage — deferred; flagged below as a possible
+   future seam extension, not done here.
+
+**Scope note:** no new readout, no seam change — `GeometryOverlayModel.
+build_draw_list` (the pure view-model QA goldens) is untouched; this is a
+transform on the `Node2D` that renders that list, nothing else. Verified
+render-only: `test_geometry_overlay.gd`'s
+`_test_world_framing_is_render_only_no_effect_on_draw_list_or_state_hash`
+applies the actual live node's framing and asserts both the `SimState` hash
+and the draw list are byte-identical before/after.
+
+**For Architect ratification:** whether stage bounds should later become a
+live `InspectionView` read (would need a small seam addition) if a scene ever
+runs a non-default stage; whether the node-transform mechanism (vs.
+`Camera2D`) is the preferred convention for other future world-space overlays
+this project adds (so a second overlay doesn't independently re-derive
+framing, which AD-035's "Why" explicitly guards against).
