@@ -24,6 +24,14 @@ extends RefCounted
 ##                 when none are currently out.
 ##   stage       — stage bounds / walls / ground affecting the sim.
 
+## Top-level serialization format version (AD-034). Governs the whole `to_dict`
+## graph — no sub-object dict (player/rng/stage/projectile/hit_record/
+## input_history) carries its own version; a change to any sub-shape bumps
+## this number instead. Format metadata, NOT mutable sim truth: emitted by
+## `to_dict` but deliberately excluded from `hash_state()` (same exclusion
+## class as the install-generation token AD-024 and px projections AD-019).
+const FORMAT_VERSION: int = 1
+
 var tick: int = 0
 var rng: RngState = null
 var players: Array[PlayerState] = []
@@ -126,6 +134,9 @@ func to_dict() -> Dictionary:
 	for pr in projectiles:
 		projectile_dicts.append(pr.to_dict())
 	return {
+		# Top-level format-version marker (AD-034). NOT read by hash_state() — see
+		# the FORMAT_VERSION doc comment above.
+		"v": FORMAT_VERSION,
 		"tick": tick,
 		"rng": rng.to_dict(),
 		"players": player_dicts,
@@ -137,7 +148,17 @@ func to_dict() -> Dictionary:
 	}
 
 
+## Restores a SimState from a `to_dict()` graph, format-version aware (AD-034).
+## `"v"` absent -> treated as version 1 (legacy dicts predate the field; the
+## shape is unchanged, so they parse normally). `"v" == FORMAT_VERSION` ->
+## parses normally. Any other value -> fails loudly (`push_error`) rather than
+## silently mis-parsing a shape this code doesn't understand; there is no
+## migration branch yet (added when a v2 actually exists).
 static func from_dict(d: Dictionary) -> SimState:
+	var v: int = int(d.get("v", 1))
+	if v != FORMAT_VERSION:
+		push_error("SimState.from_dict: unsupported format version %d (expected %d); refusing to parse." % [v, FORMAT_VERSION])
+		return null
 	var s := SimState.new()
 	s.tick = int(d["tick"])
 	s.rng = RngState.from_dict(d["rng"])

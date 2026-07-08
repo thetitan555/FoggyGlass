@@ -83,6 +83,7 @@
 - JC-045 · 2026-07-08 · TKT-P1.1-02 · Control-surface key bindings (P/N/C/R/M/J/K/L), a single cycling key for the dummy mode-switch (not three mode keys), frame-step bound as a direct passthrough with no auto-pause, and a static-InputMap-reading `ControlsLegend` node — provisional
 - JC-046 · 2026-07-08 · P1.1 gate flag (arrow-key left/right) · Wired `STATE_WALK_F`/`STATE_WALK_B` into `character_a.gd`'s `button_map` as pure-direction commands (AD-032 pattern, mirroring jump) — these states/keyframes were already authored but unreachable from any input; button_index=-1 entries listed after the standing normals so a button always wins over a bare directional hold — provisional
 - JC-047 · 2026-07-08 · P1.1 gate flag (player sinks below the floor) · Jump arc's 22-rise/23-fall frame split (equal magnitude both halves) nets +6 units of permanent downward drift every jump; fixed to 22 rise / 1 zero-velocity apex hang / 22 fall (nets exactly zero) rather than changing either tuned speed value — provisional
+- JC-048 · 2026-07-08 · TKT-P1.1-03 · AD-034's fail-fast guard implemented as `push_error` + `from_dict` returning `null` on an unrecognized `"v"` (rather than raising/crashing or returning a still-parsed state); new dedicated test file `test_serialization_version.gd` (mirrors `test_sim_state.gd`'s SceneTree-runner shape) — provisional
 
 ---
 
@@ -420,3 +421,51 @@ to `STATE_JUMP_N/F/B`'s specific numbers, but the "authored arcs must net to
 zero displacement" invariant it protects is arguably worth stating explicitly
 somewhere (`character-a.md` or a movement-authoring note) so a future
 character's jump arc doesn't reintroduce the same class of bug.
+
+### JC-048 · 2026-07-08 · TKT-P1.1-03 (AD-034 fail-fast mechanism; new test file) — provisional
+
+**Decision.** AD-034 and the ticket both specify the *behavior* on an
+unrecognized `"v"` — "fail loudly (`push_error` naming the unexpected
+version); do not silently proceed" — but not the concrete mechanism by which
+`from_dict` (a function typed `-> SimState`) refuses to proceed. `push_error`
+alone is non-fatal in GDScript: it writes to the error console but does not
+halt execution or unwind the call, so something has to happen after it for
+"do not silently proceed" to actually hold. Implemented as: call
+`push_error` with a message naming both the unexpected and expected version,
+then `return null` immediately, before touching any other field of `d`. A
+caller that ignores the return value and tries to use the result gets an
+immediate, loud null-reference failure rather than a silently-misparsed
+`SimState` limping through a run.
+
+**Alternatives passed over.** (1) `assert(false, ...)` — rejected: Godot
+strips `assert` in release/non-debug export builds, so it is not a reliable
+fail-fast in the one context (a build a player or CI runs release-mode)
+where a format mismatch would matter most; `push_error` fires in every
+build. (2) Returning a partially-parsed `SimState` (parse what's parseable,
+warn, continue) — rejected outright: this is exactly the "silent mis-parse"
+AD-034 rules out; a partially-built state that then runs is worse than an
+obvious null-deref crash. (3) Raising/throwing an actual exception — not
+available as an idiomatic GDScript mechanism (no `throw`/`try` in GDScript
+4.3); `push_error` + sentinel return is the closest idiomatic equivalent.
+
+**Also recorded here (packaging, not behavior):** the acceptance tests for
+this ticket live in a new dedicated file, `game/tests/test_serialization_
+version.gd`, rather than being folded into `test_sim_state.gd`'s existing
+suite. Passed over: adding cases to `test_sim_state.gd` directly (it already
+covers `SimState` round-trip/hash broadly) — rejected in favor of a
+dedicated file so the format-version-specific behavior (AD-034: presence,
+absence, mismatch, hash-exclusion) reads as its own clearly-scoped unit
+mirroring the ticket 1:1, and so QA's golden/regression work can point at
+one file for "is the version guard intact" without wading through the
+general round-trip suite. The new file follows `test_sim_state.gd`'s own
+`SceneTree`-runner shape (`_init`/`_eq`/`_true`/`quit(0|1)`) exactly — no new
+test-harness convention introduced. Added to `run_tests.bat`'s `TESTS` list
+as part of this same dispatch's bookkeeping-flag work.
+
+**For Architect ratification:** the `null`-return convention for a fail-fast
+`from_dict` — this is the first place in the codebase a *loader* function
+can fail and needs to signal it structurally (every other `from_dict` in the
+graph assumes a well-formed sub-dict and has no analogous guard); if a
+future ticket adds more versions/migrations, worth deciding once whether
+`null`-return is the standing convention for "reject this dict" or whether a
+richer result type (ok/error) is worth introducing then.
