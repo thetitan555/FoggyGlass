@@ -43,6 +43,8 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-031** Invulnerability consumed in phase 4; `HitBox.hit_kind` gates strike/throw/projectile; whiff is observable — settled
 - **AD-032** Command schema extension: pure-direction command + two-button chord; first-match-wins shadowing rule — settled
 - **AD-033** Air-normal height-dependent advantage: phase-5 `AirHeightScaling` on hitstun; contact-depth read — settled
+- **AD-034** Serialization carries a top-level format-version field (`"v":1`, absent⇒1, unknown⇒fail; not hashed) — settled
+- **AD-035** Render-framing contract: sim world projects into the viewport via a render-only camera transform (extends AD-019) — settled
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -611,6 +613,28 @@ but it is observable so the invariant is verifiable. `install` remains
 documented-once-at-wiring; `clear` remains test-only isolation (a test that installs a
 fresh roster starts a fresh run, so the per-run token capture is re-taken — the invariant
 is per-run, not per-process).
+**Known cost — a deliberate, slice-scoped exception (recorded 2026-07-08, F-flag resolution).**
+`MoveRegistry`'s `static var _roster` + `static var _install_generation` are the **one piece
+of process-wide mutable state** in an otherwise pure, serializable, per-instance design. This
+is a *named, bounded exception* to that purity, not an accident to "fix":
+- **The exception.** Authored roster + its install-generation token live in process-global
+  static storage, shared by whatever runs in the process — not threaded through `step` and not
+  held per-`SimState`.
+- **Why acceptable at slice scope.** The slice runs **one sim per process** (a single training
+  session / match / test scenario at a time), so a single global roster is unambiguous. Tests
+  isolate scenarios with `clear()`; the install-generation token (above) makes any mid-run
+  mutation *detectable* rather than silent (simulation.md criterion 11). Threading the roster
+  through `step` (model (b), rejected above) would buy nothing here — there is no second
+  concurrent roster to disambiguate.
+- **The invariant that contains it.** Install-once, immutable-during-a-run; the per-run
+  generation token observed at the first `step` is identical at every later `step` of that run.
+  As long as that holds, the global is indistinguishable from a threaded immutable input.
+- **What would force revisiting.** Any **concurrent/parallel sims in one process** sharing the
+  static roster — e.g. a rollback host running a second speculative sim, a background/preview sim
+  beside a live match, or two matches in one process — breaks the single-global assumption. At
+  that point the roster must move to per-`SimState`-scoped or `step`-threaded resolution (model
+  (b)); that is a **revision to this AD**, not a silent code change. The slice foreclosing none
+  of this (Tenet 3) is why the token is already observable.
 
 ### AD-025 · `neutral_restored_this_tick` is a rising edge — settled (2026-07-03, ratified from JC-018)
 **Decision.** `SimState.neutral_restored_this_tick` is set true by phase 6 on
@@ -1073,3 +1097,93 @@ backed by a real mechanism (no character-A engine code — the rule is character
 air normals is **not** in this rule — only hitstun/advantage, which is what F-014 and route 2
 need. A later character wanting height-scaled launch is a revision to this AD (extend
 `AirHeightScaling` to return more than a hitstun delta), not a silent code change.
+
+### AD-034 · Serialization carries a top-level format-version field — settled (2026-07-08, F-flag resolution)
+**Decision.** `SimState.to_dict()` carries a single format-version marker, `"v": 1`, on the
+**top-level** dict only. Sub-object dicts (`player`, `rng`, `stage`, `projectile`,
+`hit_record`, `input_history`) do **not** each carry a version — one version governs the whole
+serialized graph; a change to any sub-shape bumps the top-level number.
+- **`from_dict` handling.** Read `d.get("v", 1)`. **Absent ⇒ 1** (a dict written before this
+  field is legacy v1 — the current shape, so it parses unchanged). **Equal to the current
+  version (1) ⇒ parse normally.** **Any other value ⇒ fail loudly** (`push_error` + a clear
+  message; do not silently mis-parse a format this code does not understand). A future
+  migration path — reading an *older* version by up-converting — is added as an explicit branch
+  when a v2 exists; there is exactly one version now, so no migration code is written yet, only
+  the version stamp and the fail-fast guard.
+- **NOT covered by the canonical hash.** `"v"` is format metadata, **not** mutable sim truth,
+  so it is **not** folded into `hash_state()` (AD-023) — exactly like the install-generation
+  token (AD-024) and pixel projections (AD-019) are excluded. Consequence: adding the field
+  does **not** change any existing state hash, and every determinism/round-trip golden keyed on
+  `hash_state()` is unaffected. `to_dict`/`from_dict` round-trip stays exact (the field
+  survives the trip); `hash_state()` is blind to it by design.
+**Why.** Determinism/serialization is a Tenet-1 surface. A version stamp is one field to add
+now and expensive to retrofit once saved states — replays, save-states, rollback snapshots —
+exist in the wild and must be migrated blind. Stamping the format the moment it stabilizes is
+the cheap insurance; the fail-fast guard turns "silently loaded a format I don't understand"
+into a loud, locatable error. Homing it once at the top level (not per sub-dict) is the minimal
+shape: the graph versions as a unit, so N per-object stamps would be N places to bump for one
+format change. Excluding it from the hash keeps the golden/determinism net — the thing this
+surface exists to serve — stable across the field's introduction.
+**Rejected.** No version field (the retrofit-blind cost the flag names); a version on every
+sub-dict (N bump-sites for one unit-versioned graph; no benefit at slice scope); folding `"v"`
+into the canonical hash (would invalidate every existing state golden for a non-sim-truth
+marker — the exact drift AD-019/AD-024 exclude their own metadata to avoid); silently ignoring
+an unknown version (defeats the purpose — a format guard that never guards).
+**Consequence (Developer, via TKT-P1.1-03).** Add `"v": 1` to `SimState.to_dict()`
+(`game/sim/sim_state.gd`); read + guard it in `from_dict` per the handling above. No sub-object
+change, no `hash_state()` change, no new AD when v2 lands (bump the constant + add the migration
+branch — a revision to this AD). A single `const FORMAT_VERSION := 1` on `SimState` is the
+natural home for the number.
+
+### AD-035 · Render-framing contract: the sim world projects into the viewport via a render-only camera transform — settled (2026-07-08, geometry-overlay finding)
+**Decision.** Extends AD-019. AD-019 fixed the fixed→px *scale* (`px()`/`px_rect()`,
+`PX_PER_UNIT`) but never said **where the sim's world-space play area lands in the visible
+viewport**. This AD closes that gap: the training mode (and later match rendering) frame the
+world into the viewport through a **render-only world→screen transform** — a `Camera2D` on the
+world layer, or an equivalent offset/zoom applied to the world-drawing node — composed with the
+AD-019 scale.
+- **What it defines.** The play area (stage bounds `wall_left..wall_right`, the ground line
+  `ground_y`) maps to a visible region of the viewport: horizontally centered, with the ground
+  line seated in the lower portion of the view, at a zoom that fits the stage width with margin.
+  Both characters at their symmetric start positions (`pos_x = ±100` game units, `pos_y =
+  ground_y`) must be **fully on-screen** and **not occluded by the readout panels**.
+- **Boxes are world-layer; panels are screen-layer (HUD).** The geometry overlay draws in
+  **world space** and is moved by the camera transform; the four readout `Control` panels are
+  **screen-anchored HUD** and are *not* moved by it. This keeps the panels stationary while the
+  world frames correctly behind/around them, and is the clean separation that resolves the
+  "boxes behind the x≈16–700 panel region" symptom — the world is framed into visible space the
+  HUD does not fully cover (e.g. the play area sits below/around the panels, or the panels are
+  positioned clear of it).
+- **Render-only; Tenet 1 untouched.** The transform is float, render-side, and **never enters a
+  snapshot or the canonical hash** — identical to AD-019's px projection. It reads sim truth
+  (stage bounds, positions) to *frame* the view; it writes nothing back. Determinism and the
+  golden net are unaffected (a golden taken with or without the camera is identical — AD-019
+  criterion 6 extends to it).
+- **Exact numbers are placeholder (Developer's, like AD-014/JC-016 tuning).** The specific
+  zoom, screen anchor, and ground-line screen y are render feel, not contract — the contract is
+  "both characters fully visible, unoccluded, world-layer separate from HUD-layer." QA verifies
+  the *contract* (boxes visible on screen, in-mode human gate); the specific pixels are the
+  Developer's to pick and the user's to sign off via the human-inspection gate.
+**Why.** The geometry overlay is the charter's centerpiece surface ("see what hit and what
+whiffed"); at P0 there was nothing to look at, so AD-019 correctly stopped at scale and left
+framing unspecced. The first human run (2026-07-08) showed the cost: with `PX_PER_UNIT = 1` and
+no camera, world origin sits at the viewport top-left, so characters at `x = ±100`, `y = 0`
+render partly off-screen and behind the panels — invisible. Framing is a **shared render
+concern** (every overlay that draws in world space, and P2's match rendering, need the same
+world→screen mapping), so it is specified once as an owned contract, not re-invented per
+overlay — the consistency the Architect exists to guard. Keeping it render-only preserves
+Tenet 1 exactly as AD-019 does.
+**Rejected.** Baking a screen offset into `px()`/`px_rect()` (couples the *scale* projection to
+a *framing* decision; other callers of `px()` — e.g. a future minimap or a non-camera view —
+would inherit an unwanted offset; keep scale and framing as separate render concerns);
+per-overlay ad-hoc offsets (the drift this AD prevents — two overlays framing the world
+differently would disagree about where a box is); moving the play area by shifting sim
+`positions` (a Tenet-1 violation — framing must never touch sim truth); making the panels
+world-layer so they scroll with the camera (they are HUD — they must stay screen-anchored and
+legible regardless of camera state).
+**Consequence (Developer, via TKT-P1.1-01).** Add a render-only world→screen framing (a
+`Camera2D` on the world/`GeometryOverlay` layer is the natural mechanism) so both characters'
+boxes are fully visible and unoccluded by the panels; keep the four `Control` panels
+screen-anchored (unmoved by the camera). No sim-truth change, no hash change, no snapshot field.
+This lands together with the player-init code defect (same ticket) because boxes must first
+*resolve* before framing can be verified — see the ticket.

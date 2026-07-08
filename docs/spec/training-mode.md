@@ -60,6 +60,49 @@ read-only inspection surface. All lean directly on Tenets 1 & 2.
   stream. The dummy has **no behavior/AI** — any "reaction" is recorded or
   scripted input through the one interface.
 
+## Human control surface (operability — P1.1)
+
+The control layer above is the sim-facing *contract*; this section is the
+**human-facing binding** onto it, added in P1.1 (roadmap). P1 landed the control
+methods but bound nothing to them, so the mode was observable but not operable
+(`flags.md`, 2026-07-08). The brief's required outcomes describe a human *pressing*
+frame control, reset, and record/playback — so binding them is completing P1, not
+new scope.
+
+- **Bound controls.** Pause/resume, frame-step (`step_once`), capture-reset,
+  do-reset, and dummy record/playback mode-switch are each invokable from an actual
+  **device/keyboard control** routed through the `TrainingMode` shell's control
+  methods (never bypassing the shell into `TickHost`/`TrainingHarness`/
+  `RecordPlaybackSource` directly — the shell stays the one place the sim is driven
+  from, mirroring the read-only rule on the inspection side).
+- **Complete the P1 device sampler.** The P1 device source samples directions only;
+  it must also sample the **three attack buttons** (`BUTTON_0/1/2`, AD-018) so a
+  human can actually perform character A's moves and read their frame data — the
+  mode's whole purpose. Still the one `InputSource` interface (Tenet 2); the sampler
+  emits the identical raw `InputFrame`.
+- **Discoverable.** The bound controls are **surfaced on screen** (a minimal
+  controls legend) so a human can find them without reading code — the operability
+  the human-inspection gate confirms. This is legibility of the instrument, not
+  UI polish; keep it minimal.
+- **Players start as the installed character.** A code-level requirement completing
+  the shell wiring: both players must begin as the **installed character in its idle
+  state**, not the generic default player `SimState.new_initial()` builds — otherwise
+  the roster lookup resolves nothing and every readout (and the geometry overlay)
+  reads empty/zero (the 2026-07-08 finding: panels showed "state 0 … startup 0").
+- **Key choice is placeholder.** The specific keys are the Developer's to pick
+  (placeholder, like tuning numbers); the contract is "each control operation is
+  reachable from a bound control, and the controls are discoverable." The default
+  input map lives in `project.godot`.
+
+## Geometry framing (P1.1)
+
+The geometry overlay draws in **world space**; for boxes to be visible it needs a
+world→viewport framing, specified in **AD-035** (a render-only camera transform
+extending AD-019's fixed→px scale). The four readout panels stay **screen-anchored
+HUD** (unmoved by the framing). Both characters at their symmetric start positions
+must be fully on-screen and unoccluded by the panels. Render-only; never enters a
+snapshot or the canonical hash (Tenet 1 intact, exactly as AD-019).
+
 ## Readout layer (player-facing overlays, all from `InspectionView`)
 
 Each overlay renders only from the inspection surface. Grouped into the units the
@@ -107,7 +150,10 @@ beyond legibility.
    sim is identical on every loop (deterministic). A buffer round-trips.
 5. **Geometry.** Active hit/hurt/throw/push boxes draw at correct world positions
    matching the resolved boxes; on a contact tick the attacker hitbox is shown
-   overlapping the defender hurtbox.
+   overlapping the defender hurtbox. **The boxes are actually visible on screen**
+   — both characters' resolved boxes render fully within the viewport and are not
+   occluded by the readout panels (AD-035 framing; verified in-mode / at the human
+   gate, since pixel visibility is not headless-checkable — the P1 gap this closes).
 6. **Frame data + advantage.** The panel shows correct static
    startup/active/recovery and on-hit/on-block advantage for moves in play; the
    live advantage matches the sim's value and flips sign correctly on a punishable
@@ -129,3 +175,15 @@ beyond legibility.
     inputs from the reset point and the whole rep is bit-identical on repeat. (This
     covers the reset+playback *interaction*, which criteria 3 and 4 test only
     independently.)
+13. **Human-operable (P1.1).** Each control operation — pause/resume, frame-step,
+    capture-reset, do-reset, dummy record/playback mode-switch — is invokable by a
+    human from a bound device/keyboard control (routed through the shell), and the
+    device source samples directions **and** the three attack buttons so a human can
+    perform character A's moves. The bound controls are surfaced on screen. Verified
+    at the human-inspection gate (operability is not headless-confirmable).
+14. **Framed on screen (P1.1).** With both players started as the installed
+    character in idle, the geometry overlay's boxes are fully visible within the
+    viewport and unoccluded by the panels (AD-035); the readout panels stay
+    screen-anchored. Render-only — a golden taken with or without the camera is
+    identical (AD-019 criterion 6 extends to the framing). Pixel visibility verified
+    at the human-inspection gate.
