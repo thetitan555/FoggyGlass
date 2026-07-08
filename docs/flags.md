@@ -41,15 +41,39 @@ survived past AD-031 landing in this file.
 ---
 Resolution (owner fills): …
 
-### [open] 2026-07-04 · raised-by: Strategist (relaying QA) · owner: user · re: training-mode overlays — in-mode visual confirmation
-Problem: the P1 feature audit PASSED (`docs/audits/audit-p1-feature.md`), but one check is
-outside a headless pass: pixel-level on-screen rendering of the four training-mode overlays
-(geometry box positions, panel layout/clipping, input-history legibility). QA confirmed the
-scene loads, instantiates, and auto-wires live, and every overlay's view-model logic is
-covered by non-vacuous headless tests — so the PASS stands — but actual visual appearance
-needs a human look in an interactive Godot session. Tracked here so P1 is not treated as
-100% closed without it. Resolution: open `game/scenes/training_mode.tscn` in the Godot
-editor, confirm the overlays render correctly; QA folds the result into the audit.
+### [open] 2026-07-08 · raised-by: Strategist (from user's overlay review) · owner: Architect · re: training-mode.md — no human-operable control surface
+Problem: the first human run of `training_mode.tscn` (user, 2026-07-08; full report archived
+in `flags-archive.md`, this date) surfaced a spec-vs-charter gap that all 24 headless tests
+pass straight through. The scene mounts the four READOUT overlays but binds nothing to drive
+the CONTROL layer: pause / frame-step / reset / record-playback exist only as methods on the
+shell (`training_mode.gd`: `set_paused`, `step_once`, `capture_reset`, `set_dummy_mode`…),
+and the P1 acceptance tests exercise them by CALLING those methods directly — which is why
+criteria 1–4 are green AND why an experienced player cannot make the mode do anything: no
+key, button, or on-screen control invokes them, and `_physics_process` early-returns unless
+the host is running with no bound way to change that. Net: the mode is observable but not
+operable by a human. Scope question for the Architect (spec/scope owner): was an input-bound
+control surface in P1's scope, or deliberately deferred (P1 = control CONTRACTS + readouts,
+driving UI later)? Cross-check the training-mode brief (Strategist-owned,
+`docs/briefs/debug-training-mode.md`) and training-mode.md criteria 1–4. If deferred, rule it
+so and record where the driving UI lands on the roadmap; if a gap, spec the control surface.
+This gates the geometry finding below (nothing steps, so nothing moves to confirm) and the
+P1 audit's visual sign-off.
+---
+Resolution (owner fills): …
+
+### [open] 2026-07-08 · raised-by: Strategist (from user's overlay review) · owner: Developer · re: geometry overlay renders no visible boxes
+Problem: in the same human run (full report archived in `flags-archive.md`, 2026-07-08), the
+geometry overlay showed NO boxes on screen, though both players are present in sim state (the
+frame-data and live-state panels both read P0 and P1 idle at tick 0). Even without character
+art, two idle characters' hurtboxes should draw — this is the charter's centerpiece surface
+("see what hit and what whiffed"), and its pixel-level rendering is exactly what no headless
+test could confirm (`test_geometry_overlay.gd`'s 28 checks verify the view-model's draw-list
+numbers, not on-screen pixels). Investigate: are boxes drawn off-screen, behind the panel
+region (panels span x≈16–700), or at a projection/camera framing that puts them outside the
+view? PARTLY GATED on the control-surface flag above — with the sim frozen at tick 0 and
+nothing steppable, geometry can't be confirmed in motion; but "no boxes at all, at rest" is
+independently a finding. May bounce to the Architect if the box-to-screen projection / camera
+framing turns out to be unspecced rather than a code defect.
 ---
 Resolution (owner fills): …
 

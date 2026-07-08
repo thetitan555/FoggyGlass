@@ -817,3 +817,43 @@ This directly turns off the ~150k QA delegation-runaway class.
 Coordination model updated in the same pass: the Strategist session now orchestrates dispatch
 (the bus the user used to be) while the user keeps the two gates — `push` and the
 play/overlay-look. Free P2 evidence to collect: P2 total spend vs P1's. No further action.
+
+### [resolved] 2026-07-04 · raised-by: Strategist (relaying QA) · owner: user · re: training-mode overlays — in-mode visual confirmation
+Problem: the P1 feature audit PASSED (`docs/audits/audit-p1-feature.md`), but one check is
+outside a headless pass: pixel-level on-screen rendering of the four training-mode overlays
+(geometry box positions, panel layout/clipping, input-history legibility). QA confirmed the
+scene loads, instantiates, and auto-wires live, and every overlay's view-model logic is
+covered by non-vacuous headless tests — so the PASS stands — but actual visual appearance
+needs a human look in an interactive Godot session. Tracked here so P1 is not treated as
+100% closed without it. Resolution: open `game/scenes/training_mode.tscn` in the Godot
+editor, confirm the overlays render correctly; QA folds the result into the audit.
+---
+Resolution (owner fills): User here. Ran the scene in Godot. No errors in the log. 
+I see only this white text on default grey background: 
+
+```
+-- Frame Data --
+P0 state 0 startup 0 /active 0 /recovery 0 (total 0)  onHit +0 onBlock +0
+P1 state 0 startup 0 /active 0 /recovery 0 (total 0)  onHit +0 onBlock +0
+Live advantage: +0 plus=none toNeutral=0 neutralRestored = false
+
+-- Live State --
+P0 state 0 (grounded) f0/0 hitstop 0 stun 0(none) actionable true hits 0 scaling 100% dmg 0
+P1 state 0 (grounded) f0/0 hitstop 0 stun 0(none) actionable true hits 0 scaling 100% dmg 0
+
+-- Input --
+<A directional input for P0 that responds to my arrow key input as UDLR and a history thereof. P1's doesn't respond.>
+```
+
+If there's a way to make it do anything else, I can't figure it out.
+---
+Disposition (Strategist, 2026-07-08): The human-look duty is discharged — the user ran it, so
+this "go look" flag is closed. The look was NOT a clean pass; it produced two findings, now
+tracked as first-class open flags: (1) owner Architect — no human-operable control surface
+(the mode is observable but not operable; scope question); (2) owner Developer — geometry
+overlay renders no visible boxes. By-design, not findings: no character art yet (deferred);
+"P1 unresponsive" is the dummy (index 1, empty-playback = NEUTRAL) behaving correctly. QA
+must re-fold the visual outcome into `audit-p1-feature.md` once the two findings resolve — the
+audit's "in-mode visual confirmation" section currently reads more optimistically than the
+human result warrants. Validates the play-and-report gate (Fable review, point 1): ten minutes
+of real play produced a sharper signal than the headless suite could.
