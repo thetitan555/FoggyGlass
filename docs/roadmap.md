@@ -123,6 +123,16 @@ actually done.
 
 Proves the format generalizes and gives us a real matchup and a real game loop.
 
+> **Pre-P2 prerequisite (surfaced by P1.1, AD-036):** P2 opens with a ground-contact
+> hardening unit — a `pos_y ≥ ground_y` clamp *plus* ground-contact landing semantics
+> (designed together; a bare clamp alone would mask a mis-authored arc, which is
+> anti-legibility) — **before** char B or any air-movement content. P1.1 found the
+> engine has no landing clamp at all; vertical correctness rests entirely on authored
+> arcs summing to zero (the +6-unit sink JC-047 fixed). That foundation is load-bearing
+> for a second character and the matchup, so it lands first, not as a late P4 pass. The
+> Architect specs AD-036 into P2's opening tickets. *(Strategist sequencing call on the
+> Architect's recommendation; revisable.)*
+
 Built here: character B, a second lean moveset deliberately distinct from A,
 authored purely in move data — the test that the format wasn't secretly
 A-shaped. And the 1v1 match flow wrapping the sim: health, KO, round/match

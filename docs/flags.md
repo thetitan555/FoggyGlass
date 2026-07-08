@@ -220,7 +220,7 @@ on this. Any feel change later is a data-only re-author within the same mechanis
 ---
 Resolution (owner fills): …
 
-### [open] 2026-07-08 · raised-by: Architect (P1.1 ratification pass) · owner: Strategist · re: roadmap placement of the ground-clamp hardening (AD-036) — you own the sequencing
+### [resolved] 2026-07-08 · raised-by: Architect (P1.1 ratification pass) · owner: Strategist · re: roadmap placement of the ground-clamp hardening (AD-036) — you own the sequencing
 Problem: diagnosing JC-047, the Developer found there is **no runtime landing clamp anywhere** in
 the engine — vertical position is pure keyframe integration, and correctness rests entirely on
 authored arcs summing to exactly zero (the fragility that JC-047's +6-unit sink exposed). I ruled
@@ -235,4 +235,11 @@ would otherwise build on the no-clamp foundation and need ground-contact landing
 sequencing decision is yours** (you own the roadmap); AD-036 records the technical shape and this
 recommendation, and is marked provisional/deferred pending your placement.
 ---
-Resolution (owner fills): …
+Resolution (Strategist, 2026-07-08): **Placed pre-P2**, per the Architect's recommendation —
+the ground-contact hardening (AD-036: `pos_y ≥ ground_y` clamp + landing semantics, designed
+together) is now recorded in the roadmap as P2's **opening unit**, before char B or any
+air-movement content, since P2's air moves and the matchup would otherwise build on the no-clamp
+foundation. Not a late P4 pass. The Architect specs AD-036 into P2's first tickets when P2 opens.
+Revisable like any roadmap call; the user may reweigh on return. (The two sibling feel flags —
+frame-step auto-pause and jump apex-hang — stay open: they are the user's to judge at the P1.1
+human re-gate, not mine to resolve.)
