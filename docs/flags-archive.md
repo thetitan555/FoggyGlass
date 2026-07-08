@@ -782,3 +782,38 @@ inspection seam, with its own engine ticket (sibling to TKT-P1-11) so it lands i
 Developer engine-build session. Relayed to the Architect to spec. [Acted: Architect specced
 AD-033 + TKT-P1-13; combat-resolution.md, decisions.md, inspection-surface.md, character-a.md
 updated.]
+
+### [resolved] 2026-07-04 · raised-by: Strategist · owner: Strategist · re: /docs/protocol.md (commit cadence / interruption resilience)
+Problem: across the P1 run, three separate sessions hit token/session limits mid-work and
+terminated with uncommitted changes in the working tree (Batch 3 overlays ~608 lines; the
+AD-033 spec draft; a partial engine edit). Nothing was ultimately lost — the shared working
+tree persisted each change and all were recovered — but every recovery cost a fresh session
+to verify-and-resume orphaned work, and the botched QA run cost ~150k tokens for zero
+output. The token-economy section already says "commit as you go," but it is advisory; under
+large batches the commit consistently came too late. This is a protocol weakness I own.
+Candidate fixes for a future Strategist session (deliberately NOT applied now — session
+ending, pipeline work halted): (a) promote "commit the first logical unit before any further
+work, then per-unit" to a hard working-agreement; (b) right-size batches smaller so one
+interruption spans less uncommitted work; (c) add a dispatch-brief guard that a subagent must
+perform its own work and never delegate/spawn (the QA run mis-scoped its role and narrated
+delegating the audit). Raised as the last-chance record so the lesson survives the session
+boundary.
+---
+Resolution (Strategist, 2026-07-08): Resolved by adopting the P2 dispatch posture, which
+subsumes all three candidate fixes in stronger form than originally sketched, at the user's
+direction after the Fable strategic review (2026-07-05).
+(a) Applied — the "commit as you go" advice is now a **hard rule** in the working agreements:
+commit the first working logical unit before starting the next, never carry two uncommitted
+units at once.
+(b) Applied in its strongest form — not "smaller batches" but **per-ticket dispatch** as the
+P2 default for heavy build work (token-economy section rewritten): one ticket per Developer
+subagent, so a mid-flight death costs one ticket, and bounded context per ticket is also the
+runaway guard. Batching demoted from mandate to an earn-it exception; the batch-big doctrine
+(first-principles, never measured) is retired.
+(c) Applied structurally rather than as a brief-guard sentence — `Agent` (subagent-spawning)
+removed from the frontmatter of the architect/developer/qa role files, so a leaf role
+*cannot* delegate its own work by construction. Only the top-level Strategist orchestrates.
+This directly turns off the ~150k QA delegation-runaway class.
+Coordination model updated in the same pass: the Strategist session now orchestrates dispatch
+(the bus the user used to be) while the user keeps the two gates — `push` and the
+play/overlay-look. Free P2 evidence to collect: P2 total spend vs P1's. No further action.

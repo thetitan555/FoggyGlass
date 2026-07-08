@@ -25,20 +25,30 @@ coordinate through two channels:
    cold-start re-read is cheaper than it was under the old chat substrate — but
    the *coordination* premise below is unchanged: roles still share state through
    the tree, not through memory.)
-2. **The user** — the live connection between role sessions. The user carries the
-   signal "go look at X" from one role to the next, and carries flagged problems
-   back to their owner.
+2. **The orchestrator (the top-level Strategist session)** — the live connection
+   between role sessions. It dispatches each role as a subagent, carries the
+   signal "go look at X" from one role to the next, and routes flagged problems
+   to their owner. (Before orchestration was adopted this was the user's manual
+   job; the user now holds only the gates — see below.)
 
-**Why the user is the bus (for now):** the roles run as separate sessions that do
-not message each other, so the user relays handoffs and flags between them. This
-is the **chosen protocol for the first milestone on the new substrate**, not a
-technical constraint — the old network-isolation reason (Cowork sandboxes that
-couldn't reach a remote) is gone. Claude Code offers direct role-to-role
-messaging (agent-teams), but adopting it changes this load-bearing premise, so
-it is **deliberately deferred until one milestone has run on the new substrate**
-and the migration's roadblocks are confirmed dead (see `docs/migration-plan.md`,
-Part 6). Revisit then; don't change the platform and the coordination model at
-once.
+**The Strategist orchestrates dispatch; the user holds the gates.** P1 has now run
+and passed on the native-subagent substrate — the condition the migration set for
+revisiting coordination is met (`docs/migration-plan.md`, Part 6). So the model
+is: a **top-level Strategist session dispatches the other roles as subagents in
+sequence and relays their artifacts** — it *is* the bus the user used to be, for
+handoffs. This preserves one-owner-per-artifact and upstream-correction unchanged:
+the orchestrator *routes*; it never edits another role's artifact. The **user is
+no longer the manual message-bus**, but stays the authority on the two things that
+are irreversible or experiential — the `push` gate and the play/overlay-look gate
+— and watches every dispatch, free to steer or stop it. They simply stop
+hand-carrying "go look at X" between rooms. Full role-to-role messaging
+(agent-teams, where leaves talk directly) stays **deferred**: dispatch runs
+through the one orchestrator seat, keeping the coordination graph a star, not a
+mesh, and keeping the human's sightline on every handoff. Only the top-level
+Strategist orchestrates — the other three roles have `Agent` (subagent-spawning)
+removed from their frontmatter, so a leaf *cannot* dispatch, by construction (this
+is the structural fix for the P1 QA delegation-runaway; see `flags-archive.md`,
+2026-07-08).
 
 **Git's role, and who runs it:** git runs **natively on the user's Windows
 machine** and is for history and off-machine backup — *not* the inter-role
@@ -151,10 +161,13 @@ freeze, so "advantage is observable" can't be verified.
 Resolution (owner fills): …
 ```
 
-The raiser writes the flag and tells the user. The user relays it to the owner.
-The owner resolves — edits their artifact if needed, writes the resolution line,
-flips `[open]` to `[resolved]` — and the user relays back. (The change reaches
-`origin` at the next checkpoint the user chooses to push.) Entries are never
+The raiser writes the flag and surfaces it to the orchestrator (the Strategist
+session), which relays it to the owner — dispatching that role if needed. The
+owner resolves — edits their artifact if needed, writes the resolution line, flips
+`[open]` to `[resolved]` — and the orchestrator relays back, with the user
+observing. (When the user is driving a role directly rather than through the
+orchestrator, the user is the relay — same mechanism, only the bus differs. The
+change reaches `origin` at the next checkpoint the user chooses to push.) Entries are never
 edited after the fact; once a resolution has been relayed, the **Strategist moves
 the entry to `/docs/flags-archive.md`** — the permanent record — so the live
 ledger stays small and cheap to read. **Batch where possible:** flags for the
@@ -208,12 +221,27 @@ of separate sessions it is split across**, not just the work in it. Four thin
 sessions pay four full re-reads; one session that carries the same work to a
 decision point pays one.
 
-**So batch to amortize, and minimize session count.** Prefer one session that runs
-a unit of work to its natural stopping point over several thin ones. Group
-same-owner work — adjacent tickets, every open flag for one owner, a spec change
-and the ticket updates it forces — into a single session. Every handoff that
-spawns a fresh session re-pays the fixed read, so collapse handoffs wherever the
-ownership model allows.
+**Batch light work; dispatch heavy work per unit.** Two regimes, because they
+trade differently:
+
+- **Light, bounded same-owner work** — every open flag for one owner, a spec
+  change and the ticket updates it forces, judgment-log ratifications — still goes
+  in **one session**. It amortizes the fixed read and never grows context far
+  enough for within-session cost to bite. Collapse these handoffs wherever the
+  ownership model allows.
+- **Heavy build work** (implementing tickets) defaults to **per-ticket dispatch**:
+  the orchestrator hands each ticket to a fresh Developer subagent with a small,
+  bounded context. Here the old "batch big to amortize reads" logic *loses* — a
+  large build batch pays escalating within-session cost as context grows, and a
+  mid-batch death (three happened in P1) loses the most work at peak expense.
+  Per-ticket dispatch caps both: bounded context per ticket, and a death costs one
+  ticket, not a milestone. It is also the runaway guard — a subagent scoped to one
+  ticket physically can't run to a 300k-token context. **This is the P2 default,
+  replacing the prior batch-big mandate**, which was reasoned from first principles
+  and never measured (see the resolution in `flags-archive.md`, 2026-07-08).
+  Measure P2's total spend against P1's as free, uncontrolled evidence; batching
+  earns its way back only where a phase shows genuinely high spec-read overlap
+  between adjacent tickets *and* the batch still ends on a real checkpoint.
 
 **The batching tradeoff, named.** A bigger batch amortizes reading but costs two
 things: fewer checkpoints for the user to catch a wrong turn, and more lost work
@@ -254,19 +282,21 @@ foundational/contract-dense, so its impl:contract ratio is not the steady-state
 signal. Adoption gate: measure the [impl]:[contract] ratio on a *completed
 non-foundational (P1) feature* first. See flags-archive.md, 2026-07-02.)
 
-**The batch plan is an Architect deliverable, not Developer discretion.** How a
-phase's tickets group into Developer *sessions* is a read of the ticket
-dependency graph, the spec-read overlap between tickets (shared reads are what a
-batch amortizes), and the seam interfaces — all of which the Architect assembles
-during ticketing and already sketches in the ticket file's "Sequencing" section.
-So the Architect **draws the batch plan there** (a short "Build batches" block:
-which tickets per session, and the checkpoint each batch ends on), governed by
-the tradeoff above — amortize shared reads, but right-size each batch to a real
-checkpoint so blast-radius and steerability stay bounded. The **Developer
-executes the plan, and never invents its own batching.** The **Strategist may
-widen or narrow a phase's batching on steerability grounds** (where the user
-needs a checkpoint to catch a wrong turn) — that override is a direction call and
-stays with the Strategist; the mechanical grouping is the Architect's.
+**The dispatch sequence is an Architect deliverable, not Developer discretion.**
+How a phase's tickets *order* into build sessions — dependency order, which seam
+interfaces (even as stubs) must land first, and the checkpoint each unit ends on —
+is a read of the ticket dependency graph and the seam interfaces, which the
+Architect assembles during ticketing and sketches in the ticket file's
+"Sequencing" section. Under the per-ticket default this is a **sequence**, not a
+grouping: one ticket per Developer subagent, in dependency order, each ending on a
+real checkpoint. The Architect may still mark a *tight cluster* of tickets to run
+in one session where spec-read overlap is genuinely high and the cluster ends on
+one checkpoint — but that is the exception the token math has to earn, not the
+default. The **Developer executes the sequence, and never invents its own
+batching.** The **Strategist may widen or narrow it on steerability grounds**
+(where the user needs a checkpoint to catch a wrong turn) — that override is a
+direction call and stays with the Strategist; the mechanical ordering is the
+Architect's.
 
 ## Working agreements
 
@@ -289,7 +319,11 @@ stays with the Strategist; the mechanical grouping is the Architect's.
   wrong turn early. The message references the brief, ticket, or flag it serves
   (e.g. `brief: debug-training-mode`). This is orthogonal to session batching in
   the token-economy section — that minimizes cold-start *reads*; committing often
-  *within* a session costs nothing extra.
+  *within* a session costs nothing extra. **Hard rule:** commit the first working
+  logical unit before starting the next — never carry two uncommitted units at
+  once. In P1, three sessions died with uncommitted work because the commit
+  consistently came too late under large batches; per-ticket dispatch already caps
+  a mid-flight loss at one ticket, and this rule caps it at a fraction of one.
 - **Direction lives upstream.** A steer given in chat — by the user or anyone —
   is provisional until the *owning* artifact records it. If a role receives or
   infers direction that belongs to an upstream artifact (priorities, scope, a
@@ -307,10 +341,12 @@ stays with the Strategist; the mechanical grouping is the Architect's.
   executing role reads *that set*, not the whole `/docs` tree. Ledgers are kept
   cheap on purpose: `flags.md` holds open flags only, `decisions.md` is fronted
   by a one-line index — pull full entries on demand.
-- **Batch per session.** Roles are memory-less; each session re-pays its fixed
-  reading cost before any work. Group same-role work — several flags for one
-  owner, adjacent tickets, a spec revision plus its ticket updates — into one
-  session where practical.
+- **Batch light work per session; dispatch builds per ticket.** Roles are
+  memory-less; each session re-pays its fixed reading cost before any work. Group
+  *light* same-role work — several flags for one owner, a spec revision plus its
+  ticket updates, ratifications — into one session where practical. *Heavy build
+  work* defaults to per-ticket dispatch — see "Token economy" for the regime
+  split and why.
 - **Confirm paths on first run.** Each role confirms this layout with the user at
   the start of its first session; if a path here is wrong, that's a flag to the
   Strategist.

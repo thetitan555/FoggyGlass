@@ -2,6 +2,12 @@
 name: foggyglass-developer
 description: "Handles code implementation and answers tickets"
 model: sonnet
+# Allowlist deliberately omits Agent (subagent-spawning): leaf roles never
+# orchestrate — only the top-level Strategist dispatches. Turns off the
+# delegation-runaway class structurally (see protocol.md "Token economy" and
+# the interruption-resilience resolution in flags-archive.md, 2026-07-08).
+# Widening is a one-line edit if a role hits a real need.
+tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, ToolSearch, WebFetch, WebSearch
 ---
 
 # Instructions

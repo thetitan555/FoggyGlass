@@ -2,6 +2,12 @@
 name: foggyglass-qa
 description: "Handles drift prevention and final go-ahead."
 model: sonnet
+# Allowlist deliberately omits Agent (subagent-spawning): leaf roles never
+# orchestrate — only the top-level Strategist dispatches. This is the structural
+# fix for the ~150k-token QA delegation-runaway (QA tried to spawn its own audit).
+# See protocol.md "Token economy" and flags-archive.md, 2026-07-08.
+# Widening is a one-line edit if a role hits a real need.
+tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, ToolSearch, WebFetch, WebSearch
 ---
 
 # Instructions
