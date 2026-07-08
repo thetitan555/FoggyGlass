@@ -11,7 +11,7 @@
 
 ---
 
-### [open] 2026-07-04 · raised-by: QA · owner: Developer · re: /run_tests.bat
+### [resolved] 2026-07-04 · raised-by: QA · owner: Developer · re: /run_tests.bat
 Problem: `run_tests.bat` (repo root) still lists only the original 12 P0-era
 test files in its `TESTS` variable and has not been updated to include the 13
 test files added during P1 work (`test_air_height_scaling`, `test_character_a`,
@@ -25,7 +25,15 @@ files are independently green when run directly against Godot (confirmed in
 the P1 audit, `docs/audits/audit-p1-feature.md`, this session). Fix: add the
 13 missing names to the `TESTS` variable.
 ---
-Resolution (owner fills): …
+Resolution (owner fills): `TESTS` brought fully current — not just the 13 named here, but
+also the P1.1-phase additions landed since this flag was raised (`test_control_surface`)
+and TKT-P1.1-03's own new test (`test_serialization_version`), for **27 runnable
+`SceneTree` tests total**, enumerated against a fresh `game/tests/test_*.gd` glob rather
+than trusting either this flag's list or the prior 12-file list. `test_support.gd` is
+excluded — it is a shared helper (`TestSupport`, programmatic move-data builders), not a
+runnable `SceneTree` test; it has no `_init`/`quit` test-runner shape and running it
+directly does nothing. Verified: ran all 27 headlessly (directly against Godot, not
+through the batch file, to sidestep its trailing `pause`) — 27/27 pass.
 
 ### [open] 2026-07-04 · raised-by: QA · owner: Developer · re: game/content/character_a.gd:731
 Problem: `2H`'s invuln keyframe carries a stale comment: `# frames 1-8 per
