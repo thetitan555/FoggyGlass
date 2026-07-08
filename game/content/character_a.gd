@@ -767,7 +767,7 @@ static func _build_2h() -> MoveState:
 	kf_start.frame_start = 1
 	kf_start.frame_end = 5
 	kf_start.hurtboxes = [_hurt_crouch()]
-	kf_start.invuln_strike = true   # frames 1-8 per spec; see flags.md (inert until consumed)
+	kf_start.invuln_strike = true   # frames 1-8 per spec; consumed in phase 4 (AD-031)
 	var hb := HitBox.new()
 	hb.box = Box.make(FP.from_int(15), FP.from_int(30), FP.from_int(35), FP.from_int(60))   # tall anti-air box
 	hb.damage = 60

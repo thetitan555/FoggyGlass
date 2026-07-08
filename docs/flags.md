@@ -35,7 +35,7 @@ runnable `SceneTree` test; it has no `_init`/`quit` test-runner shape and runnin
 directly does nothing. Verified: ran all 27 headlessly (directly against Godot, not
 through the batch file, to sidestep its trailing `pause`) — 27/27 pass.
 
-### [open] 2026-07-04 · raised-by: QA · owner: Developer · re: game/content/character_a.gd:731
+### [resolved] 2026-07-04 · raised-by: QA · owner: Developer · re: game/content/character_a.gd:731
 Problem: `2H`'s invuln keyframe carries a stale comment: `# frames 1-8 per
 spec; see flags.md (inert until consumed)`. This predates TKT-P1-11/AD-031
 landing — invuln is no longer inert (it is consumed in phase 4; confirmed
@@ -47,7 +47,15 @@ reader into thinking invuln doesn't function yet. Worth a single pass to
 check for and remove the "(inert until consumed)" phrase anywhere else it
 survived past AD-031 landing in this file.
 ---
-Resolution (owner fills): …
+Resolution (owner fills): Comment updated to `# frames 1-8 per spec; consumed in phase 4
+(AD-031)` (the line has since shifted to `character_a.gd:770` as the file grew, confirmed
+by grep, not a line-number regression). Checked the whole file for the phrase surviving
+elsewhere — this was its only occurrence in `character_a.gd`; none found. Two other
+references to the phrase remain, both in historical docs (`flags-archive.md`'s own past
+entry and `audit-p1-feature.md`'s quote of it) — left untouched, since those are dated
+records of what the comment USED to say, not the stale comment itself, and this flag's
+scope was the code. Code-correct throughout; no behavior change. `character_a.gd` still
+parses and all 27 headless tests pass (including `test_invuln.gd`, unaffected).
 
 ### [resolved] 2026-07-08 · raised-by: Strategist (from user's overlay review) · owner: Developer · re: geometry overlay renders no visible boxes
 Problem: in the same human run (full report archived in `flags-archive.md`, 2026-07-08), the
