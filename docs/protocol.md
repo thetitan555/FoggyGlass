@@ -123,11 +123,22 @@ the Architect appends rulings.
 5. **Audit** *(QA).* Verifies against acceptance criteria, the tenets, and the
    audit criterion; reads the judgment-call log for drift. Objective failures are
    pass/fail and QA owns the call; subjective questions QA *surfaces* and routes.
-   Findings go out as flags to their owners. When a change passes, it's **done**.
+   Findings go out as flags to their owners. When a change passes — and, for a
+   change carrying a **human-inspection gate**, once the user has cleared that
+   gate too — it's **done**.
 
 The loop closes back on itself: a QA finding, an Architect ratification, or a new
 idea re-enters at the appropriate stage. Work is "done" only after it clears
-audit — not when the Developer thinks it's finished.
+audit — and, for any feature with an **experiential surface** (rendering,
+operability, on-screen legibility a headless check can't confirm), only after the
+user has cleared its human-inspection gate as well. QA's objective pass is
+necessary, not sufficient, for such features. The gate is declared upstream
+(Strategist, on the brief or roadmap milestone) and defined in
+`audit-criterion.md`; QA records it as an explicit open item in the audit and
+**cannot issue a done verdict while it stands open** — only the user closes it.
+P1 is why this exists: it was taken as done on green tests while its centerpiece
+surface was invisible and inoperable to a human (`flags.md`, 2026-07-08). Not
+when the Developer thinks it's finished, and not on headless green alone.
 
 ## Upstream correction — the rule that keeps the pipeline honest
 
@@ -191,7 +202,10 @@ user pasted into its chat; the owner sanity-checks against live state first.
   `.claude/agents/strategist.md`.
 - **Per feature.** QA audits each feature against its acceptance criteria, the
   tenets (determinism + serialization especially), and the audit criterion before
-  it is "done." This gates the loop — nothing is done un-audited.
+  it is "done." This gates the loop — nothing is done un-audited. A feature that
+  carries a **human-inspection gate** is not done on the audit alone: the user's
+  gate clears last (see the flow's definition of done above). Green headless
+  tests never substitute for it.
 - **Per milestone.** At each roadmap milestone, QA runs a **drift sweep**: the
   cumulative-behavior-vs-charter review and spec-vs-implementation divergence that
   per-feature checks can't see. Drift is the central failure mode of a
@@ -268,8 +282,8 @@ are rubber-stamp passes and re-reads of unchanged artifacts.
 highest-leverage lever, because shaving a role's mandatory read pays off in every
 future session that role ever runs. Reinforce what's already here: tickets and
 briefs name the exact spec sections a role must read (not "read the spec");
-`flags.md` holds open flags only; `decisions.md` is fronted by its index;
-rationale lives once and is cited, never restated. Every line a role does *not*
+`flags.md` holds open flags only; `decisions.md` and `judgment-log.md` are
+fronted by their indexes; rationale lives once and is cited, never restated. Every line a role does *not*
 have to re-read is a line saved in perpetuity.
 
 **Consolidate ownership passes where the model allows.** A single feature can
@@ -339,8 +353,14 @@ Architect's.
 - **Read what the task needs, not the tree.** Every role reads the tenets and its
   own inputs; beyond that, tickets name the specs/sections they serve and the
   executing role reads *that set*, not the whole `/docs` tree. Ledgers are kept
-  cheap on purpose: `flags.md` holds open flags only, `decisions.md` is fronted
-  by a one-line index — pull full entries on demand.
+  cheap on purpose: `flags.md` holds open flags only; `decisions.md` and
+  `judgment-log.md` are each fronted by a one-line index — pull full entries on
+  demand. The judgment-log index carries one line per entry in log order:
+  `JC-0NN · <ticket/flag> · <≤10-word decision gist> — <status>`. Its upkeep
+  follows the log's own shared-write split: the **Developer** adds the index line
+  when appending an entry, the **Architect** updates that line's status token on
+  ratifying/overturning — same write, never a trailing chore (as with
+  `decisions.md`).
 - **Batch light work per session; dispatch builds per ticket.** Roles are
   memory-less; each session re-pays its fixed reading cost before any work. Group
   *light* same-role work — several flags for one owner, a spec revision plus its

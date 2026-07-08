@@ -66,6 +66,28 @@ is cherished (a lost read). If they can't even discover what happened, it's tax
 (opacity). The debug/technical training mode and replays are this backstop made
 real: they are where "what just happened?" always has an answer.
 
+## The human-inspection gate (experiential surfaces)
+
+Some of what this criterion tests is not confirmable by a headless check. Whether
+boxes actually *render*, whether a control is *operable* by a human hand, whether
+a readout is legible *on screen* — these are the charter's legibility promise at
+the pixel and the input, and no passing test suite proves them. P1 is the
+standing lesson: all 24 headless tests were green while the geometry overlay drew
+nothing and nothing in the mode was human-operable (`flags.md`, 2026-07-08).
+Green tests are necessary and not sufficient.
+
+So: **any change with an experiential surface — anything whose correctness
+includes rendering, input-operability, or on-screen legibility a headless check
+cannot confirm — carries a human-inspection gate.** QA's objective verdict does
+not close it; only the user, having seen and operated the thing, does (the
+"play/overlay-look gate" the user already owns — `protocol.md`). Until that gate
+clears, the change is *audit-passed, pending human inspection* — never "done."
+Ownership stays clean: the Strategist **declares** the gate on the owning brief
+or roadmap milestone (it's a direction call), QA **enforces** it (a declared-open
+gate blocks a done verdict), and the done-mechanics are `protocol.md`'s. This is
+the same automate-the-objective / human-holds-the-experiential shape as the push
+gate.
+
 ## Objective vs. subjective (QA's handling, per its role)
 
 - **Objective — QA verifies, pass/fail, owns the call:** Is the information

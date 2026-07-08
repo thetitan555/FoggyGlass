@@ -29,7 +29,7 @@ Each phase depends on the one before it through a real interface, so the order
 isn't preference — it's the dependency graph:
 
 ```
-P0 backbone ─▶ P1 char A + debug training ─▶ P2 char B + 1v1 match ─▶ P3 2P tutorial ─▶ P4 harden
+P0 backbone ─▶ P1 char A + debug training ─▶ P1.1 finish the instrument ─▶ P2 char B + 1v1 match ─▶ P3 2P tutorial ─▶ P4 harden
 ```
 
 The load-bearing sequencing fact: the debug training mode and the 2P tutorial
@@ -39,6 +39,17 @@ the player-facing half is downstream of the simulation-facing interface — so
 those interfaces, even as stubs, come first. The determinism harness comes online
 *with* the sim loop, not after, because determinism violations are far cheaper to
 catch as the sim is written than to chase later.
+
+## Definition of done includes a human-inspection gate
+
+From P1.1 on, any milestone with an **experiential surface** — something a human
+must see or operate to confirm (rendering, input-operability, on-screen
+legibility) — is not "done" on QA's headless audit alone; the user's
+play/overlay-look gate clears it last. Mechanics live in `protocol.md`, what
+qualifies in `audit-criterion.md`. **P0** was exempt (pure architecture, nothing
+to look at). **P1, P1.1, P2, P3** all carry the gate; **P4** is where the charter
+audit itself is the human sign-off. Recorded here because P1 was taken as done
+without it — the gap P1.1 now closes.
 
 ## P0 — Architecture backbone
 
@@ -75,6 +86,38 @@ replaying a buffer (Tenet 2), not a special case.
 **Done when:** character A is playable against a dummy; the training mode shows,
 live and correctly, what the sim is doing each frame; the record/playback dummy
 round-trips a buffer. *The instrumentation the whole team uses now exists.*
+*(Not actually met at first sign-off: the human review of 2026-07-08 found the
+mode inoperable and its geometry overlay blank. P1.1 closes that — P1 is not
+truly done until P1.1 clears.)*
+
+## P1.1 — Finish the P1 instrument (make it operable and visible)
+
+Not new scope — **completing P1 against its own brief.** The first human run of
+the training mode (2026-07-08) surfaced two gaps that all 24 headless tests pass
+straight through: nothing in the mode is **operable by a human** (pause /
+frame-step / reset / record-playback exist only as methods, bound to no key or
+button), and the **geometry overlay renders no boxes** — the charter's centerpiece
+surface, blank. Both are already open flags (`flags.md`, 2026-07-08).
+
+Why it precedes P2: the training mode is the team's instrument — the surface we
+author, verify, and audit *through*. Building char B and the 1v1 matchup on an
+instrument that can't be operated or seen through would author a second character
+we equally can't inspect, and try to verify the matchup's legibility — the
+charter's whole point — on a surface that shows nothing. Pay the debt before
+stacking on it.
+
+The debug-training brief (`briefs/debug-training-mode.md`) already lists frame
+control and situation reset as **required outcomes** and describes a human
+pressing them, so operability is not new intent. The one open scope question is
+the Architect's: was an input-bound control surface in P1's scope (a gap to close
+now) or deliberately deferred (driving UI later)? That flag is open to them; if
+they rule it deferred, the driving UI's roadmap placement routes back to me.
+
+**Done when:** the training mode is operable by a human — pause, frame-step,
+reset, and record/playback all invokable from an actual control — and the geometry
+overlay draws both characters' boxes on screen; the two flags are resolved; and
+the **human-inspection gate clears** (the user confirms it live). Only then is P1
+actually done.
 
 ## P2 — Second character + playable 1v1 match
 
