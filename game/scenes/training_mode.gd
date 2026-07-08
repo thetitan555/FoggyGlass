@@ -177,6 +177,12 @@ func _physics_process(_delta: float) -> void:
 	_source_p2.produce_next()
 
 
+## TKT-P1.1-02 (training-mode.md "Complete the P1 device sampler"; AD-018).
+## Samples directions AND the three attack buttons into ONE raw InputFrame —
+## still exactly the one InputSource shape (Tenet 2): no "P1 is special" type,
+## no move/button-label semantics here (those live in the character's
+## button_map, AD-018/AD-002). The three tm_button_* actions are placeholder
+## key bindings (project.godot; see docs/judgment-log.md).
 func _sample_device_p1() -> int:
 	var frame: int = InputFrame.NEUTRAL
 	if Input.is_action_pressed("ui_up"):
@@ -187,11 +193,63 @@ func _sample_device_p1() -> int:
 		frame |= InputFrame.LEFT
 	if Input.is_action_pressed("ui_right"):
 		frame |= InputFrame.RIGHT
+	if Input.is_action_pressed("tm_button_0"):
+		frame |= InputFrame.BUTTON_0
+	if Input.is_action_pressed("tm_button_1"):
+		frame |= InputFrame.BUTTON_1
+	if Input.is_action_pressed("tm_button_2"):
+		frame |= InputFrame.BUTTON_2
 	return InputFrame.mask(frame)
 
 
 func _on_ticked(tick: int) -> void:
 	ticked.emit(tick)
+
+
+# ---------------------------------------------------------------------------
+# TKT-P1.1-02 — human control surface (training-mode.md "Human control
+# surface" + criterion 13). Binds each control operation to a device/keyboard
+# control (the tm_* input-map actions, project.godot), routed EXCLUSIVELY
+# through this shell's own control methods below (never TickHost/
+# TrainingHarness/RecordPlaybackSource directly — mirrors the read-only rule
+# on the inspection side, criterion 10). Key choice is placeholder latitude
+# (docs/judgment-log.md).
+# ---------------------------------------------------------------------------
+
+## Which player index the dummy-mode-cycle control affects. P2 (index 1) is
+## "the dummy" (training-mode.md "Control layer" → Record/playback dummy) —
+## P1 stays the human's own passthrough source. A future session that wants to
+## cycle P1's mode instead can still do so via set_dummy_mode(0, ...) directly
+## (unaffected by this binding).
+const _DUMMY_CONTROL_PLAYER_INDEX: int = 1
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("tm_pause"):
+		set_paused(not is_paused())
+	elif event.is_action_pressed("tm_step"):
+		step_once()
+	elif event.is_action_pressed("tm_capture_reset"):
+		capture_reset()
+	elif event.is_action_pressed("tm_do_reset"):
+		do_reset()
+	elif event.is_action_pressed("tm_dummy_mode_cycle"):
+		_cycle_dummy_mode()
+
+
+## Cycles the dummy's mode PASSTHROUGH -> RECORDING -> PLAYBACK -> PASSTHROUGH
+## on each press — "dummy record/playback mode-switch" as a single reachable
+## control (the ticket's one operation), rather than three separate keys.
+## Routed through this shell's own set_dummy_mode/get_dummy_mode (never
+## RecordPlaybackSource directly).
+func _cycle_dummy_mode() -> void:
+	var modes: Array = [
+		RecordPlaybackSource.Mode.PASSTHROUGH,
+		RecordPlaybackSource.Mode.RECORDING,
+		RecordPlaybackSource.Mode.PLAYBACK,
+	]
+	var current: int = get_dummy_mode(_DUMMY_CONTROL_PLAYER_INDEX)
+	var next_idx: int = (modes.find(current) + 1) % modes.size()
+	set_dummy_mode(_DUMMY_CONTROL_PLAYER_INDEX, modes[next_idx])
 
 
 # ---------------------------------------------------------------------------

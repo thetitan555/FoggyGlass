@@ -80,6 +80,7 @@
 - JC-042 · 2026-07-04 · TKT-P1-06 · Projectile hitbox given its own draw color instead of a `hit_kind`-based BoxView split — ratified
 - JC-043 · 2026-07-04 · TKT-P1-09 · Recognized-command projection reconstructs `InputHistory` from `PlayerView.input_history` to call the sim's own recognizer — ratified
 - JC-044 · 2026-07-08 · TKT-P1.1-01 · AD-035 render framing implemented as a position/scale transform on `GeometryOverlay` itself (not a `Camera2D`); exact zoom/ground-line/margin constants and fixed placeholder stage bounds (not a live seam read) — provisional
+- JC-045 · 2026-07-08 · TKT-P1.1-02 · Control-surface key bindings (P/N/C/R/M/J/K/L), a single cycling key for the dummy mode-switch (not three mode keys), frame-step bound as a direct passthrough with no auto-pause, and a static-InputMap-reading `ControlsLegend` node — provisional
 
 ---
 
@@ -149,3 +150,79 @@ runs a non-default stage; whether the node-transform mechanism (vs.
 `Camera2D`) is the preferred convention for other future world-space overlays
 this project adds (so a second overlay doesn't independently re-derive
 framing, which AD-035's "Why" explicitly guards against).
+
+### JC-045 · 2026-07-08 · TKT-P1.1-02 (control surface: bindings, dummy-mode-switch shape, legend) — provisional
+
+**Decision.** Four bundled latitude calls completing `training-mode.md`'s
+"Human control surface" section and criterion 13, all explicitly named
+placeholder by the ticket ("Key/action choice is placeholder ... like tuning
+numbers"):
+
+1. **Key bindings.** Added eight `project.godot` input-map actions and bound
+   them in `TrainingMode._unhandled_input`
+   (`game/scenes/training_mode.gd`): `tm_pause`=P, `tm_step`=N,
+   `tm_capture_reset`=C, `tm_do_reset`=R, `tm_dummy_mode_cycle`=M,
+   `tm_button_0`=J, `tm_button_1`=K, `tm_button_2`=L. Movement stays on the
+   existing built-in `ui_up/down/left/right` (arrow keys) — untouched, since
+   `_sample_device_p1` already read them. Mnemonic where available (P-ause,
+   N-ext, C-apture, R-eset, M-ode); attack buttons on J/K/L, adjacent keys
+   clear of the control mnemonics, following the common arrows-plus-left-hand-
+   buttons fightstick-emulation layout (arrows right hand, J/K/L or Z/X/C left
+   hand — J/K/L chosen over Z/X/C only because it left Z/X/C/etc. free for any
+   future binding without crowding one corner of the keyboard). **Passed
+   over:** WASD for movement (would conflict with attack-button placement and
+   isn't more discoverable than arrows, which the sampler already used).
+2. **Dummy record/playback mode-switch is ONE cycling key, not three mode
+   keys.** `tm_dummy_mode_cycle` advances P2's dummy
+   PASSTHROUGH → RECORDING → PLAYBACK → PASSTHROUGH on each press
+   (`TrainingMode._cycle_dummy_mode`), routed through the shell's own
+   `get_dummy_mode`/`set_dummy_mode` (never `RecordPlaybackSource` directly).
+   The ticket names this as one operation ("dummy record/playback
+   mode-switch"), and a single reachable control satisfies "each operation is
+   reachable from a bound control" without adding three new bindings for what
+   the spec treats as one control. Fixed to P2 (index 1) — training-mode.md
+   names P2 as "the dummy"; P1 stays the human's own passthrough source (still
+   reachable via `set_dummy_mode(0, ...)` directly, just not bound to a key by
+   this ticket). **Passed over:** three separate keys (one per mode) — more
+   directly discoverable per-mode, but three new bindings for a single named
+   operation, and not requested by the spec's wording.
+3. **Frame-step is a direct, unconditional passthrough — no auto-pause.**
+   `tm_step` always calls `step_once()` regardless of the shell's current
+   pause state, exactly mirroring the existing `step_once()` method's own
+   behavior (which likewise doesn't check `is_paused()`). The spec describes
+   frame-step's *meaning* only "while paused"; a human is expected to press
+   `tm_pause` first. **Passed over:** having the step binding also force
+   `set_paused(true)` as a convenience — more forgiving UX, but it would be
+   the binding *inventing* behavior beyond "call the corresponding control
+   method," which is what this ticket scopes ("routed through the shell's
+   control methods," not a new composite operation). If the human-inspection
+   gate finds this awkward, worth a follow-up ticket, not a silent addition
+   here.
+4. **Controls legend reads Godot's InputMap directly, not hardcoded key
+   text.** `game/scenes/controls_legend.gd` (`ControlsLegend`, mounted as a
+   sibling `Control` in `training_mode.tscn`, top-right, `x:750..1136,
+   y:16..260` — clear of the existing HUD panels at `x:16..700` and of the
+   framed stage, which sits centered near screen x:454..698 for the symmetric
+   start positions per `test_geometry_overlay.gd`) builds its text from
+   `InputMap.action_get_events(action).as_text()` per action, so the legend
+   can never drift out of sync with `project.godot`'s actual bindings if they
+   change later. Not wired through `TrainingMode.set_source` / the
+   `inspection_view()` seam at all — it has no sim dependency, so it isn't a
+   "readout overlay" in `training-mode.md`'s taxonomy and needn't honor
+   criterion 10's grep (there is nothing sim-internal in the file for it to
+   catch). **Passed over:** a static hardcoded Label string — simpler, but
+   would silently go stale the moment a key binding changes, defeating the
+   "discoverable" intent criterion 13 asks for.
+
+**Scope note:** no new readout, no seam change, no new control operation
+beyond the five the spec names — this is binding + legend only. Determinism
+unchanged: the device sampler's `_sample_device_p1` still emits one raw
+`InputFrame` (same shape, three more bits read); `_unhandled_input` calls
+existing control methods verbatim, never touching `TickHost`/
+`TrainingHarness`/`RecordPlaybackSource` directly.
+
+**For Architect ratification:** the specific key choices (P/N/C/R/M/J/K/L);
+whether the dummy mode-switch should eventually get direct per-mode keys
+instead of one cycling key; whether frame-step should auto-pause as a UX
+convenience (a design call, not implementation, if wanted — flagged here
+rather than added unilaterally).
