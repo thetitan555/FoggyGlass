@@ -243,3 +243,29 @@ foundation. Not a late P4 pass. The Architect specs AD-036 into P2's first ticke
 Revisable like any roadmap call; the user may reweigh on return. (The two sibling feel flags —
 frame-step auto-pause and jump apex-hang — stay open: they are the user's to judge at the P1.1
 human re-gate, not mine to resolve.)
+
+### [open] 2026-07-08 · raised-by: QA (P1.1 objective audit) · owner: Strategist · re: docs/flags-archive.md contains a run of NUL bytes — file-integrity defect, not content drift
+Problem: while reading `docs/flags-archive.md` for the P1.1 drift check, the file fails a plain-text
+check (`file docs/flags-archive.md` reports "data", not text) — it contains **4,632 contiguous NUL
+(`\x00`) bytes** starting at byte offset 48023 (right after the resolution text for a P0-era
+`test_throws_multihit.gd` flag entry, and before the next entry continues normally in plain text).
+`git status` on the file is clean and `git log` shows it was last touched by commit `11eab90`
+("flags: archive three resolved Architect flags"), so **the NUL run is already committed** — this
+is not something introduced by my read-only audit pass (I only `Read`/`Grep`/`Bash`-catted it, never
+wrote to it). No other coordination artifact I checked (`flags.md`, `judgment-log.md`,
+`judgment-log-archive.md`, `roadmap.md`, `protocol.md`) shows the same symptom — this looks isolated
+to this one file, most likely from whatever tool/process wrote the archive-sweep commit (a
+pre-allocated buffer or truncated write that never got its bytes filled in, rather than a merge or
+encoding issue — the text before and after the NUL run is intact and readable). Practical impact:
+some tools (`grep`/`rg` in this environment) refuse to search file content past the first NUL and
+silently report "binary file matches" instead of surfacing the actual line — so anyone `grep`ing
+this archive for an old flag by date/keyword may get a false negative past that offset, without any
+error telling them why. This does not affect anything P1.1 needed (the corrupted span sits inside
+old P0-era content, not any P1.1 entry), so it does **not** block this audit's pass/fail verdicts —
+routing separately as a repo-hygiene / artifact-integrity defect on the file you own moving entries
+into. Suggested fix: re-save `docs/flags-archive.md` (e.g. re-write it from its current readable
+text content, stripping the NUL run) so it round-trips as plain UTF-8 text again; verify no content
+was actually lost (the readable text on both sides of the NUL run should be checked against git
+history/blame to confirm nothing was silently dropped, only that null padding was inserted).
+---
+Resolution (owner fills): …

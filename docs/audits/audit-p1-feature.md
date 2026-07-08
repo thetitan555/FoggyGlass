@@ -1,5 +1,21 @@
 # Audit — P1 (Character A + Debug/Technical Training Mode)
 
+> **Addendum (2026-07-08, QA):** this report's unqualified "P1 PASSES" reads
+> more optimistic than events warranted. It predates the first human
+> operation of the training mode (2026-07-08), which found the mode
+> **inoperable** (no control bound to any key/button) and the geometry
+> overlay **rendering no boxes at all** — both explicitly named below as "not
+> verifiable from this environment" but, in hindsight, understated as
+> non-blocking. They were real defects a human found on the first try, that
+> all 24 headless tests here passed straight through. P1.1
+> (`docs/tickets/p1.1-finish-instrument.md`) closed both, plus two further
+> gate-defect fixes the *first* P1.1 human re-run then found (walk
+> unreachable by keyboard; a jump-landing floor-sink) — see
+> `docs/audits/audit-p1.1-instrument.md` for the current, corrected status.
+> This file is left otherwise unedited as the dated record of what was known
+> at the time; do not read its "PASSES" verdict below as still current
+> without also reading the P1.1 audit.
+>
 > QA audit report. Owner: QA. Routed findings live in `docs/flags.md`.
 > Date: 2026-07-04. Auditor: QA (FoggyGlass).
 >
