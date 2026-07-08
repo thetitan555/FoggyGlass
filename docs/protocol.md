@@ -88,7 +88,8 @@ project tree — **`/game`** at repo root (the Architect's call, recorded in
 | Architecture decisions | `/docs/spec/decisions.md` | **Architect** | all |
 | Tickets | `/docs/tickets/*.md` | **Architect** | Developer, QA |
 | Game code + dev tests | `/game` (engine project tree) | **Developer** | all |
-| Judgment-call log | `/docs/judgment-log.md` | **Developer** writes; **Architect** ratifies | QA, Architect |
+| Judgment-call log (index + provisional bodies) | `/docs/judgment-log.md` | **Developer** writes; **Architect** ratifies | QA, Architect |
+| Judgment-call archive (closed, verbatim) | `/docs/judgment-log-archive.md` | **Strategist** moves entries in | on demand |
 | Audit + drift reports | `/docs/audits/*.md` | **QA** | routed to owner |
 | Flag ledger (open) | `/docs/flags.md` | **any role** appends; **owner** resolves | all |
 | Flag archive (resolved + relayed) | `/docs/flags-archive.md` | **Strategist** moves entries in | on demand |
@@ -196,10 +197,14 @@ user pasted into its chat; the owner sanity-checks against live state first.
 ## Cadence
 
 - **Per session (Strategist).** At the start of every session, before other
-  work, check `flags.md` for entries the owner has flipped to `[resolved]` and
-  relayed back. Move each to `flags-archive.md`. This is the only place this
-  duty is enforced structurally rather than left to memory — see
-  `.claude/agents/strategist.md`.
+  work, sweep both live ledgers into their archives: (1) move each `flags.md`
+  entry the owner has flipped to `[resolved]` and relayed back into
+  `flags-archive.md`; (2) move each `judgment-log.md` entry the Architect has
+  ratified/overturned out of the "Provisional" section into
+  `judgment-log-archive.md` (verbatim; its index line stays, status token now
+  marking it archived). One janitorial owner for both ledgers keeps the live
+  reads flat. This is the only place the duty is enforced structurally rather
+  than left to memory — see `.claude/agents/strategist.md`.
 - **Per feature.** QA audits each feature against its acceptance criteria, the
   tenets (determinism + serialization especially), and the audit criterion before
   it is "done." This gates the loop — nothing is done un-audited. A feature that
@@ -211,8 +216,9 @@ user pasted into its chat; the owner sanity-checks against live state first.
   per-feature checks can't see. Drift is the central failure mode of a
   memory-less pipeline; the sweep exists to catch what individual green checks
   miss.
-- **Judgment-call ratification.** The Architect reads the judgment-call log and
-  resolves each open entry — *ratify* (fold into the spec) or *overturn* (flag it
+- **Judgment-call ratification.** The Architect reads the judgment-log's
+  **"Provisional" section** (not the archive — closed calls are already folded)
+  and resolves each entry — *ratify* (fold into the spec) or *overturn* (flag it
   back) — at least once per feature, before that feature is audited. Recorded
   calls are provisional until ratified; don't let them pile up unresolved, or the
   spec drifts out from under everyone.
@@ -353,14 +359,18 @@ Architect's.
 - **Read what the task needs, not the tree.** Every role reads the tenets and its
   own inputs; beyond that, tickets name the specs/sections they serve and the
   executing role reads *that set*, not the whole `/docs` tree. Ledgers are kept
-  cheap on purpose: `flags.md` holds open flags only; `decisions.md` and
-  `judgment-log.md` are each fronted by a one-line index — pull full entries on
-  demand. The judgment-log index carries one line per entry in log order:
-  `JC-0NN · <ticket/flag> · <≤10-word decision gist> — <status>`. Its upkeep
-  follows the log's own shared-write split: the **Developer** adds the index line
-  when appending an entry, the **Architect** updates that line's status token on
-  ratifying/overturning — same write, never a trailing chore (as with
-  `decisions.md`).
+  cheap on purpose so no role ever cold-reads a project's whole history:
+  `flags.md` holds open flags only (resolved ones in `flags-archive.md`);
+  `decisions.md` is fronted by a one-line index; and **`judgment-log.md` is
+  fronted by an index and holds only _provisional_ bodies — closed entries live
+  verbatim in `judgment-log-archive.md`**, pulled by JC-id on demand. Never read
+  an archive whole; scan the index, pull what the task needs. The judgment-log
+  index carries one line per entry in log order:
+  `JC-0NN · <ticket/flag> · <gist> — <status>`. Upkeep follows the log's own
+  shared-write split: the **Developer** adds the index line and the provisional
+  body when appending; the **Architect** flips that line's status token (and the
+  body's) on ratifying/overturning — same write, never a trailing chore; the
+  **Strategist** sweeps closed bodies into the archive (below).
 - **Batch light work per session; dispatch builds per ticket.** Roles are
   memory-less; each session re-pays its fixed reading cost before any work. Group
   *light* same-role work — several flags for one owner, a spec revision plus its

@@ -82,16 +82,26 @@ whether they can always find out what happened and why.
   clunky UX, feedback that doesn't tell you what happened) is tax to remove. It's
   yours to sharpen — the boundary cases especially. You own *what* the audit
   tests for; QA owns *how* it's performed.
-- **The flag archive** — `flags.md` is owned jointly (any role appends, the
-  flagged artifact's owner resolves), but moving entries out of it is yours
-  alone: once a resolution has been relayed back to you, move that entry to
-  `flags-archive.md` (append-only, verbatim). No other role does this — an
-  Architect or Developer session that resolves a flag is done once it's flipped
-  to `[resolved]`; the entry sits in `flags.md` until you clear it. **Check
-  `flags.md` for resolved-and-relayed entries at the start of every session,
-  before other work** — this is easy to skip because it's ledger upkeep, not a
-  brief or a roadmap, but a live ledger cluttered with old resolutions is exactly
-  the kind of process rot this role exists to prevent.
+- **The ledger archives** — moving entries out of the two live ledgers is yours
+  alone, so their cold-start reads stay flat no matter how long the project's
+  history grows:
+  - **`flags.md`** is owned jointly (any role appends, the flagged artifact's
+    owner resolves), but once a resolution has been relayed back to you, you move
+    that entry to `flags-archive.md` (append-only, verbatim). No other role does
+    this — an Architect or Developer session that resolves a flag is done once
+    it's flipped to `[resolved]`; the entry sits in `flags.md` until you clear it.
+  - **`judgment-log.md`** is fronted by a one-line index and holds only
+    *provisional* (unratified) bodies; once the Architect ratifies/overturns an
+    entry, you move its body to `judgment-log-archive.md` (append-only, verbatim),
+    leaving the index line in place with its status token now marking it archived.
+    The Developer authors entries and the Architect rules on them — but the
+    archival move is yours, the same janitorial role you hold for flags.
+
+  **Sweep both at the start of every session, before other work.** This is easy
+  to skip because it's ledger upkeep, not a brief or a roadmap, but a live ledger
+  cluttered with old resolutions — or a judgment-log that re-serves its whole
+  closed history on every cold start — is exactly the kind of process rot this
+  role exists to prevent.
 
 All of this lives in `/docs/` (confirm the repo layout with the user first).
 
