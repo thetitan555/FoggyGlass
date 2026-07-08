@@ -125,7 +125,7 @@ directions by pressing the arrow keys in a running `training_mode.tscn` window i
 human-inspection gate** — the user's to confirm on return, separate from and not claimed by this
 code fix.
 
-### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Developer · re: player sinks ~5px below the floor on landing
+### [resolved] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Developer · re: player sinks ~5px below the floor on landing
 Problem: same human run. On landing from a straight-up jump, the player drops through the floor
 slightly (~5px) MOST times. First determine whether this is a SIM defect (the player's sim `pos_y`
 actually goes below `ground_y` for one or more ticks — read the Live State `pos_y` against
@@ -138,7 +138,28 @@ if AD-035 underspecifies where the ground line seats. The floor is a reference t
 against, so this is a gate-visible legibility defect and blocks the P1.1 human gate alongside the
 movement flag.
 ---
-Resolution (owner fills): …
+Resolution (owner fills): **SIM defect, confirmed** — the render layer (AD-035/`geometry_overlay.gd`)
+is exonerated: it's a pure linear world→screen transform with no independent vertical-seating bug,
+so it faithfully rendered whatever `pos_y` the sim reported. Root cause: `character_a.gd`'s
+`_build_jump_arcs` split the 45-frame jump arc as 22 rise frames / 23 fall frames (45 is odd) at
+EQUAL magnitude (both 6.0 units/frame) — so the arc's net vertical displacement was `+6` units of
+permanent downward drift on EVERY jump (deterministic, not intermittent), landing the character 6
+units into the floor. There is no runtime landing clamp anywhere in the engine (movement is pure
+keyframe integration by design, AD-014) to correct this after the fact. Fixed by spending the odd
+frame as a one-frame, zero-velocity "apex hang" at the top of the arc (22 rise / 1 hang / 22 fall =
+45 frames, unchanged duration) — nets to exactly zero, verified headlessly: the character now lands
+bit-exact at its starting height, 0 ticks below `ground_y` during the whole flight. This is a
+conscious, disclosed sim-behavior change (JC-017-style): no persisted golden-file fixtures exist yet
+in the repo, so nothing needed silent regeneration, but `test_character_a.gd`'s
+`_test_jump_arc_integrates` — whose PRIOR assertion explicitly tolerated the drift ("lands close to
+its start... not bit-exact") — is updated to assert exact equality, since that prior tolerance was,
+in hindsight, documenting the very defect this flag reports. Full diagnosis and alternatives-passed-
+over (an uneven fall speed instead of a hang frame; a runtime clamp; a parabolic re-bake) recorded at
+**JC-047** (`docs/judgment-log.md`, provisional). All 26 headless test files pass.
+
+**Not closed by this fix: live human re-confirmation.** Whether the player visibly lands flush on
+the floor in a running `training_mode.tscn` window is the **P1.1 human-inspection gate** — the
+user's to confirm on return, separate from and not claimed by this code fix.
 
 ### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Strategist · re: character A crouching-normal attack heights — confirm design intent (NON-BLOCKING)
 Problem: the first visual look at character A's boxes (via the now-working geometry overlay)

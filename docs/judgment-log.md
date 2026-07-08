@@ -82,6 +82,7 @@
 - JC-044 · 2026-07-08 · TKT-P1.1-01 · AD-035 render framing implemented as a position/scale transform on `GeometryOverlay` itself (not a `Camera2D`); exact zoom/ground-line/margin constants and fixed placeholder stage bounds (not a live seam read) — provisional
 - JC-045 · 2026-07-08 · TKT-P1.1-02 · Control-surface key bindings (P/N/C/R/M/J/K/L), a single cycling key for the dummy mode-switch (not three mode keys), frame-step bound as a direct passthrough with no auto-pause, and a static-InputMap-reading `ControlsLegend` node — provisional
 - JC-046 · 2026-07-08 · P1.1 gate flag (arrow-key left/right) · Wired `STATE_WALK_F`/`STATE_WALK_B` into `character_a.gd`'s `button_map` as pure-direction commands (AD-032 pattern, mirroring jump) — these states/keyframes were already authored but unreachable from any input; button_index=-1 entries listed after the standing normals so a button always wins over a bare directional hold — provisional
+- JC-047 · 2026-07-08 · P1.1 gate flag (player sinks below the floor) · Jump arc's 22-rise/23-fall frame split (equal magnitude both halves) nets +6 units of permanent downward drift every jump; fixed to 22 rise / 1 zero-velocity apex hang / 22 fall (nets exactly zero) rather than changing either tuned speed value — provisional
 
 ---
 
@@ -340,3 +341,82 @@ touching `character_a.gd`'s `button_map` should be considered "character
 content" for future dispatch-boundary wording (this session's read: input-
 recognition wiring is closer to engine-adjacent plumbing than authored move/
 damage/timing content, but the Architect may see it differently).
+
+### JC-047 · 2026-07-08 · P1.1 gate flag (player sinks ~5px below the floor on landing) — provisional
+
+**Decision.** Diagnosed per the ticket's SIM-vs-RENDER branch: driving a
+neutral jump headlessly (hold UP briefly, release, let the arc run its full
+45-frame duration) showed `pos_y` landing exactly 6 units (`FP.from_units
+(6.0)`) below `ground_y` at the moment the state returns to idle — a SIM
+defect, not a render one (confirmed the render framing, AD-035/`geometry_
+overlay.gd`, is a pure linear world→screen transform with no independent
+vertical-seating bug: it maps whatever `pos_y` the sim reports, so it
+faithfully rendered the sim's own 6-unit sink). Root cause: `_build_jump_arcs`
+(`character_a.gd`) split the 45-frame `JUMP_DURATION` as 22 rise frames / 23
+fall frames (45 is odd, so an even 22/22 split leaves one frame over) at
+EQUAL magnitude (`RISE_SPEED == FALL_SPEED == 6.0`) — so the arc's net
+vertical displacement is NOT zero: `22*(-6.0) + 23*(+6.0) = +6.0` units of
+permanent downward drift on every single jump (deterministic, not
+intermittent — "most jumps" in the human report is likely just how often a
+session jumps at all). There is no landing clamp anywhere in `step_phases.gd`
+(P0 movement is pure keyframe integration, AD-014/JC-A-01) to correct this
+drift after the fact.
+
+Fixed by spending the odd frame as a single one-frame, zero-velocity APEX
+HANG at frame 23 (`RISE_FRAMES + 1`): 22 rise + 1 hang + 22 fall = 45
+(`JUMP_DURATION` unchanged), which nets to exactly zero. Verified headlessly:
+driving the arc to completion now lands `pos_y` bit-exact at its start
+(`start_y`), and `pos_y` never exceeds `ground_y` at any tick during the
+flight (0 below-ground ticks, 0 max-below-ground units, both pre- and mid-
+fix probes checked).
+
+**Alternatives passed over.** (1) Changing `FALL_SPEED` to a non-round value
+(`132/23 ≈ 5.739...`) so 23 unequal-speed fall frames net to zero over the
+existing 22/23 split — rejected: this touches the ALREADY-RATIFIED tuned
+speed value (`JC-A-01`, Architect-ratified content latitude, "rise/fall...
+same magnitude"), introducing an asymmetric rise/fall feel (slower descent)
+that changes how the jump plays, not just where it lands — a design-adjacent
+change, whereas the apex-hang keeps both tuned speeds untouched and only
+adjusts the internal frame split. (2) A true parabolic re-bake — out of scope
+(JC-A-01 already settled triangular-vs-parabolic as tuning-by-feel latitude,
+ratified; this fix doesn't reopen that call, it only corrects the net-
+displacement arithmetic bug within the triangular shape). (3) Adding a
+runtime landing clamp against `ground_y` in `step_phases.gd` (a new engine
+mechanism) instead of an authoring fix — rejected: no clamp exists anywhere
+in the engine today (movement is pure keyframe integration by design, AD-014),
+and introducing one is a bigger, more architecturally-visible change than
+fixing the one asymmetric arc that's the actual source of the drift; a data-
+only fix stays inside the existing mechanism.
+
+**Determinism / golden note (JC-017-style conscious change).** This changes
+sim behavior: frame 23's `motion_vel_y` changes from a fall value to zero, and
+every subsequent frame's `pos_y` in the back half of the arc shifts (by up to
+6 units, tapering to 0 at landing) versus the pre-fix trajectory. This is a
+DELIBERATE, disclosed change, not a silent regeneration — no persisted golden-
+file fixtures exist yet in the repo (checked: no `*golden*` files under
+version control; `SimHarness`/`InspectionView` exist as the infrastructure a
+future QA golden harness would read, per their own doc comments, but nothing
+is checked in yet), so there is nothing stale to regenerate. The one place
+this trajectory was asserted in test form, `test_character_a.gd`'s
+`_test_jump_arc_integrates`, is updated in this same change: its prior
+assertion explicitly TOLERATED the drift ("assert it LANDS CLOSE to its start
+... within one frame's worth of velocity, not bit-exact") — that tolerance
+was, in hindsight, documenting the very defect this flag reports. Updated to
+assert exact equality (`pos_y == start_y`) now that the fix makes it exact.
+
+**Regression coverage.** `test_character_a.gd`'s `_test_jump_arc_integrates`
+(updated, asserts bit-exact return to start height). Not yet covered:
+an end-to-end (live-input, not state-injected) landing assertion through
+`test_command_recognition.gd`'s existing jump test — that test only checks
+`STATE_JUMP_N` is reached, not the full landing; left as-is since it wasn't
+in this flag's path and adding it would be a training-suite feature beyond
+this dispatch's two defects, per the boundary. Worth a follow-up if QA wants
+belt-and-suspenders live-input landing coverage.
+
+**For Architect ratification:** the apex-hang mechanism itself (vs. an
+uneven-speed fall, vs. a runtime clamp) as the general pattern for any future
+arc whose frame count doesn't evenly split its rise/fall — this fix is scoped
+to `STATE_JUMP_N/F/B`'s specific numbers, but the "authored arcs must net to
+zero displacement" invariant it protects is arguably worth stating explicitly
+somewhere (`character-a.md` or a movement-authoring note) so a future
+character's jump arc doesn't reintroduce the same class of bug.

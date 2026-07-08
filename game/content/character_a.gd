@@ -416,13 +416,35 @@ static func _build_movement() -> Array[MoveState]:
 ## The jump arc (movement table: "~45f airborne, no air dash, no double jump,
 ## no jump cancels"). Authored as a hand-baked triangular vel_y profile over
 ## one-frame keyframes (see this file's header note: the engine has no gravity
-## primitive, so an arc is authored data, not computed). Rise for the first
-## half (22f), fall for the second (23f), symmetric magnitude, sign-flipped at
-## the apex. JUMP_N/F/B share the same vertical profile; only horizontal
-## carry differs (0 / forward / back).
+## primitive, so an arc is authored data, not computed). Rise for 22f, a single
+## one-frame APEX HANG (vel_y = 0) at frame 23, then fall for the remaining
+## 22f -- symmetric magnitude, sign-flipped either side of the hang. JUMP_N/F/B
+## share the same vertical profile; only horizontal carry differs (0 / forward
+## / back).
+##
+## FIX NOTE (2026-07-08 human-inspection-gate flag, "player sinks ~5px below
+## the floor on landing"). The original split was 22 rise frames / 23 fall
+## frames (JUMP_DURATION=45 is odd, so an even 22/22 split leaves one frame
+## over) at EQUAL rise/fall speed -- so the arc's net vertical displacement was
+## NOT zero: 22*(-6.0) + 23*(+6.0) = +6.0 units of permanent downward drift
+## every single jump (confirmed by driving the arc headlessly: pos_y lands
+## exactly 6 units below its start, not "close to" as the prior dev-test
+## tolerated -- see test_character_a.gd's _test_jump_arc_integrates, updated
+## alongside this fix). Nothing in step_phases.gd clamps pos_y to ground_y
+## (P0 movement is pure keyframe integration, AD-014), so that drift was never
+## corrected and the character landed standing 6 units into the floor. Rather
+## than change either tuned speed value (RISE_SPEED/FALL_SPEED, ratified
+## content, JC-A-01), the extra frame is spent as an explicit one-frame apex
+## hang (vel_y = 0) -- a common, feel-plausible jump-arc convention -- so
+## 22 rise + 1 hang + 22 fall = 45 (JUMP_DURATION unchanged) nets to exactly
+## zero and the character always lands flush at ground_y. Determinism-affecting
+## (frame-23 vel_y changes from a fall frame to a hang frame, and the whole
+## back half of the arc's positions shift up by up to 6 units) -- a deliberate,
+## conscious change; recorded per JC-017-style convention in judgment-log.md.
 static func _build_jump_arcs() -> Array[MoveState]:
 	const JUMP_DURATION: int = 45
 	const RISE_FRAMES: int = 22
+	const APEX_HANG_FRAME: int = RISE_FRAMES + 1   # frame 23: vel_y = 0
 	const RISE_SPEED: float = 6.0    # px/f upward (negative y, screen-up convention: rising is -y)
 	const FALL_SPEED: float = 6.0
 	const JUMP_HORIZ_SPEED: float = 3.5   # forward/back carry during a directional jump
@@ -447,11 +469,14 @@ static func _build_jump_arcs() -> Array[MoveState]:
 			kf.hurtboxes = [_hurt_air()]
 			kf.has_motion = true
 			kf.motion_vel_x = FP.from_units(horiz_by_state[state_id])
-			# Rising (screen -y) for RISE_FRAMES, then falling (+y) for the rest.
-			# Baked as a CONSTANT velocity per half (a triangular position curve),
-			# authored data -- see header note.
+			# Rising (screen -y) for RISE_FRAMES, a single zero-velocity apex-hang
+			# frame, then falling (+y) for the symmetric remainder. Baked as
+			# CONSTANT velocities (a triangular position curve with a flat apex tick),
+			# authored data -- see header/fix note above.
 			if f <= RISE_FRAMES:
 				kf.motion_vel_y = FP.from_units(-RISE_SPEED)
+			elif f == APEX_HANG_FRAME:
+				kf.motion_vel_y = 0
 			else:
 				kf.motion_vel_y = FP.from_units(FALL_SPEED)
 			timeline.append(kf)

@@ -572,12 +572,17 @@ func _test_jump_arc_integrates() -> void:
 	_true(apex_y < start_y, "the jump arc rises (pos_y decreases) during the authored rise frames")
 	for _k in range(23):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
-	# 22 rise frames @ -6.0 + 23 fall frames @ +6.0 nets +6 units (one extra fall
-	# frame, since 45 is odd) -- not exactly symmetric; assert it LANDS CLOSE to
-	# its start (within one frame's worth of velocity), not bit-exact.
-	var landed_close: int = absi(s.players[0].pos_y - start_y)
-	_true(landed_close <= FP.from_units(6.0),
-		"the jump arc returns close to its starting height after the full authored duration (within one frame's fall speed; got %d" % landed_close)
+	# FIX (2026-07-08 human-inspection-gate flag, "player sinks ~5px below the
+	# floor on landing"): 22 rise frames + a one-frame zero-velocity apex hang
+	# (frame 23) + 22 fall frames now nets to EXACTLY zero displacement (was: 22
+	# rise @ -6.0 + 23 fall @ +6.0 = +6 units of permanent downward drift, since
+	# 45 is odd and the old split gave the extra frame entirely to the fall
+	# half). Assert the arc returns BIT-EXACT to its starting height, not merely
+	# "close" -- this is the deliberate behavior change the fix makes (recorded
+	# JC-017-style in judgment-log.md: this test's prior tolerance documented the
+	# very drift that was the reported defect).
+	_eq(s.players[0].pos_y, start_y,
+		"the jump arc returns EXACTLY to its starting height after the full authored duration (no floor-sink drift)")
 	_cleanup()
 
 
