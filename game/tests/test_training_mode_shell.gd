@@ -49,6 +49,7 @@ func _run() -> void:
 	await _test_reset_through_shell()
 	await _test_dummy_mode_through_shell()
 	await _test_reset_resyncs_dummy_through_shell()
+	await _test_players_start_as_installed_character_with_resolved_boxes()
 
 
 ## Static seam check (criterion 10: "verifiable by inspection of the
@@ -179,6 +180,34 @@ func _test_reset_resyncs_dummy_through_shell() -> void:
 	for i in range(trace_1.size()):
 		_eq(trace_2[i], trace_1[i],
 			"rep 2 P2 input %d matches rep 1 (dummy re-synced by reset through the shell)" % i)
+	tm.get_parent().queue_free()
+
+
+## TKT-P1.1-01 Part A regression guard (training-mode.md "Players start as the
+## installed character"; ticket acceptance: "with the shell's initial state,
+## both players resolve a non-empty boxes list"). Before this fix,
+## SimState.new_initial() alone left both players at character_id 0/state_id 0,
+## which the installed roster (keyed on CharacterA.CHAR_ID) never resolves — so
+## PlayerView.move was null and boxes was []. Asserts, at tick 0 (no step taken),
+## that both players' character_id/state_id match the installed character's idle
+## state and that their idle hurtbox actually resolves.
+func _test_players_start_as_installed_character_with_resolved_boxes() -> void:
+	var tm := await _make_shell()
+	var view := tm.inspection_view()
+	for i in range(2):
+		var pv: PlayerView = view.player(i)
+		_eq(pv.character_id, CharacterA.CHAR_ID,
+			"player %d starts as the installed character (CharacterA.CHAR_ID)" % i)
+		_eq(pv.state_id, CharacterA.STATE_IDLE,
+			"player %d starts in the installed character's idle state" % i)
+		_true(pv.boxes.size() > 0,
+			"player %d resolves a non-empty boxes list from the shell's initial state" % i)
+		var has_hurt: bool = false
+		for box in pv.boxes:
+			if box.kind == BoxView.KIND_HURT:
+				has_hurt = true
+				break
+		_true(has_hurt, "player %d's resolved boxes include its idle hurtbox" % i)
 	tm.get_parent().queue_free()
 
 

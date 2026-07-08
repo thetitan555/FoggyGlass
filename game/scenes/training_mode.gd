@@ -90,6 +90,7 @@ func _ready() -> void:
 	_source_p2 = RecordPlaybackSource.new()   # dummy: PASSTHROUGH-empty == NEUTRAL until scripted
 
 	var state := SimState.new_initial()
+	_init_players_as_installed_character(state)
 	_tick_host.setup(state, _source_p1, _source_p2)
 	_tick_host.ticked.connect(_on_ticked)
 
@@ -139,6 +140,23 @@ func _install_roster() -> void:
 		ProjectileRegistry.install(_projectile_registry_builder.call())
 	else:
 		ProjectileRegistry.install({})
+
+
+## TKT-P1.1-01 Part A (player-init code defect; training-mode.md "Players start
+## as the installed character"). `SimState.new_initial()` alone leaves both
+## players at the generic default `character_id 0 / state_id 0`, which the
+## installed roster (keyed on `_character_id`, e.g. CharacterA.CHAR_ID = 2)
+## never resolves — so `PlayerView.move` is null, `boxes == []`, and every
+## frame-data/state readout reads zero/empty (the 2026-07-08 finding). Set both
+## players to the installed character's id and its idle state so the roster
+## lookup resolves from tick 0. CHARACTER-AGNOSTIC: reads `_character_id` and
+## the roster's own `Character.idle_state_id` — no character-A-specific branch
+## (works identically if `configure()` points the shell at a different roster).
+func _init_players_as_installed_character(state: SimState) -> void:
+	var character: Character = _roster[_character_id]
+	for p in state.players:
+		p.character_id = _character_id
+		p.state_id = character.idle_state_id
 
 
 func _physics_process(_delta: float) -> void:
