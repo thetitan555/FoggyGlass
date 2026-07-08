@@ -49,6 +49,9 @@ func _run() -> void:
 	_test_character_a_bare_h_reaches_5h()
 	_test_character_a_chord_reaches_throw_ordered_first()
 	_test_character_a_jump_reachable_end_to_end()
+	_test_character_a_walk_forward_reachable_end_to_end()
+	_test_character_a_walk_back_reachable_end_to_end()
+	_test_character_a_button_beats_walk_on_same_frame()
 
 
 # --- Scenario setup ----------------------------------------------------------
@@ -229,4 +232,49 @@ func _test_character_a_jump_reachable_end_to_end() -> void:
 			break
 	_true(reached_prejump, "holding UP reaches STATE_PREJUMP")
 	_true(reached_jump_n, "holding UP carries through PREJUMP into the neutral jump arc (STATE_JUMP_N), live-input only")
+	_cleanup()
+
+
+## End-to-end regression for the 2026-07-08 human-inspection-gate flag
+## ("arrow-key left/right movement does nothing"): holding RIGHT (forward,
+## player 0 faces right in _two_char_state) reaches STATE_WALK_F and actually
+## displaces pos_x, through live input only -- no state injection. Mirrors the
+## jump end-to-end test above (AD-032's pure-direction-command pattern).
+func _test_character_a_walk_forward_reachable_end_to_end() -> void:
+	var s := _two_char_state()
+	var start_x: int = s.players[0].pos_x
+	var reached_walk_f: bool = false
+	for _k in range(5):
+		s = SimState.step(s, InputFrame.RIGHT, InputFrame.NEUTRAL)
+		if s.players[0].state_id == CharacterA.STATE_WALK_F:
+			reached_walk_f = true
+	_true(reached_walk_f, "holding RIGHT (forward) reaches STATE_WALK_F, live-input only")
+	_true(s.players[0].pos_x > start_x, "holding RIGHT (forward) actually advances pos_x")
+	_cleanup()
+
+
+## Same regression, back direction: holding LEFT (back, player 0 faces right)
+## reaches STATE_WALK_B and displaces pos_x the other way.
+func _test_character_a_walk_back_reachable_end_to_end() -> void:
+	var s := _two_char_state()
+	var start_x: int = s.players[0].pos_x
+	var reached_walk_b: bool = false
+	for _k in range(5):
+		s = SimState.step(s, InputFrame.LEFT, InputFrame.NEUTRAL)
+		if s.players[0].state_id == CharacterA.STATE_WALK_B:
+			reached_walk_b = true
+	_true(reached_walk_b, "holding LEFT (back) reaches STATE_WALK_B, live-input only")
+	_true(s.players[0].pos_x < start_x, "holding LEFT (back) actually retreats pos_x")
+	_cleanup()
+
+
+## A button held alongside a bare direction still performs the normal, not the
+## walk (button_map lists the walk entries AFTER the standing normals, so a
+## button always wins on the same buffered frame -- the conventional "button
+## beats movement" rule, not a new precedence mechanism).
+func _test_character_a_button_beats_walk_on_same_frame() -> void:
+	var s := _two_char_state()
+	s = SimState.step(s, InputFrame.RIGHT | InputFrame.BUTTON_0, InputFrame.NEUTRAL)
+	_eq(s.players[0].state_id, CharacterA.STATE_5L,
+		"forward + L on the same frame performs 5L, not a walk")
 	_cleanup()

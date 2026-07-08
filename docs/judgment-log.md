@@ -81,6 +81,7 @@
 - JC-043 · 2026-07-04 · TKT-P1-09 · Recognized-command projection reconstructs `InputHistory` from `PlayerView.input_history` to call the sim's own recognizer — ratified
 - JC-044 · 2026-07-08 · TKT-P1.1-01 · AD-035 render framing implemented as a position/scale transform on `GeometryOverlay` itself (not a `Camera2D`); exact zoom/ground-line/margin constants and fixed placeholder stage bounds (not a live seam read) — provisional
 - JC-045 · 2026-07-08 · TKT-P1.1-02 · Control-surface key bindings (P/N/C/R/M/J/K/L), a single cycling key for the dummy mode-switch (not three mode keys), frame-step bound as a direct passthrough with no auto-pause, and a static-InputMap-reading `ControlsLegend` node — provisional
+- JC-046 · 2026-07-08 · P1.1 gate flag (arrow-key left/right) · Wired `STATE_WALK_F`/`STATE_WALK_B` into `character_a.gd`'s `button_map` as pure-direction commands (AD-032 pattern, mirroring jump) — these states/keyframes were already authored but unreachable from any input; button_index=-1 entries listed after the standing normals so a button always wins over a bare directional hold — provisional
 
 ---
 
@@ -226,3 +227,116 @@ whether the dummy mode-switch should eventually get direct per-mode keys
 instead of one cycling key; whether frame-step should auto-pause as a UX
 convenience (a design call, not implementation, if wanted — flagged here
 rather than added unilaterally).
+
+### JC-046 · 2026-07-08 · P1.1 gate flag (arrow-key left/right movement does nothing) — provisional
+
+**Decision.** Diagnosed the flag (`docs/flags.md`, "arrow-key left/right
+movement does nothing") past the two candidates the flag/dispatch named
+(`_sample_device_p1` and `project.godot`'s input-map bindings) — both of those
+are confirmed CORRECT (see "Diagnosis" below) — to the actual root cause: the
+SIM had no path from a held direction to a walk state at all. `character_a.gd`
+already authored `STATE_WALK_F`/`STATE_WALK_B` (movement table speeds 2.2 /
+1.8, `character-a.md`) with correct keyframe motion, and `CharacterPhysics.
+walk_speed` even carries the forward speed as a documented "data only" field —
+but no `Character.button_map` entry ever routed a bare held direction into
+either state. Holding RIGHT (or LEFT) for any number of ticks produced zero
+state change and zero displacement — confirmed by driving `SimState.step`
+directly for 30 ticks pre-fix (headless probe, not committed): `state_id`
+stayed `STATE_IDLE`, `pos_x` never moved. Fixed by adding two pure-direction
+`ButtonMapEntry` entries (button_index=-1, no motion, no chord — exactly
+AD-032's existing jump-entry pattern: `_map(-1, InputFrame.UP, 0,
+STATE_PREJUMP)`), listed AFTER the standing normals so a button held alongside
+a direction still performs the normal (button beats movement, the universal
+convention already implicit in 5L/5M/5H's own `required_direction == 0` gate
+which lets them fire on any direction and therefore win by list-order over
+anything below them):
+```
+map.append(_map(-1, InputFrame.RIGHT, 0, STATE_WALK_F))
+map.append(_map(-1, InputFrame.LEFT, 0, STATE_WALK_B))
+```
+`InputFrame.RIGHT`/`LEFT` here are `required_direction`'s existing semantic
+convention for forward/back (facing-resolved by `InputBuffer.
+_required_direction_held`), not literal-physical — same convention `UP` uses
+literally for jump.
+
+**Diagnosis of the two originally-named candidates (both exonerated).**
+- `_sample_device_p1` (`training_mode.gd`): already samples `ui_left`/
+  `ui_right` into `InputFrame.LEFT`/`RIGHT` identically to `ui_up` — no
+  asymmetry in the sampler code.
+- `project.godot`'s `[input]` section: only defines the `tm_*` custom actions
+  (added in TKT-P1.1-02); it does NOT touch `ui_left`/`ui_right`/`ui_up`/
+  `ui_down` at all, so those fall through to Godot's own built-in default
+  bindings (arrow keys) — unmodified and unshadowed. `test_control_surface.gd`
+  already exercised `Input.action_press("ui_left")` against the sampler before
+  this session (combined with the attack-button test) and passed, confirming
+  this headlessly; this session adds a dedicated, symmetric LEFT+RIGHT test
+  (`_test_device_sampler_encodes_left_and_right`) per the ticket's explicit
+  ask.
+
+Both are objectively fine; the human-observed "UP works, LEFT/RIGHT does
+nothing" was never a control-path asymmetry — UP happens to work because jump
+is the ONE direction that already had a `button_map` entry (TKT-P1-12/AD-032),
+and LEFT/RIGHT had none.
+
+**Alternatives passed over.** (1) Wiring continuous, physics-driven movement
+in `phase3_movement` that reads `CharacterPhysics.walk_speed` directly off
+`resolve_intent`'s forward/back booleans whenever no state-authored motion
+applies — rejected because `move-format.md` explicitly lists "walk" among the
+"data-defined states (idle, walk, a normal...)" category, i.e. the spec's own
+words already read walk as a discrete authored state like idle, matching what
+`character_a.gd` had ALREADY authored (the states, exactly as data-defined
+states) — the missing piece was only the button_map trigger, not a second
+movement mechanism. Also `walk_speed`'s own code comment ("data only; back
+walk is authored per-state") already recorded that it's deliberately inert;
+this fix doesn't touch or contest that. (2) Leaving Flag 1 open and reporting
+only the negative (control path is fine, sim path is broken, no fix) —
+rejected: the flag/ticket's explicit goal is "fix so a human can walk both
+directions," and this fix satisfies it with a minimal, precedent-following,
+two-line wiring addition using already-spec'd, already-authored values; no new
+design number was invented.
+
+**Boundary note (why this is flagged here rather than silently done).** The
+dispatch bounded this task to "no character content changes." This fix DOES
+touch `character_a.gd` (`button_map`, a content file) — but only the
+input-recognition wiring layer (the same mechanism/pattern as the existing
+jump/DP/fireball/throw entries), not move/hitbox/damage/timing content, and
+the values it wires in (walk speeds, keyframe motion) were already fully
+authored and spec'd before this session. The boundary appears to have been
+written under the (reasonable, but incorrect) assumption from the flag's own
+text that "sim-side walk is fine" (based on 5H's forward advance, a different
+mechanism — keyframe motion inside an already-reachable move, not a bare-
+direction state transition). Recording this explicitly so the Strategist/
+Architect can review: this went beyond the anticipated two-candidate diagnosis
+because neither candidate was actually broken.
+
+**Regression coverage.** `test_command_recognition.gd`:
+`_test_character_a_walk_forward_reachable_end_to_end`,
+`_test_character_a_walk_back_reachable_end_to_end` (both drive `SimState.step`
+live-input only, no state injection — mirrors the existing jump end-to-end
+test), and `_test_character_a_button_beats_walk_on_same_frame` (forward+L
+still performs 5L). `test_control_surface.gd`:
+`_test_device_sampler_encodes_left_and_right` (the ticket's explicitly
+requested sampler-bit regression, mirroring the attack-button-bit test).
+`data/character-a.tres` re-baked via `tools/bake_character_a.gd` so the
+shipped resource matches the builder (button_map size 14→16).
+
+**Side effect on an existing test (fixed, not a regression).**
+`test_character_a.gd`'s `_test_5h_plus_on_block_and_advances` measured the
+INTER-PLAYER GAP to confirm 5H advances P0 forward; P1's defending "hold
+back" input, now that back-holding actually walks a non-frozen defender
+backward (`STATE_WALK_B`), legitimately retreats during 5H's startup/
+recovery, which is correct new behavior but confounds the gap as a proxy.
+Updated the assertion to measure P0's OWN `pos_x` delta directly (the thing
+the test is actually about) instead of the gap. Blocking itself is unaffected
+— `_is_holding_back` reads the raw held-back intent directly, independent of
+`state_id`.
+
+**For Architect ratification:** whether the `button_map` wiring (using the
+already-established AD-032 pure-direction pattern) is the right mechanism vs.
+some future `CharacterPhysics.walk_speed`-driven continuous-movement path
+(this fix leaves `walk_speed` exactly as inert as it already was — did not
+resolve or touch that ambiguity, just didn't need to for this fix); whether
+touching `character_a.gd`'s `button_map` should be considered "character
+content" for future dispatch-boundary wording (this session's read: input-
+recognition wiring is closer to engine-adjacent plumbing than authored move/
+damage/timing content, but the Architect may see it differently).

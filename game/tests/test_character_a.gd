@@ -164,19 +164,29 @@ func _test_frame_data_derivation_2m() -> void:
 
 func _test_5h_plus_on_block_and_advances() -> void:
 	# 5H is plus on block and ADVANCES FORWARD (character-a.md: "advances ~30px").
-	# Drive P0 into 5H, let P1 block it, confirm P0 ends up closer than it started.
+	# Drive P0 into 5H, let P1 block it, confirm P0's OWN position moves forward.
+	#
+	# Asserts P0's OWN pos_x delta (not the inter-player gap) since the
+	# 2026-07-08 walk-button-map fix (character_a.gd _build_button_map) makes
+	# P1's held "back" input ALSO walk P1 backward (STATE_WALK_B) whenever P1 is
+	# actionable and not frozen in blockstun -- correct new behavior (holding
+	# back walks/retreats, same as any other direction), but it means the GAP
+	# is no longer a clean proxy for "did P0 advance": P1 legitimately retreats
+	# during 5H's startup/recovery too, which could mask or exaggerate P0's own
+	# displacement. Measuring P0's own pos_x isolates the thing this test is
+	# actually about.
 	var s := _two_char_state(60)
 	s.players[0].state_id = CharacterA.STATE_5H
 	s.players[0].frame_in_state = 0
-	var start_gap: int = FP.to_int(s.players[1].pos_x - s.players[0].pos_x)
+	var start_x: int = s.players[0].pos_x
 	var p1_block: int = InputFrame.LEFT   # P1 faces -1; back = RIGHT... see below
 	# P1 faces -1 (spawned facing left toward P0 on its left): back relative to
 	# facing -1 is RIGHT (mirrors StepPhases.resolve_intent: facing<0 => back=RIGHT).
 	p1_block = InputFrame.RIGHT
 	for _k in range(45):
 		s = SimState.step(s, InputFrame.NEUTRAL, p1_block)
-	var end_gap: int = FP.to_int(s.players[1].pos_x - s.players[0].pos_x)
-	_true(end_gap < start_gap, "5H advances P0 forward while active (closes space)")
+	var end_x: int = s.players[0].pos_x
+	_true(end_x > start_x, "5H advances P0 forward while active (P0's own pos_x increases)")
 	_cleanup()
 
 
@@ -547,14 +557,13 @@ func _test_footsie_route_2m_dp_l() -> void:
 # --- Jump arc (movement table; authored data, flagged unreachable via input) --
 
 func _test_jump_arc_integrates() -> void:
-	# The jump states are not reachable via button_map (flagged), but the
-	# AUTHORED KEYFRAME MOTION must still integrate correctly when driven
-	# directly -- proving the data (not the command-recognition gap) is sound.
+	# The jump states are reachable via button_map now (AD-032, TKT-P1-12), but
+	# this test still drives the state directly to isolate the AUTHORED KEYFRAME
+	# MOTION itself (data), independent of command recognition.
 	var s := _two_char_state(200)
 	s.players[0].state_id = CharacterA.STATE_JUMP_N
 	s.players[0].frame_in_state = 0
 	var start_y: int = s.players[0].pos_y
-	var rose: bool = false
 	var apex_y: int = start_y
 	for _k in range(22):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)

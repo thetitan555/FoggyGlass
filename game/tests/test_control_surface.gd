@@ -53,6 +53,7 @@ func _run() -> void:
 	await _test_reset_actions_through_shell()
 	await _test_dummy_mode_cycle_action_through_shell()
 	_test_device_sampler_encodes_attack_buttons()
+	_test_device_sampler_encodes_left_and_right()
 	_test_input_map_actions_are_registered()
 
 
@@ -150,6 +151,29 @@ func _test_device_sampler_encodes_attack_buttons() -> void:
 	Input.action_release("tm_button_1")
 	Input.action_release("tm_button_2")
 	_eq(tm._sample_device_p1(), InputFrame.NEUTRAL, "releasing all inputs returns to NEUTRAL (no stuck state)")
+	tm.free()
+
+
+## Regression for the 2026-07-08 human-inspection-gate flag ("arrow-key
+## left/right movement does nothing"): confirms `_sample_device_p1` encodes
+## BOTH the LEFT and RIGHT direction bits (mirrors
+## `_test_device_sampler_encodes_attack_buttons` above). Drives the built-in
+## `ui_left`/`ui_right` actions directly via `Input.action_press` -- these are
+## Godot's own default actions (arrow keys), not entries this project's
+## `project.godot` [input] section defines, so this also stands as a guard
+## against a future `[input]` edit accidentally shadowing/disabling them.
+func _test_device_sampler_encodes_left_and_right() -> void:
+	var tm := TrainingMode.new()
+
+	Input.action_press("ui_left")
+	_eq(tm._sample_device_p1(), InputFrame.LEFT, "ui_left (arrow key) encodes LEFT")
+	Input.action_release("ui_left")
+
+	Input.action_press("ui_right")
+	_eq(tm._sample_device_p1(), InputFrame.RIGHT, "ui_right (arrow key) encodes RIGHT")
+	Input.action_release("ui_right")
+
+	_eq(tm._sample_device_p1(), InputFrame.NEUTRAL, "releasing both returns to NEUTRAL (no stuck state)")
 	tm.free()
 
 

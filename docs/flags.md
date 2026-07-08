@@ -88,7 +88,7 @@ visible on a real running window is the **P1.1 human-inspection gate** (`audit-c
 from and not claimed by this code fix. This flag closes the code-defect/unspecced-contract
 question the geometry finding raised; it does not itself constitute the human sign-off.
 
-### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Developer · re: arrow-key left/right movement does nothing
+### [resolved] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Developer · re: arrow-key left/right movement does nothing
 Problem: first human operation of `training_mode.tscn` after TKT-P1.1-01/02 (user, 2026-07-08).
 UP works (jump straight up) but LEFT and RIGHT arrow keys produce no walk — horizontal movement
 by keyboard is impossible. Forward displacement from moves works (5H advances forward), so the
@@ -100,7 +100,30 @@ can walk both directions. **Blocks P1.1's "operable by a human" gate** — there
 spacing without walk. Add a headless regression asserting the device sampler encodes the left and
 right direction bits (mirroring the attack-button-bit test).
 ---
-Resolution (owner fills): …
+Resolution (owner fills): Both named candidates checked out FINE — `_sample_device_p1` samples
+`ui_left`/`ui_right` identically to `ui_up`, and `project.godot`'s `[input]` section never touches
+`ui_left`/`ui_right`/`ui_up`/`ui_down` at all (they fall through to Godot's own built-in arrow-key
+defaults, unshadowed). The actual root cause was **sim-side**, not the control path the flag named:
+`character_a.gd` had already authored `STATE_WALK_F`/`STATE_WALK_B` (movement-table speeds) with
+correct keyframe motion, but no `button_map` entry ever routed a bare held direction into either
+state — holding RIGHT/LEFT produced zero state change and zero displacement, confirmed by driving
+`SimState.step` directly (state stuck at `STATE_IDLE`, `pos_x` never moved). Fixed by adding two
+pure-direction `ButtonMapEntry` entries (mirrors the existing jump entry, AD-032's pattern exactly),
+listed after the standing normals so a button held with a direction still performs the normal, not
+a walk. Full diagnosis, alternatives, and a boundary note (this touches `character_a.gd`, nominally
+out of this dispatch's "no character content changes" bound, but is input-recognition wiring using
+already-authored/spec'd values, not new move/damage/timing content) recorded at **JC-046**
+(`docs/judgment-log.md`, provisional — flagging for Architect review given it exceeded the
+dispatch's anticipated two-candidate diagnosis). Regression: `test_command_recognition.gd`'s
+`_test_character_a_walk_forward_reachable_end_to_end` / `_walk_back_reachable_end_to_end` /
+`_button_beats_walk_on_same_frame` (live-input only, no state injection), and
+`test_control_surface.gd`'s `_test_device_sampler_encodes_left_and_right` (the requested sampler-bit
+regression). `data/character-a.tres` re-baked to match. All 26 headless test files pass.
+
+**Not closed by this fix: live human re-confirmation.** Whether a human can actually walk both
+directions by pressing the arrow keys in a running `training_mode.tscn` window is the **P1.1
+human-inspection gate** — the user's to confirm on return, separate from and not claimed by this
+code fix.
 
 ### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Developer · re: player sinks ~5px below the floor on landing
 Problem: same human run. On landing from a straight-up jump, the player drops through the floor

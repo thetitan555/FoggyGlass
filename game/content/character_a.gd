@@ -200,6 +200,20 @@ static func _build_button_map() -> Array[ButtonMapEntry]:
 	map.append(_map(0, 0, 0, STATE_5L))
 	map.append(_map(1, 0, 0, STATE_5M))
 	map.append(_map(2, 0, 0, STATE_5H))
+	# Walk (pure-direction command, AD-032): held forward/back, no button, into
+	# the already-authored STATE_WALK_F/STATE_WALK_B (movement table, below in
+	# _build_movement) -- these states and their keyframe motion were authored
+	# but never reachable from live input (2026-07-08 human-inspection-gate
+	# flag: "arrow-key left/right movement does nothing"). Listed AFTER the
+	# standing normals so a button press always wins over a bare directional
+	# hold on the same buffered frame -- e.g. forward+L still performs 5L, not
+	# a walk (5L/5M/5H match on ANY direction via their own required_direction
+	# == 0 gate, so they already take priority by list order over anything
+	# listed below them -- no new precedence mechanism needed). required_
+	# direction uses RIGHT/LEFT to mean forward/back (facing-resolved, same
+	# ButtonMapEntry/InputBuffer convention the jump entry above uses with UP).
+	map.append(_map(-1, InputFrame.RIGHT, 0, STATE_WALK_F))
+	map.append(_map(-1, InputFrame.LEFT, 0, STATE_WALK_B))
 	return map
 
 
