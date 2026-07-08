@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://bfg1trainingmode1"]
+[gd_scene load_steps=7 format=3 uid="uid://c81rt5osa1631"]
 
 [ext_resource type="Script" path="res://scenes/training_mode.gd" id="1_shell"]
 [ext_resource type="Script" path="res://sim/tick_host.gd" id="2_tickhost"]
@@ -17,6 +17,8 @@ script = ExtResource("2_tickhost")
 script = ExtResource("3_geometry")
 
 [node name="FrameDataPanel" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 520.0
@@ -29,6 +31,8 @@ offset_right = 504.0
 offset_bottom = 124.0
 
 [node name="LiveStatePanel" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
 offset_left = 16.0
 offset_top = 150.0
 offset_right = 520.0
@@ -41,6 +45,8 @@ offset_right = 504.0
 offset_bottom = 110.0
 
 [node name="InputHistoryPanel" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
 offset_left = 16.0
 offset_top = 270.0
 offset_right = 700.0

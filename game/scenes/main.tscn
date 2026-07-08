@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://bfg0main0scene0"]
+[gd_scene load_steps=3 format=3 uid="uid://dhavk8s41tkpx"]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://sim/tick_host.gd" id="2_tickhost"]
