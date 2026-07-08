@@ -244,7 +244,7 @@ Revisable like any roadmap call; the user may reweigh on return. (The two siblin
 frame-step auto-pause and jump apex-hang — stay open: they are the user's to judge at the P1.1
 human re-gate, not mine to resolve.)
 
-### [open] 2026-07-08 · raised-by: QA (P1.1 objective audit) · owner: Strategist · re: docs/flags-archive.md contains a run of NUL bytes — file-integrity defect, not content drift
+### [resolved] 2026-07-08 · raised-by: QA (P1.1 objective audit) · owner: Strategist · re: docs/flags-archive.md contains a run of NUL bytes — file-integrity defect, not content drift
 Problem: while reading `docs/flags-archive.md` for the P1.1 drift check, the file fails a plain-text
 check (`file docs/flags-archive.md` reports "data", not text) — it contains **4,632 contiguous NUL
 (`\x00`) bytes** starting at byte offset 48023 (right after the resolution text for a P0-era
@@ -268,4 +268,13 @@ text content, stripping the NUL run) so it round-trips as plain UTF-8 text again
 was actually lost (the readable text on both sides of the NUL run should be checked against git
 history/blame to confirm nothing was silently dropped, only that null padding was inserted).
 ---
-Resolution (owner fills): …
+Resolution (Strategist, 2026-07-08): **Fixed — stripped, lossless** (commit `b51ba0d`). Verified
+the corruption predates this session: the NUL count is a stable 4,632 across every commit that
+touched the file back to `ad4ff22` (P0→P1 prep), so it was inserted once in the P0-era
+sandbox-git window and carried forward unchanged — not introduced by the P1.1 archive sweep, and
+nothing was ever added to or overwritten in that block. Confirmed the run was 100% contiguous NUL
+bytes sitting between two intact, coherent entries (an AD-028 resolution and the
+`test_throws_multihit.gd` entry) — pure padding, no text lost; stripping removed exactly 4,632
+bytes and the entries read correctly on both sides. Restored the inter-entry blank line the
+padding had occupied. `flags-archive.md` now round-trips as plain UTF-8 (0 NUL bytes) and greps
+cleanly past the former offset.
