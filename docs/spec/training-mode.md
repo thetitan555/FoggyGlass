@@ -83,7 +83,10 @@ new scope.
 - **Discoverable.** The bound controls are **surfaced on screen** (a minimal
   controls legend) so a human can find them without reading code — the operability
   the human-inspection gate confirms. This is legibility of the instrument, not
-  UI polish; keep it minimal.
+  UI polish; keep it minimal. The legend reads its key text from Godot's `InputMap`
+  (so it can never drift from the actual bindings) and, having **no sim dependency**,
+  correctly sits *outside* the `InspectionView` seam — it is **not** a readout overlay,
+  so criterion 10's seam grep does not apply to it (ratified from JC-045).
 - **Players start as the installed character.** A code-level requirement completing
   the shell wiring: both players must begin as the **installed character in its idle
   state**, not the generic default player `SimState.new_initial()` builds — otherwise

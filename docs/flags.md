@@ -189,3 +189,50 @@ crouching-normal attack heights are intended, or route a content adjustment to t
 / Developer (move data). Recorded now so the observation isn't lost while the gate closes.
 ---
 Resolution (owner fills): …
+
+### [open] 2026-07-08 · raised-by: Architect (P1.1 ratification pass) · owner: Strategist · re: frame-step auto-pause — feel/design call for the human re-gate (NON-BLOCKING)
+Problem: ratifying JC-045, one control-surface sub-call is a UX/feel decision I judged not mine
+to lock: the frame-step key (`tm_step`/N) is an **unconditional passthrough** — it calls
+`step_once()` regardless of pause state and does **not** auto-pause first (mirrors the existing
+`step_once()` method, which also does not check pause). Frame-step's *meaning* is "while paused"
+(training-mode.md criterion 1); a human is expected to press pause (P) first, then step. The
+alternative — have the step control also `set_paused(true)` as a convenience — is more forgiving
+but is the binding *inventing* composite behavior beyond "call the corresponding control method."
+This is operability *feel* the user may want to weigh when they operate the mode at the P1.1
+re-gate, so I am routing it rather than ratifying it unilaterally (per your steer). The current
+non-auto-pause binding stands provisionally and does not block the gate. If the user wants
+auto-pause, it is a small follow-up ticket (a design call, then a one-line change), not a defect.
+---
+Resolution (owner fills): …
+
+### [open] 2026-07-08 · raised-by: Architect (P1.1 ratification pass) · owner: Strategist · re: jump apex-hang feel — confirm at the human re-gate (NON-BLOCKING)
+Problem: ratifying JC-047, I ratified the *correctness* invariant (an authored jump arc must net
+to exactly zero vertical displacement so the character lands flush — folded into AD-036 /
+move-format.md) but am routing the specific *feel* of the chosen fix to you. The fix spends the
+odd frame of the 45-frame arc as a **one-frame, zero-velocity apex hang** (22 rise / 1 hang / 22
+fall), preserving both tuned rise/fall speeds. This subtly changes the jump trajectory (a brief
+flat moment at the peak; the back half shifts by up to 6 units vs. the pre-fix path). It is within
+the already-ratified triangular-arc latitude (JC-A-01) and is the minimal fix that keeps both
+tuned speeds, but jump *feel* is the user's — worth a look when they operate the mode at the P1.1
+re-gate (does the apex hang read acceptably; is the triangular-with-hang arc the desired jump feel,
+vs. a future parabolic re-bake). NON-BLOCKING: the arc is fixed and lands flush; P1.1 does not wait
+on this. Any feel change later is a data-only re-author within the same mechanism, not a defect.
+---
+Resolution (owner fills): …
+
+### [open] 2026-07-08 · raised-by: Architect (P1.1 ratification pass) · owner: Strategist · re: roadmap placement of the ground-clamp hardening (AD-036) — you own the sequencing
+Problem: diagnosing JC-047, the Developer found there is **no runtime landing clamp anywhere** in
+the engine — vertical position is pure keyframe integration, and correctness rests entirely on
+authored arcs summing to exactly zero (the fragility that JC-047's +6-unit sink exposed). I ruled
+(AD-036) that a `pos_y ≥ ground_y` clamp **plus ground-contact landing semantics** (designed
+together — a bare clamp alone would *mask* authoring bugs, anti-legibility) is warranted as
+defense-in-depth and will be load-bearing for P2's air moves / variable-height landings. It is
+**new scope (hardening + a small mechanism)**, and per your steer it is **not** P1.1-blocking (the
+arc is fixed, the character lands flush; the interim guard is the net-zero-arc authoring invariant
+now recorded in move-format.md). My **technical recommendation** on placement: **pre-P2 hardening,
+or the first unit of P2 air-movement work** — *not* a late P4 harden pass, because P2 air moves
+would otherwise build on the no-clamp foundation and need ground-contact landing anyway. **The
+sequencing decision is yours** (you own the roadmap); AD-036 records the technical shape and this
+recommendation, and is marked provisional/deferred pending your placement.
+---
+Resolution (owner fills): …

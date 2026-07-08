@@ -59,6 +59,11 @@ without a flag round-trip. (Flag-resolved 2026-07-02; see the flag ledger.)
 | Jump `7/8/9` | ~45 f airborne | No air dash, no double jump, **no jump cancels** (reserved for a later contrast character). |
 | Crouch / Block | — | Stand- and crouch-block; `2L`/`2M` are lows. |
 
+Walk is a **held-direction command** (hold forward/back → `WALK_F`/`WALK_B`; a button held
+with the direction performs the normal instead — AD-032 first-match-wins, JC-046). Jump arcs
+are authored to net **exactly zero** vertical displacement so the character lands flush (there
+is no runtime ground clamp — AD-036 / `move-format.md` → movement authoring invariants).
+
 ## Normals — frame data
 
 | Move | Startup | Active | Recovery | On block | On hit | `>` cancel? | Role |

@@ -45,6 +45,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-033** Air-normal height-dependent advantage: phase-5 `AirHeightScaling` on hitstun; contact-depth read — settled
 - **AD-034** Serialization carries a top-level format-version field (`"v":1`, absent⇒1, unknown⇒fail; not hashed) — settled
 - **AD-035** Render-framing contract: sim world projects into the viewport via a render-only camera transform (extends AD-019) — settled
+- **AD-036** No runtime ground clamp yet; a `pos_y ≥ ground_y` clamp + ground-contact landing is deferred defense-in-depth; interim guard is the net-zero-arc authoring invariant — provisional (deferred)
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -164,6 +165,61 @@ the disposition. All nine **ratified** (none overturned).
   `PlayerView.input_history`) — *latitude*: single-source-of-truth extended to the
   training-mode side (no second panel-local recognizer to drift), character-agnostic
   (encodes only AD-032's generic schema), no seam field added.
+
+## P1.1 latitude ratifications (JC-044..048)
+
+The P1.1 judgment calls (finish-the-instrument: geometry framing, control surface,
+walk wiring, jump-arc fix, serialization version), disposed at the pre-audit
+ratification pass (2026-07-08). Full reasoning in `judgment-log.md`; this records the
+disposition. All five **ratified** — two (JC-045, JC-047) with a narrow feel/design
+sub-item *carved out and routed to the Strategist* (flags.md) rather than locked here.
+
+- **JC-044** AD-035 render framing as a node `position`/`scale` transform on
+  `GeometryOverlay` (not a `Camera2D`); placeholder constants; stage bounds as fixed
+  literals — **ratified**. AD-035 explicitly names the node-transform as an accepted
+  mechanism and the exact zoom/anchor/ground-line as placeholder. Folded into AD-035
+  (see its ratified elaboration): (a) the world→screen framing computation is the
+  **single shared world-space mapping** — a second world-space overlay reuses it, never
+  re-derives (the drift AD-035's "Why" guards against); (b) hardcoded stage-bounds
+  literals are acceptable **only while the stage is the fixed default** — a
+  non-default/variable stage (P2) requires reading bounds through a live
+  inspection-surface accessor (a `StageView`), a seam addition to make then.
+- **JC-045** control-surface bindings (P/N/C/R/M/J/K/L), dummy mode-switch as one
+  cycling key, InputMap-reading legend — **ratified** (keys/cycle/legend are placeholder
+  latitude the ticket names). The legend correctly sits **outside** the `InspectionView`
+  seam — it reads Godot's `InputMap`, not sim truth, so it is not a readout overlay and
+  criterion 10's seam grep does not apply (folded as a one-line note into
+  `training-mode.md`). **Carve-out:** the frame-step "unconditional passthrough, no
+  auto-pause" sub-call is a UX/feel decision, **not** folded — routed to the Strategist
+  (flags.md) for the human re-gate; the current binding stands provisionally.
+- **JC-046** walk wiring (two pure-direction `button_map` entries → `WALK_F`/`WALK_B`,
+  AD-032 pattern, listed after the standing normals) — **ratified** as correct
+  move-format wiring: it is AD-032's pure-direction command shape, identical to jump,
+  with the correct first-match-wins ordering (a button held with a direction still
+  performs the normal). Folded: (a) `move-format.md` now names walk (bare held
+  forward/back) as a **canonical pure-direction command** alongside jump; (b)
+  `character-a.md` states walk is triggered by holding forward/back. **Classification
+  (recorded for future dispatch wording):** `button_map` recognition wiring that routes
+  to an *already-authored* state is **recognition plumbing**, distinct from authored
+  move *content* (geometry/damage/timing) — the Developer correctly surfaced the
+  boundary crossing rather than doing it silently. (Dispatch-boundary *wording* on a
+  flag-driven fix is the Strategist's; this records only the technical distinction.)
+- **JC-047** jump-arc fix (22 rise / 1 zero-velocity apex hang / 22 fall = 45, nets
+  zero, both tuned speeds preserved) — **ratified** for the *correctness invariant*:
+  an authored vertical arc must net to **exactly zero** displacement so the character
+  lands flush (there is no runtime clamp — AD-036). Folded: `move-format.md` now carries
+  the net-zero-arc authoring invariant. **Carve-out:** the specific *apex-hang feel*
+  (vs. a future parabolic re-bake or an uneven fall speed) is a jump-feel decision the
+  user owns — routed to the Strategist (flags.md) for re-gate confirmation; not locked
+  by this ratification.
+- **JC-048** serialization fail-fast (`push_error` + `return null` on an unrecognized
+  `"v"`; dedicated `test_serialization_version.gd`) — **ratified** as the correct
+  GDScript-idiomatic implementation of AD-034's stated fail-loudly / do-not-proceed
+  behavior (GDScript has no exceptions; `assert` is stripped in release, so
+  `push_error` + a sentinel return is the reliable fail-fast). Folded into AD-034:
+  **`null`-return is the standing fail-fast-loader convention** for a `from_dict`-style
+  loader that must reject a dict; a richer ok/error result type is a revision to make
+  then, if a future migration needs structured error reporting.
 
 ---
 
@@ -1134,6 +1190,15 @@ an unknown version (defeats the purpose — a format guard that never guards).
 change, no `hash_state()` change, no new AD when v2 lands (bump the constant + add the migration
 branch — a revision to this AD). A single `const FORMAT_VERSION := 1` on `SimState` is the
 natural home for the number.
+**Fail-fast loader convention (ratified from JC-048, 2026-07-08).** The concrete refusal
+mechanism for the unknown-version guard — `push_error` (non-fatal in GDScript, and fires in
+*every* build, unlike `assert`, which is stripped in release/non-debug exports) **followed by
+`return null`** before touching any other field of `d` — is ratified as the **standing
+fail-fast-loader convention** for any `from_dict`-style loader that must reject a dict it cannot
+parse. GDScript has no idiomatic exceptions; `push_error` + a `null` sentinel is the closest
+equivalent, and a caller that ignores the `null` gets a loud null-deref rather than a silent
+mis-parse limping through a run. If a future migration needs structured error reporting (an
+ok/error result type), that is a revision to this AD, made then.
 
 ### AD-035 · Render-framing contract: the sim world projects into the viewport via a render-only camera transform — settled (2026-07-08, geometry-overlay finding)
 **Decision.** Extends AD-019. AD-019 fixed the fixed→px *scale* (`px()`/`px_rect()`,
@@ -1187,3 +1252,56 @@ boxes are fully visible and unoccluded by the panels; keep the four `Control` pa
 screen-anchored (unmoved by the camera). No sim-truth change, no hash change, no snapshot field.
 This lands together with the player-init code defect (same ticket) because boxes must first
 *resolve* before framing can be verified — see the ticket.
+**Ratified elaboration (from JC-044, 2026-07-08).**
+- **Mechanism.** A render-only `position`/`scale` transform on the world-drawing `Node2D` itself
+  (`GeometryOverlay`) is an accepted mechanism for this framing — AD-035 names it as the
+  alternative to a `Camera2D`, and it keeps the sibling HUD panels screen-anchored with no
+  `CanvasLayer` restructuring. The world→screen framing computation
+  (`GeometryOverlay.compute_world_framing`) is the **single shared world-space mapping**: a second
+  world-space overlay, or P2's match rendering, must **reuse** it — never independently re-derive
+  framing, the per-overlay drift this AD's "Why" guards against. When a second world-space consumer
+  lands, lift the framing computation to a shared location rather than copying it.
+- **Stage bounds.** Hardcoding the stage bounds (`wall_left/right`, `ground_y`) as literals
+  mirroring `StageState.new_initial()` is acceptable **only while the stage is the fixed slice
+  default**. A non-default or variable stage (P2) requires the framing to read stage bounds through
+  a **live inspection-surface accessor** (a new `StageView` / `stage()` read on `InspectionView`) so
+  the framing tracks sim stage truth rather than assuming the default — a **seam addition
+  (Architect's)** to make then, not a Developer latitude call. Deferred here because the P1.1
+  acceptance bar is the symmetric start positions, which sit well inside the default bounds
+  regardless.
+
+### AD-036 · No runtime ground clamp yet; a `pos_y ≥ ground_y` clamp + ground-contact landing is deferred defense-in-depth — provisional (deferred; 2026-07-08, from JC-047)
+**Context.** Vertical position in the sim is **pure keyframe integration** (AD-014 / JC-A-01) with
+**no landing clamp anywhere** in `step_phases.gd`. A character's height is correct only because its
+authored jump arc's per-frame `motion_vel_y` sums to exactly zero net displacement over the state's
+`duration`. JC-047 found character A's arc did *not* net zero (22 rise / 23 fall at equal magnitude
+⇒ +6 units of permanent downward drift per jump — the character sank into the floor), fixed by
+re-authoring the arc to net zero (an apex-hang frame).
+**Decision (interim guard in effect + deferred shape).**
+- **Interim guard (in effect now).** The correctness relied upon is stated as an **authoring
+  invariant**: an authored vertical arc must net to exactly zero displacement (return to start
+  height) over its duration. Recorded in `move-format.md` (movement authoring) so character B's jump
+  in P2 cannot silently reintroduce the JC-047 class of bug. Same kind of authoring constraint as
+  the JC-038 "don't end an ALWAYS-cancel at `duration`" rule.
+- **Deferred defense-in-depth (NOT built yet — new scope).** A runtime `pos_y ≥ ground_y` clamp *is*
+  warranted as defense-in-depth and *will* be load-bearing for P2 (air moves, variable-height
+  landings, knockdown-into-ground). But a **bare position clamp is rejected**: clamping position
+  without also defining **ground-contact landing semantics** (transition `AIRBORNE → GROUNDED` on
+  ground contact, not only on the fixed state `duration`) would *hide* a mis-authored arc — the
+  character would silently float at ground level instead of visibly sinking — the opposite of the
+  charter's legibility promise (a bug should surface, not be masked). So the clamp must be designed
+  **together with** ground-contact landing, as one small mechanism, when it lands.
+**Why deferred, not now.** P1.1 does not wait on it (Strategist steer, 2026-07-08): character A's
+arc is fixed and it lands flush, and P1's fixed-duration jump needs no ground-contact landing. The
+mechanism becomes genuinely load-bearing at P2's air movement, so it is best placed as **pre-P2
+hardening or the first unit of P2 air-movement work** — *not* a late P4 harden pass (P2 air moves
+would otherwise build on the fragile no-clamp foundation). **Roadmap placement is the Strategist's**
+— flagged to them (flags.md); this AD records only the technical shape and the recommendation.
+**Rejected.** A bare `pos_y ≥ ground_y` clamp with no landing semantics (masks authoring bugs —
+anti-legibility; also leaves the character nominally "airborne" at ground level for the remaining
+state frames). Doing nothing beyond the authoring invariant permanently (leaves vertical correctness
+resting entirely on perfect authored data — the exact fragility JC-047 exposed; tolerable for the
+slice's one fixed-duration jump, not for P2's air game). Building it now (new scope, not P1.1; and it
+needs P2's air-move requirements to design the landing semantics against).
+**Status.** Provisional/deferred: the *interim authoring invariant* is in effect; the *clamp +
+landing mechanism* is designed-in-intent but unbuilt, pending Strategist roadmap placement.

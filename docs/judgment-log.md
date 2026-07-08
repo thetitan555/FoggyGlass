@@ -79,11 +79,11 @@
 - JC-041 · 2026-07-04 · TKT-P1-05 · Missing `.tscn` scenes built; overlays auto-wired by duck-typed `set_source` convention — ratified
 - JC-042 · 2026-07-04 · TKT-P1-06 · Projectile hitbox given its own draw color instead of a `hit_kind`-based BoxView split — ratified
 - JC-043 · 2026-07-04 · TKT-P1-09 · Recognized-command projection reconstructs `InputHistory` from `PlayerView.input_history` to call the sim's own recognizer — ratified
-- JC-044 · 2026-07-08 · TKT-P1.1-01 · AD-035 render framing implemented as a position/scale transform on `GeometryOverlay` itself (not a `Camera2D`); exact zoom/ground-line/margin constants and fixed placeholder stage bounds (not a live seam read) — provisional
-- JC-045 · 2026-07-08 · TKT-P1.1-02 · Control-surface key bindings (P/N/C/R/M/J/K/L), a single cycling key for the dummy mode-switch (not three mode keys), frame-step bound as a direct passthrough with no auto-pause, and a static-InputMap-reading `ControlsLegend` node — provisional
-- JC-046 · 2026-07-08 · P1.1 gate flag (arrow-key left/right) · Wired `STATE_WALK_F`/`STATE_WALK_B` into `character_a.gd`'s `button_map` as pure-direction commands (AD-032 pattern, mirroring jump) — these states/keyframes were already authored but unreachable from any input; button_index=-1 entries listed after the standing normals so a button always wins over a bare directional hold — provisional
-- JC-047 · 2026-07-08 · P1.1 gate flag (player sinks below the floor) · Jump arc's 22-rise/23-fall frame split (equal magnitude both halves) nets +6 units of permanent downward drift every jump; fixed to 22 rise / 1 zero-velocity apex hang / 22 fall (nets exactly zero) rather than changing either tuned speed value — provisional
-- JC-048 · 2026-07-08 · TKT-P1.1-03 · AD-034's fail-fast guard implemented as `push_error` + `from_dict` returning `null` on an unrecognized `"v"` (rather than raising/crashing or returning a still-parsed state); new dedicated test file `test_serialization_version.gd` (mirrors `test_sim_state.gd`'s SceneTree-runner shape) — provisional
+- JC-044 · 2026-07-08 · TKT-P1.1-01 · AD-035 render framing implemented as a position/scale transform on `GeometryOverlay` itself (not a `Camera2D`); exact zoom/ground-line/margin constants and fixed placeholder stage bounds (not a live seam read) — ratified
+- JC-045 · 2026-07-08 · TKT-P1.1-02 · Control-surface key bindings (P/N/C/R/M/J/K/L), a single cycling key for the dummy mode-switch (not three mode keys), frame-step bound as a direct passthrough with no auto-pause, and a static-InputMap-reading `ControlsLegend` node — ratified
+- JC-046 · 2026-07-08 · P1.1 gate flag (arrow-key left/right) · Wired `STATE_WALK_F`/`STATE_WALK_B` into `character_a.gd`'s `button_map` as pure-direction commands (AD-032 pattern, mirroring jump) — these states/keyframes were already authored but unreachable from any input; button_index=-1 entries listed after the standing normals so a button always wins over a bare directional hold — ratified
+- JC-047 · 2026-07-08 · P1.1 gate flag (player sinks below the floor) · Jump arc's 22-rise/23-fall frame split (equal magnitude both halves) nets +6 units of permanent downward drift every jump; fixed to 22 rise / 1 zero-velocity apex hang / 22 fall (nets exactly zero) rather than changing either tuned speed value — ratified
+- JC-048 · 2026-07-08 · TKT-P1.1-03 · AD-034's fail-fast guard implemented as `push_error` + `from_dict` returning `null` on an unrecognized `"v"` (rather than raising/crashing or returning a still-parsed state); new dedicated test file `test_serialization_version.gd` (mirrors `test_sim_state.gd`'s SceneTree-runner shape) — ratified
 
 ---
 
@@ -93,7 +93,7 @@
 > overturns them; then the status flips and the Strategist sweeps the body to the
 > archive. New entries append to this section.
 
-### JC-044 · 2026-07-08 · TKT-P1.1-01 (Part B, AD-035 render framing) — provisional
+### JC-044 · 2026-07-08 · TKT-P1.1-01 (Part B, AD-035 render framing) — ratified
 
 **Decision.** Implemented AD-035's render-only world→screen framing as a
 `position`/`scale` transform applied directly to the `GeometryOverlay` Node2D
@@ -154,7 +154,7 @@ runs a non-default stage; whether the node-transform mechanism (vs.
 this project adds (so a second overlay doesn't independently re-derive
 framing, which AD-035's "Why" explicitly guards against).
 
-### JC-045 · 2026-07-08 · TKT-P1.1-02 (control surface: bindings, dummy-mode-switch shape, legend) — provisional
+### JC-045 · 2026-07-08 · TKT-P1.1-02 (control surface: bindings, dummy-mode-switch shape, legend) — ratified
 
 **Decision.** Four bundled latitude calls completing `training-mode.md`'s
 "Human control surface" section and criterion 13, all explicitly named
@@ -230,7 +230,7 @@ instead of one cycling key; whether frame-step should auto-pause as a UX
 convenience (a design call, not implementation, if wanted — flagged here
 rather than added unilaterally).
 
-### JC-046 · 2026-07-08 · P1.1 gate flag (arrow-key left/right movement does nothing) — provisional
+### JC-046 · 2026-07-08 · P1.1 gate flag (arrow-key left/right movement does nothing) — ratified
 
 **Decision.** Diagnosed the flag (`docs/flags.md`, "arrow-key left/right
 movement does nothing") past the two candidates the flag/dispatch named
@@ -343,7 +343,7 @@ content" for future dispatch-boundary wording (this session's read: input-
 recognition wiring is closer to engine-adjacent plumbing than authored move/
 damage/timing content, but the Architect may see it differently).
 
-### JC-047 · 2026-07-08 · P1.1 gate flag (player sinks ~5px below the floor on landing) — provisional
+### JC-047 · 2026-07-08 · P1.1 gate flag (player sinks ~5px below the floor on landing) — ratified
 
 **Decision.** Diagnosed per the ticket's SIM-vs-RENDER branch: driving a
 neutral jump headlessly (hold UP briefly, release, let the arc run its full
@@ -422,7 +422,7 @@ zero displacement" invariant it protects is arguably worth stating explicitly
 somewhere (`character-a.md` or a movement-authoring note) so a future
 character's jump arc doesn't reintroduce the same class of bug.
 
-### JC-048 · 2026-07-08 · TKT-P1.1-03 (AD-034 fail-fast mechanism; new test file) — provisional
+### JC-048 · 2026-07-08 · TKT-P1.1-03 (AD-034 fail-fast mechanism; new test file) — ratified
 
 **Decision.** AD-034 and the ticket both specify the *behavior* on an
 unrecognized `"v"` — "fail loudly (`push_error` naming the unexpected

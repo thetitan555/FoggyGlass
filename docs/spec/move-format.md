@@ -143,7 +143,14 @@ the one recognizer.
   of the last 6 (command-buffer) frames — no button needed. This is the directionless/
   button-less path the P0 recognizer lacked. (A jump is a *held direction*, not a motion
   sequence, so it is a `required_direction` gate, **not** a new `motion` token — keeping
-  `_motion_tokens` reserved for actual multi-direction sequences.)
+  `_motion_tokens` reserved for actual multi-direction sequences.) **Walk is the other
+  canonical pure-direction command** (ratified from JC-046): a bare held forward/back
+  (`button_index = -1`, `motion = 0`, `required_direction = RIGHT`/`LEFT`, facing-resolved)
+  routes to the character's `WALK_F`/`WALK_B` state. It is listed **after** the standing
+  normals so a button held together with a direction still performs the normal (first-match-
+  wins; the normals match on any direction via their own `required_direction == 0` gate, so
+  they win by list order over a bare walk). Every character's walk uses this one shape — it
+  is recognition wiring, not authored move content.
 - **Two-button chord** (throw, `L+H`): `button_index` = one button, `chord_button_index` =
   the other, both required on the **same** frame (not merely both somewhere in the window,
   which a naive per-button buffer scan would wrongly accept). `required_direction`/`motion`
@@ -205,6 +212,20 @@ Computed from a `MoveState`'s timeline, exposed via the inspection surface:
 
 These definitions are canonical: every character's frame data is derived this one
 way, so two characters can't disagree about what "startup" or "advantage" means.
+
+## Movement authoring invariants
+
+- **A vertical arc must net to exactly zero displacement (JC-047, AD-036).** Vertical
+  position is pure keyframe integration (AD-014) with **no runtime landing clamp**
+  (AD-036); a jump's per-frame `motion_vel_y` over the state's `duration` must sum to
+  exactly zero so the character returns to its start height and lands flush. An arc that
+  does not net zero drifts the character permanently up or down every rep (the JC-047 bug:
+  22 rise / 23 fall at equal magnitude ⇒ +6 units of sink per jump). When a frame count
+  does not split evenly across rise/fall, spend the odd frame(s) as **zero-velocity
+  apex-hang frame(s)** rather than unbalancing the tuned rise/fall speeds. This will bite
+  character-B jump authoring in P2 otherwise; a runtime `pos_y ≥ ground_y` clamp (with
+  ground-contact landing) is the deferred defense-in-depth (AD-036), not yet built — until
+  it is, this invariant is the *only* thing keeping a character on the floor.
 
 ## Acceptance criteria (QA-checkable)
 
