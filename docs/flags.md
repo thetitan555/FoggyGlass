@@ -71,11 +71,12 @@ driving-UI phase (no roadmap routing-back needed). Specced: `training-mode.md` n
 control surface (operability — P1.1)" section + acceptance criterion 13 — bind pause/resume,
 frame-step, capture/do-reset, and dummy record/playback mode-switch to device/keyboard controls
 routed through the `TrainingMode` shell; complete the P1 device sampler to also read the three
-attack buttons (AD-018) so a human can perform character A's moves; surface a minimal on-screen
-controls legend; and start both players as the installed character in idle (the wiring gap
-behind the "state 0 / startup 0" readouts). Ticketed as **TKT-P1.1-02**. Key choice is
-placeholder (Developer's, like tuning). Operability is confirmed at the human-inspection gate,
-per the roadmap's P1.1 done-bar.
+attack buttons (AD-018) so a human can perform character A's moves; and surface a minimal
+on-screen controls legend — **TKT-P1.1-02**. The shared prerequisite of starting both players
+as the installed character in idle (the wiring gap behind the "state 0 / startup 0" readouts
+*and* the blank overlay) is implemented in **TKT-P1.1-01**, on which the control surface
+depends. Key choice is placeholder (Developer's, like tuning). Operability is confirmed at the
+human-inspection gate, per the roadmap's P1.1 done-bar.
 
 ### [open] 2026-07-08 · raised-by: Strategist (from user's overlay review) · owner: Developer · re: geometry overlay renders no visible boxes
 Problem: in the same human run (full report archived in `flags-archive.md`, 2026-07-08), the
