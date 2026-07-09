@@ -111,6 +111,52 @@ every gap found. Minimum checklist (extend if the spec names more):
 - [ ] **Geometry** — all box kinds (hit / hurt / collision-pushbox) render with **correct Y
       orientation** for every state above.
 
+## Companion capability — scripted-input behavioral-trace harness (folded in; user 2026-07-09)
+
+**Why it's here.** This reconciliation exists because the pipeline verifies the *presence* of
+what was built but never *drives the assembled character as a human against its brief*
+(`pipeline-analysis-completeness-gap.md`, element 1). The user's proposal closes most of that
+gap mechanically: author an input string, replay it **headless** (Godot `--headless -s`, exactly
+how the 27 suites already run) through the existing `RecordPlaybackSource` (a Tenet-2 input
+source, JC-030), dump a per-tick trace of chosen `InspectionView` fields, and assert against
+expected. It becomes this work-order's **own verification instrument** — the checklist items
+above ("hold 6, release → returns to idle by frame X") are exactly the assertions it expresses.
+
+**Near-term intent (this work-order):** a *minimal* harness — compile an authored input string
+to the buffer, replay N ticks headless, dump/assert chosen state fields. **Not** a general TAS
+framework. It gives the reconciliation executable, brief-derived behavioral coverage so the
+sim-behavior gaps can't silently reopen at a later gate.
+
+**What it does and does NOT cover — hold this line.** It reads sim state, the same values the
+headless suite reads — so it catches the *sim-behavior* half (walk-won't-stop, wrong
+state/position, unreachable crouch, jump arcs) but is **blind to render bugs by the same logic
+that hid the Y-inversion from all 27 tests.** It shrinks the human re-gate to genuinely-visual
+concerns (is anything drawn, right-side-up, legible); it does **not** remove it. Do **not** mark
+P1.1 done on this harness's green — that is the P1 mistake in a new costume.
+
+**Build for extension (Tenet 3) — the user's explicit steer.** Design the input-string format
+and the replay seam so they are **not test-only.** The same "load an input string, replay
+deterministically" mechanism is, one step out, a player sharing a setup — a pasteable input
+string that loads a situation to *practice against* in training mode. Do not build that feature
+now, but do not foreclose it: the format should be human-authorable and shareable, and the replay
+path should be the general input-source seam, not a test-harness backdoor. (This is also **P3's
+scripted-input source arriving early** — the tutorial is the same Tenet-2 mechanism.)
+
+**Discipline (so it stays honest):**
+- **Inline, human-readable assertions** derived from the brief beat blind golden-diffs for this
+  purpose — they encode *intended* behavior, not "whatever the sim does today." A pure
+  record-and-lock golden would enshrine current bugs (the JC-047 trap: a test that "tolerated the
+  drift" thereby documented it).
+- Any golden trace must be **born from a human-confirmed run**, then locked.
+
+**Ownership/routing.** The **format is a contract** (input-string syntax → `InputFrame` buffer;
+the trace field-set and file shape) → the **Architect** specs it, in the same entry as the
+coordinate convention and state-machine model below. The **replay-through-a-seam** honors Tenet 2
+(the user's ground) — flag it if any of it strains the tenet rather than working around it. **QA
+owns authoring the trace-scripts** long-term (it is "how the audit is performed"), derived from
+the brief. Keep the near-term build minimal; the extension trajectory is recorded intent, not
+this work-order's build scope.
+
 ## Recommended routing (how a fresh session should run it)
 
 Mirror the pipeline's own flow; do not let one role invent another's artifact.
@@ -120,12 +166,16 @@ Mirror the pipeline's own flow; do not let one role invent another's artifact.
    unspecced); (b) the **movement state-machine model** for release→idle exits, crouch-stance
    entry/exit, and directional/diagonal jump-input mapping — reconcile `spec/character-a.md`
    and the move-format/state-machine spec against the brief, rule what's a spec gap vs. unwired
-   content, and decompose into **tickets**. This is the "reconcile built-vs-intended" step the
-   pipeline lacked (see the analysis doc).
-2. **Developer** — implement the tickets: fix the geometry Y-orientation and wire/author the
-   missing movement against the ratified spec. Record contract-adjacent calls in the
-   judgment-log ("Provisional" section + index line — the log is index-fronted now; closed
-   bodies are in `judgment-log-archive.md`).
+   content, and decompose into **tickets**; (c) the **scripted-input trace-harness format** —
+   the input-string→`InputFrame`-buffer syntax and the trace field-set/file shape, designed for
+   extension per the companion-capability section (human-authorable/shareable, replay via the
+   general Tenet-2 input-source seam, not test-only), specced in this same entry. This is the
+   "reconcile built-vs-intended" step the pipeline lacked (see the analysis doc).
+2. **Developer** — implement the tickets: build the **minimal trace harness** per the Architect's
+   format, then use it to verify the movement fixes as you make them; fix the geometry
+   Y-orientation and wire/author the missing movement against the ratified spec. Record
+   contract-adjacent calls in the judgment-log ("Provisional" section + index line — the log is
+   index-fronted now; closed bodies are in `judgment-log-archive.md`).
 3. **Architect ratifies** the new judgment calls; **QA** runs the objective audit (criteria +
    determinism; note the jump/movement changes will move sim behavior — goldens change
    deliberately, JC-017 style).

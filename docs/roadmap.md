@@ -130,6 +130,17 @@ pickup-ready work-order in `briefs/character-a-movement-reconciliation.md` and
 `pipeline-analysis-completeness-gap.md`. The two feel calls (frame-step auto-pause,
 jump apex-hang) remain parked per the user.
 
+**Folded into the reconciliation (user, 2026-07-09):** a **minimal scripted-input
+behavioral-trace harness** — author an input string, replay it headless through the
+existing `RecordPlaybackSource` (Tenet 2), dump a per-tick `InspectionView` state
+trace, assert against expected. It mechanizes the *sim-behavior* half of the human
+gate (the completeness-gap's element 1) and becomes the reconciliation's own
+verification instrument; it stays **blind to render bugs**, so the human gate still
+clears visual concerns. Designed **build-for-extension** (Tenet 3), not test-only:
+the same replay-a-shareable-input-string mechanism is a player pasting a setup to
+practice against, and is **P3's scripted-input source arriving early**. Not a full
+TAS framework now. Details in the work-order's "Companion capability" section.
+
 ## P2 — Second character + playable 1v1 match
 
 Proves the format generalizes and gives us a real matchup and a real game loop.
