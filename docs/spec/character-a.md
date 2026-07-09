@@ -64,6 +64,23 @@ with the direction performs the normal instead — AD-032 first-match-wins, JC-0
 are authored to net **exactly zero** vertical displacement so the character lands flush (there
 is no runtime ground clamp — AD-036 / `move-format.md` → movement authoring invariants).
 
+**Movement reachability & conventions (P1.1 reconciliation, 2026-07-09).** The gate found several
+specced movement elements built but unreachable/mis-oriented; the rulings (tickets in
+`/docs/tickets/p1.1-reconciliation.md`):
+- **Walk/crouch exit (AD-038).** Holding `4`/`6` enters walk and **releasing returns to idle**;
+  holding `2` enters the **crouch stance** (a bare-`DOWN` pure-direction command, AD-032) and
+  releasing returns to stand. **Crouch block** falls out of the existing hold-back block once the
+  crouch stance is reachable (stand block already works); blocking is stance-agnostic hold-back in
+  the slice (no high/low enforcement).
+- **Jumps (AD-039).** `8` = neutral, `9` = forward, `7` = back — forward/back jumps are the
+  diagonals (one composite `UP+horizontal` mechanism via per-direction prejump lead-ins). **Jump-in
+  normals** `j.L/M/H` are reached by cancelling the jump state into the air normal.
+- **Geometry (AD-037).** All boxes render with up = −Y (feet at `pos_y = ground_y`, body above at
+  negative local y); the prior positive-y authoring was the Y-inversion, fixed in data.
+- **Dash `66`/`44`.** Authored as data (`STATE_DASH_F/B`) but **unreachable** — no double-tap
+  recognizer exists. Whether it is in slice scope is a **Strategist scope call** (raised, `flags.md`),
+  not defaulted in or out here.
+
 ## Normals — frame data
 
 | Move | Startup | Active | Recovery | On block | On hit | `>` cancel? | Role |

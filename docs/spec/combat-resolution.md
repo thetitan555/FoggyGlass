@@ -16,7 +16,11 @@
    buffering and motion/command recognition over `input_history`; apply legal
    transitions and `CancelRule`s (`move-format.md`) per their `condition`/`window`
    /`requires_tag`. A character under hitstop is frozen here: cancels may *buffer*
-   but no transition executes until the first unfrozen tick (AD-017).
+   but no transition executes until the first unfrozen tick (AD-017). **An actionable
+   character in a `loop` state re-derives its state from input each tick, falling back
+   to idle when no command matches (AD-038)** — the exit for held-input stances
+   (walk/crouch return to idle on release); a committed once-through move keeps the
+   "run a buffered command, else stay until it ends" behavior.
 3. **Movement integration.** Apply per-state/keyframe motion and physics to
    `position`/`velocity` (fixed-point integers, AD-014); resolve pushbox
    collisions and stage bounds. Integrate live projectiles' positions too (AD-021),

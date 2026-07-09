@@ -46,6 +46,9 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-034** Serialization carries a top-level format-version field (`"v":1`, absent⇒1, unknown⇒fail; not hashed) — settled
 - **AD-035** Render-framing contract: sim world projects into the viewport via a render-only camera transform (extends AD-019) — settled
 - **AD-036** No runtime ground clamp yet; a `pos_y ≥ ground_y` clamp + ground-contact landing is deferred defense-in-depth; interim guard is the net-zero-arc authoring invariant — provisional (deferred)
+- **AD-037** Vertical convention: up is −Y everywhere (world + character-local, one shared axis); feet-origin at `pos_y = ground_y`; the box-authoring Y-inversion is a DATA bug (reflect across the feet line), the render is correct — settled
+- **AD-038** Held-input looping-state exit: an actionable character in a looping state re-derives its state from input each tick, falling back to idle when no command matches (walk/crouch return to idle on release) — settled
+- **AD-039** Airborne-action model: directional/diagonal jumps via per-direction prejump lead-ins; air normals reached by jump-state cancels — data-only, no engine change — settled
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -1305,3 +1308,136 @@ slice's one fixed-duration jump, not for P2's air game). Building it now (new sc
 needs P2's air-move requirements to design the landing semantics against).
 **Status.** Provisional/deferred: the *interim authoring invariant* is in effect; the *clamp +
 landing mechanism* is designed-in-intent but unbuilt, pending Strategist roadmap placement.
+
+### AD-037 · Vertical convention: up is −Y everywhere; the box Y-inversion is a data bug, not a render bug — settled (2026-07-09, character-A movement reconciliation)
+**Decision.** The sim's vertical axis is **up = −Y**, screen-convention, applied on **one shared
+axis** to BOTH world position and character-local box geometry. This anchors, at the geometry
+level, the `pos_y` convention AD-033 already fixed ("screen convention up = −y … an airborne
+attacker has `pos_y < ground_y`, `depth > 0`"). Concretely:
+- **Ground line** = `stage.ground_y`. A grounded character's `position` anchor is its **feet**,
+  at `pos_y = ground_y`; airborne ⇒ `pos_y < ground_y` (rising is −y, per the jump arc and AD-033).
+- **Character-local box space shares the world axis** (box resolution is a pure translate +
+  facing-x-flip: `wy = pos_y + b.y`, `move_data.gd`). So a box's `y` is its **min corner (the
+  top/head edge)** and the box spans `[y, y+h]` **downward toward the feet**. A grounded body
+  therefore occupies local `y ∈ [−H, 0]` — head at `−H`, feet at `0` (= `pos_y` = `ground_y`).
+- **The Y-inversion is a DATA bug, not a render bug.** Every box in `content/character_a.gd`
+  (and the P0 `TestSupport` character it mirrors) was authored with **positive, downward** local
+  `y` — the body *below* the feet-origin. That is internally consistent for *relative* overlap
+  (attacker and defender boxes share the wrong sign, so hit/hurt overlap still resolves — which
+  is exactly why all 27 headless tests pass), but it is geometrically inverted against `ground_y`
+  and the settled up = −Y `pos_y` convention, so it renders **below the floor and upside-down**
+  (the gate-2 findings: pushbox at the *top* edge of the hurtbox; the crouch box shrinks *up*;
+  crouching normals *look* head-high). **Fix = reflect every authored box across the feet line:**
+  `new_y = −(old_y + old_h)`, `h` unchanged. E.g. standing hurt `[0,80] → [−80,0]`; `5L` hit
+  `(y=45,h=20) → (y=−65,h=20)`; crouch hurt `[0,55] → [−55,0]`; default pushbox `[0,40] → [−40,0]`.
+  After the reflection the pushbox sits at the *lower* part of the body, the crouch box shrinks
+  *downward* (head lowers), and grounded attacks land at honest heights.
+- **The render is correct as-is; do NOT flip the render sign.** World y-down projects to Godot's
+  screen y-down through a **positive** zoom with **no Y flip** (`geometry_overlay.gd` /
+  `px_rect`), and AD-035 seats `ground_y` low in the viewport — so once the box data is
+  reflected, a body at world `y ∈ [ground_y−H, ground_y]` draws upright *above* the ground line,
+  and a jump (`pos_y` going negative) draws *higher*. This is the load-bearing distinction the
+  Developer must not guess wrong: **flipping the render sign is rejected and wrong.** A render
+  flip would fix a *static* standing box by accident but **double-invert vertical motion** — a
+  jump moves `pos_y` negative (up in sim, per JC-047's net-zero arc and AD-033); under a render
+  flip that draws the jumping character *below* the floor. The fix lives in the DATA (one shared
+  up = −Y axis), never in a render sign.
+**Why.** `move-format.md`'s `Box` said only "AABB in character-local space … offset by position"
+and never fixed the Y direction — genuinely unspecced, so the box authors read local y as "up =
++y, growing up from the feet" while the engine's translate + the settled `pos_y`/jump/AD-033
+convention are up = −y. One axis, stated once, removes the ambiguity. This is the single root
+cause behind the whole gate-2 box-appearance cluster and the perceived jump anomaly (the jump
+*sim* is already correct — JC-047 verified net-zero headlessly — so once the body sits above the
+floor the vertical read becomes honest; re-evaluate the jump feel and the crouching-normal-height
+flag at the re-gate against a correctly-oriented display).
+**Rejected.** A render Y-flip / negative `scale.y` (fixes standing by accident, double-inverts
+the jump — anti-consistent with up = −Y `pos_y`/AD-033/JC-047). Flipping the `pos_y`/jump
+convention to up = +y instead (a multi-document reversal of AD-033, the jump arc, and
+combat-resolution's depth rule, for no benefit). A separate "local box y is y-up, resolve
+subtracts" convention (mixes two axes through one translate — `wy = pos_y − b.y` for boxes but
+`+` for motion; two conventions is the drift this AD exists to prevent).
+**Consequence (Developer).** Reflect every authored box in `content/character_a.gd` (and, for the
+P0 test character, `tests/test_support.gd`) by `new_y = −(y+h)`. No engine/format code changes —
+`resolve_box`, `overlaps`, and `px_rect` already assume the shared-axis translate. Box world-y
+values in the geometry goldens change **deliberately** (JC-017 style: a conscious behavior/geometry
+move, goldens re-baselined, not "tolerated drift"); the sim's hit/hurt *relationships* are
+unchanged (the reflection is uniform), so combat outcomes/advantage goldens are unaffected. Verify
+right-side-up rendering for every state — including that a jump apex clears the HUD panels (within
+AD-035's placeholder framing latitude; adjust zoom/anchor there if it does not, or flag).
+
+### AD-038 · Held-input looping-state exit: re-derive an actionable loop state from input each tick — settled (2026-07-09, character-A movement reconciliation)
+**Decision.** When a character is **actionable** and its current state is a **looping** state
+(`MoveState.loop` — the neutral held-input family: idle, walk, crouch), phase 2 **re-derives the
+desired state from buffered input every tick**: the desired state is the first satisfied
+`button_map` command (through the one recognizer), or the character's `idle_state_id` if **no**
+command is satisfied. Transition iff the desired state differs from the current. A **committed
+once-through move** is unaffected — its end is still handled by the once-through → idle transition;
+this rule governs only `loop` states.
+**Why.** The P1 phase-2 actionable branch transitioned **only on a new matching command** and
+otherwise stayed put. That is correct for a move in recovery, but it left a held-direction looping
+state (walk/crouch) with **no exit** when the direction is released — the gate finding "walk enters
+on 4/6 but never returns to idle, state stuck at 101/102." Re-deriving loop states each tick makes
+every held-input stance enter on hold and return to idle on release **uniformly**, with no
+per-state exit wiring: idle re-derives to itself (no-op); walk with the direction still held
+re-selects walk (`target == current`, no-op); release ⇒ no satisfied command ⇒ idle. It is the
+**exit** half of AD-032, which gave only the pure-direction **entry** (walk, and — once its
+bare-`DOWN` entry is wired — crouch).
+**Rejected.** Per-state explicit exit transitions (drift — every held state re-inventing its own
+release, the thing the one-pattern state machine exists to prevent). Making walk/crouch
+once-through (they must persist while the input is held). A timed/auto exit (exit is input-driven,
+not a timer; a timed exit would feel wrong and is unnecessary).
+**Consequence (Developer).** In `step_phases.gd` `phase2_state_machine`, the actionable branch:
+when `Actionability.is_actionable(p, move)` **and** `move.loop`, compute
+`target = _buffered_command(...)`; if `target == -1`, set `target = character.idle_state_id`; then
+transition if `target != p.state_id`. Non-loop actionable states keep the existing "run a buffered
+command, else stay" behavior. Deterministic (a pure function of `input_history` + state); movement
+goldens change deliberately (walk now terminates).
+
+### AD-039 · Airborne-action model: per-direction prejump lead-ins + air-normal jump-state cancels — settled (2026-07-09, character-A movement reconciliation)
+**Decision.** Two data-only wirings (no engine or format change) complete character A's air game;
+both use mechanisms the engine already has.
+- **Directional/diagonal jumps via per-direction prejump lead-ins.** A jump's **horizontal**
+  direction is decided at **takeoff** (the input frame), so it is captured by routing the jump
+  command to one of **three** prejump states — `PREJUMP_N` / `PREJUMP_F` / `PREJUMP_B` — each an
+  **input-gateless ALWAYS cancel** (`input = 0`, window ending at `duration − 1` per JC-038) into
+  its matching `JUMP_N` / `JUMP_F` / `JUMP_B` arc. `button_map` (AD-032 pure-direction commands;
+  the recognizer's `_required_direction_held` **ANDs** each required bit, so a composite
+  `required_direction` is expressible): `UP|FORWARD → PREJUMP_F`, `UP|BACK → PREJUMP_B`,
+  `UP → PREJUMP_N`, with the two **diagonals listed before** bare `UP` (first-match-wins, AD-032).
+  **Reconciliation:** "jump forward/back" and "diagonal (7/9) jump" are the **same** motion —
+  numpad `9` = up+forward, `7` = up+back; there is no separate pure-horizontal jump. One composite
+  mechanism satisfies both the brief's "jumping (neutral/forward/back)" and the checklist's
+  "diagonal (7/9)".
+- **Air normals via jump-state cancels.** An airborne character acts by **cancelling its jump
+  state into an air normal**: `JUMP_N/F/B` each carry three `CancelRule`s (condition `ALWAYS`,
+  `window` = the airborne frames, `input =` `BUTTON_0/1/2`) targeting `j.L`/`j.M`/`j.H`. The
+  cancel's raw-button `input` resolves through `CancelEval`'s **existing raw-button fallback**
+  (`_input_buffered` matches `rule.input == BUTTON_n` as a bitmask when no `button_map` entry
+  targets the air-normal state), so **no `button_map` entry is needed** for the air normals and no
+  new "airborne" gate field is added to `ButtonMapEntry`.
+**Why.** The gate found forward/back and diagonal jumps and jump-in normals all unreachable:
+`button_map` routed only bare `UP → PREJUMP`, `PREJUMP`'s cancel target was hardcoded `JUMP_N`, and
+there were no `button_map` or cancel paths to `JUMP_F/JUMP_B` or the `j.*` normals (which is why
+pressing a button mid-air did nothing — a committed jump is not actionable, so the actionable
+`button_map` branch never fires in flight; only a cancel can act during a committed move). The
+states (`JUMP_F/JUMP_B`, `j.L/M/H`) already **exist** — only the wiring was missing. Both fixes
+express what the engine already supports (composite direction gate; ALWAYS cancel; raw-button
+cancel fallback), so this is **unwired content over a stated model**, not a format gap.
+**Known limitation (AD-036 class, deferred).** An air normal, on ending, returns to idle at
+whatever height the arc/normal left it — there is **no ground-contact landing** (AD-036 defers the
+`pos_y ≥ ground_y` clamp + landing semantics). So a jump-in cancelled mid-arc does not cleanly
+land; **reachability + correct rendering is the P1.1 bar**, and clean air-normal landing rides on
+AD-036's deferred mechanism. Confirm the feel at the re-gate; if the float reads unacceptably, it
+is an AD-036 roadmap-placement question (Strategist), **not** P1.1 scope to build now.
+**Rejected.** A single prejump with direction-branched cancels (a `CancelRule` has no direction
+gate — the horizontal choice cannot be expressed on one cancel; three prejumps is the clean data
+expression *and* captures direction at takeoff, which is correct). Making the jump state
+"actionable" so the neutral `button_map` fires mid-air (breaks the committed-move model and the
+actionable/advantage semantics). Adding an "airborne" gate field to `ButtonMapEntry` (unnecessary —
+air normals are reached *from* the jump via a cancel, not from neutral; the cancel already means
+"act during this move").
+**Consequence (Developer).** In `content/character_a.gd`: author `PREJUMP_F`/`PREJUMP_B` mirroring
+`PREJUMP` (each ALWAYS-cancelling to its jump, window `[3,3]` like the existing neutral prejump);
+add the three composite-direction `button_map` entries (diagonals before bare `UP`); add three
+air-normal `CancelRule`s to each of `JUMP_N/F/B`. No engine/format change; movement goldens gain
+the new reachable states (deliberate).

@@ -58,6 +58,25 @@ on this. Any feel change later is a data-only re-author within the same mechanis
 ---
 Resolution (owner fills): …
 
+### [open] 2026-07-09 · raised-by: Architect (character-A reconciliation, step 1) · owner: Strategist · re: character A forward/back DASH — slice scope decision (the brief's discretionary call)
+Problem: the reconciliation checklist asks whether the brief's *discretionary* grounded forward/back
+dash (`66`/`44`, "no air dash") was ever specced/built. **Findings:** the dash **states exist and are
+correct data** — `character-a.md` → Movement authors "Forward dash `66` 20f ~95px" / "Back dash `44`
+22f ~80px, invuln 1–7", and `content/character_a.gd` builds `STATE_DASH_F`/`STATE_DASH_B` with the
+authored motion + back-dash invuln. **But the dash is UNREACHABLE from input:** there is no `66`/`44`
+recognition — the input buffer has no double-tap detector (`_motion_tokens` is only `236`/`623`, which
+are direction *sequences*, not a *timed double-tap*), and `button_map` has no dash entry. So building
+the dash needs a **new recognizer mechanism** (double-tap `6 6` / `4 4` with a timing window) — real,
+non-trivial engine work, not a one-line wiring. Per the work-order, this is a **Strategist/user scope
+decision, not a Developer default** — I am neither adding nor omitting it. Question for you: **is the
+grounded dash in slice scope for P1.1?** If yes, it becomes an Architect-specced recognizer + a ticket
+(a new command shape, likely an AD-032-style schema extension for double-tap). If no (or deferred), the
+dash states remain authored-but-unreachable content, harmless, and the `44`/`66` note in `character-a.md`
+should be marked deferred. **Non-blocking for the rest of the reconciliation** (walk/crouch/jump/normals
++ Y-fix proceed without it); the P1.1 checklist's dash line resolves to whatever you rule here.
+---
+Resolution (owner fills): …
+
 ### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human re-gate, 2nd run) · owner: Architect (entry point) · re: character A movement incomplete vs brief + geometry Y-inversion — full reconciliation, see work-order
 Problem: the second P1.1 human re-gate (user, 2026-07-08) found character A materially
 incomplete against its own brief AND the geometry overlay rendering boxes with an inverted
@@ -77,4 +96,32 @@ QA, re-gate), and pickup instructions — is
 (reconcile spec vs brief, rule the vertical coordinate convention and the movement
 state-machine/release model, then ticket); fix-ownership fans out from there.
 ---
-Resolution (owner fills): …
+Resolution (Architect step, 2026-07-09 — stays [open]; the reconciliation closes only at the
+human re-gate, not on this step): the **Architect entry-point work is done** and fix-ownership now
+fans out to the Developer. Ruled:
+- **Vertical convention — AD-037.** Up is −Y **everywhere** (world + character-local, one shared
+  axis); feet-origin at `pos_y = ground_y`. The Y-inversion is a **DATA bug, not a render bug**:
+  every authored box has positive downward local y (body below the feet), inverted vs `ground_y` and
+  the settled `pos_y`/AD-033 convention. Fix = reflect each box across the feet line
+  (`new_y = −(y+h)`); the render is correct as-is; **flipping the render sign is wrong** (it
+  double-inverts the jump). This is the single root cause of the whole box-appearance cluster; the
+  crouching-normal-height flag likely closes once it lands.
+- **Held-input looping-state exit — AD-038.** An actionable character in a looping state (idle/walk/
+  crouch) re-derives its state from input each tick, falling back to idle when nothing matches — the
+  **exit** half of AD-032. Fixes walk-never-stops; gives crouch its release-to-stand.
+- **Airborne-action model — AD-039.** Directional/diagonal jumps via **per-direction prejump lead-ins**
+  (`9`/`7` = the "forward/back" jumps — same motion); air normals via **jump-state cancels** (raw-button
+  fallback). Data-only, no engine change. `JUMP_F/JUMP_B` + `j.*` states already exist; only the wiring
+  was missing.
+- **Crouch stance/block:** unwired content (add a bare-`DOWN` pure-direction `button_map` entry);
+  crouch block falls out of the existing hold-back block once the stance is reachable. Blocking is
+  stance-agnostic hold-back in the slice (no high/low) — noted, not changed.
+- **Trace-harness format** specced (`spec/trace-harness.md`): numpad+`L/M/H` input string → `InputFrame`
+  buffer, replayed through the existing `RecordPlaybackSource` (Tenet 2 — **no strain**, a scripted
+  source is a first-class producer), a float-free `InspectionView` trace dump + inline brief-derived
+  assertions. Designed shareable/extensible (the future "paste a setup" / P3 tutorial), minimal build now.
+- **Dash:** raised as a **separate scope flag to you** (above) — states exist, input unreachable, needs a
+  new double-tap recognizer; your call, not defaulted.
+Tickets: `docs/tickets/p1.1-reconciliation.md` (01 trace-harness → 02 geometry-Y-fix → 03 held-input-
+stances → 04 airborne-actions; per-ticket dispatch). Next: Developer executes; Architect ratifies the
+new JCs; QA audits (goldens move deliberately, JC-017 style); then the user re-gate drives the checklist.

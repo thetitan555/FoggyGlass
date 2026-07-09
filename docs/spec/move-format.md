@@ -31,6 +31,20 @@ A character is a state machine. Each state references move data. Two layers:
 Every character uses this one pattern — no bespoke per-character machines. This
 is the consistency guard that lets character B be *content, not engineering*.
 
+**Held-input looping-state exit (AD-038).** A `loop` state is the neutral held-input family
+(idle, walk, crouch). When a character is **actionable** and in a `loop` state, phase 2
+re-derives the desired state from buffered input **every tick** — the first satisfied
+`button_map` command, or `idle_state_id` if none — so a held-direction stance enters on hold
+(the AD-032 pure-direction command) and **returns to idle on release** with no per-state exit
+wiring. A committed once-through move is unaffected (its end is the once-through → idle
+transition). This is the exit half of the state model; AD-032 gave only the entry.
+
+**Airborne-action model (AD-039).** A jump's horizontal direction is chosen at takeoff via
+**per-direction prejump lead-in** states (`PREJUMP_N/F/B`, each an `input = 0` ALWAYS cancel
+into its `JUMP_N/F/B` arc; `button_map` routes composite `UP|FORWARD` / `UP|BACK` / `UP`).
+Air normals are reached by **cancelling the jump state** into `j.*` (a `CancelRule` per attack
+button). Both are expressed in data with existing mechanisms — no format change.
+
 ## Schema
 
 ### `Character`
@@ -171,6 +185,15 @@ that left `L+H` unreachable — three buttons all taken by standing normals). QA
 | Field | Meaning |
 |---|---|
 | `x`, `y`, `w`, `h` | AABB in character-local space, **fixed-point units** (AD-014); flipped by `facing`, offset by `position`. |
+
+**Vertical convention (AD-037): up is −Y, one shared axis with world position.** Box
+resolution is a pure translate + facing-x-flip (`wy = pos_y + b.y`), so character-local Y
+shares the world axis fixed by AD-033: **up = −Y**. The character's `position` anchor is its
+**feet** at `pos_y = ground_y`; a box's `y` is its **min corner (head/top) edge** and the box
+spans `[y, y+h]` **downward toward the feet**, so a grounded body occupies local `y ∈ [−H, 0]`
+(head at `−H`, feet at `0`). Authoring a body with *positive* downward `y` is the JC-inversion
+AD-037 diagnosed (it renders below the floor / upside-down while passing every *relative*-overlap
+test); the fix is data (reflect across the feet line, `new_y = −(y+h)`), never a render sign flip.
 
 `pushbox` (collision box) is defined per `MoveState`/category rather than
 per-keyframe unless a move overrides it.
