@@ -84,6 +84,11 @@
 - JC-046 · 2026-07-08 · P1.1 gate flag (arrow-key left/right) · Wired `STATE_WALK_F`/`STATE_WALK_B` into `character_a.gd`'s `button_map` as pure-direction commands (AD-032 pattern, mirroring jump) — these states/keyframes were already authored but unreachable from any input; button_index=-1 entries listed after the standing normals so a button always wins over a bare directional hold — ratified
 - JC-047 · 2026-07-08 · P1.1 gate flag (player sinks below the floor) · Jump arc's 22-rise/23-fall frame split (equal magnitude both halves) nets +6 units of permanent downward drift every jump; fixed to 22 rise / 1 zero-velocity apex hang / 22 fall (nets exactly zero) rather than changing either tuned speed value — ratified
 - JC-048 · 2026-07-08 · TKT-P1.1-03 · AD-034's fail-fast guard implemented as `push_error` + `from_dict` returning `null` on an unrecognized `"v"` (rather than raising/crashing or returning a still-parsed state); new dedicated test file `test_serialization_version.gd` (mirrors `test_sim_state.gd`'s SceneTree-runner shape) — ratified
+- JC-049 · 2026-07-09 · TKT-P1.1R-01 · Trace-row exact field order/text encoding: `tick`, then `p0.*` over `{state,frame,cat,px,py,vx,vy,act,stun,sk,face}`, then `p1.*` (same order), then any requested optional fields; optional `boxes` renders as `KIND:x,y,w,h` entries `;`-joined per player — provisional
+- JC-050 · 2026-07-09 · TKT-P1.1R-01 · The inline-assert runner is a GDScript API (`TraceHarness.check`/`row_at`), not a parser for Contract 3's illustrated `P1:`/`assert tick=... field=...` text-DSL — provisional
+- JC-051 · 2026-07-09 · TKT-P1.1R-01 · `InputScript` grammar edge cases: a repeated button letter in one token (e.g. `LL`) is accepted (idempotent OR); digit `0` and any character outside `1-9`/`L`/`M`/`H` is malformed; button letters are case-sensitive (no lowercase aliasing) — provisional
+- JC-052 · 2026-07-09 · TKT-P1.1R-01 · `InputScript.compile`'s hard-error boundary uses `assert(false, msg)` (mirrors `InputSource.validate`); added a non-asserting `InputScript.is_well_formed_token` as an additive testing hook, not part of Contract 1's `compile` signature — provisional
+- JC-053 · 2026-07-09 · TKT-P1.1R-01 · An empty/omitted P2 script defaults to neutral via `RecordPlaybackSource`'s existing empty-buffer-loops-neutral behavior, not an explicitly-compiled N-tick neutral buffer — provisional
 
 ---
 
@@ -93,4 +98,117 @@
 > overturns them; then the status flips and the Strategist sweeps the body to the
 > archive. New entries append to this section.
 
-*(none — all recorded calls are ratified/closed; their bodies are in `judgment-log-archive.md`.)*
+### JC-049 · 2026-07-09 · TKT-P1.1R-01 · Trace-row exact field order/text encoding — provisional
+**Serves:** `docs/spec/trace-harness.md` Contract 3 ("Row = one dumped tick... fixed
+field order") and acceptance criterion 4 (round-trip identically).
+**Decision.** `TraceHarness.format_row` emits, in order: `tick=<n>`, then for
+player 0 the fields `state, frame, cat, px, py, vx, vy, act, stun, sk, face` (each
+`p0.<field>=<value>`), then the identical set for player 1 (`p1.*`), then any
+requested optional fields in the order `boxes` (per player, immediately after
+that player's default block), `advantage` (`adv.value`, `adv.plus_player`,
+`adv.neutral_restored`), `last_hit` (`hit.attacker`, `hit.defender`,
+`hit.damage_dealt`, `hit.was_block`, `hit.contact_depth`,
+`hit.air_height_hitstun_delta`). Optional `boxes` renders as
+`KIND:x,y,w,h` box entries `;`-joined within one `p{i}.boxes=` field (KIND one of
+`HURT/HIT/THROW/PUSH`, `BoxView`'s own kind names).
+**Alternative considered.** Interleaving p0/p1 per-field (`p0.state p1.state
+p0.frame p1.frame ...`) instead of a full block per player. Passed over: a
+per-player block reads as one coherent "this player's row" at a glance (the way
+a fighting-game frame-data tool typically groups a combatant's stats), and
+matches the table's own presentation (one Field column, `p{i}.` prefix implying
+"repeat this whole list per player").
+**Why latitude, not escalation.** Contract 3 fixes the field SET and that the
+order is fixed; it does not fix the literal token sequence. One reasonable
+reading, cheaply reversible (a caller reads named `key=value` pairs by name, not
+position), invisible across the seam.
+
+### JC-050 · 2026-07-09 · TKT-P1.1R-01 · Inline-assert runner is a GDScript API, not a text-DSL parser — provisional
+**Serves:** `docs/spec/trace-harness.md` Contract 3 "Assert" mode; acceptance
+criterion 5.
+**Decision.** Built the inline-assert runner as a GDScript API —
+`TraceHarness.check(rows, tick, field, expected) -> bool` (fails loudly, prints
+tick/field/expected/actual, mirrors every existing test file's `_eq`/`_true`
+convention) plus `TraceHarness.row_at` — rather than a parser for the spec's
+worked illustration (a `.script`-style text file with `P1:`/`P2:` input lines and
+`assert tick=<n> <field>=<expected>` lines, using symbolic state names like
+`p0.state=WALK_F`).
+**Alternative considered.** A literal text-file parser matching the illustration
+verbatim. Passed over: resolving a symbolic name like `WALK_F` against a raw
+`state_id` in a CHARACTER-AGNOSTIC harness (inspection-surface.md criterion 5 —
+no character-specific code in the seam) needs a per-character symbol table
+(name -> id) that no contract defines yet — inventing one would be a new,
+un-spec'd resolution mechanism (contract-adjacent), not an implementation detail.
+The GDScript-API form delivers the identical semantics Contract 3 actually
+specifies as the contract — "(tick, field, expected)" checked against the trace,
+failing loudly by name — while staying inside this codebase's existing,
+already-audited test-authoring convention.
+**Why latitude, not escalation (with a caveat).** The (tick,field,expected) +
+loud-failure CONTRACT is fully preserved; only the host mechanism (GDScript call
+vs. parsed text file) differs from the spec's illustrative shorthand. Flagged
+here rather than silently decided because it has real drift-risk for QA's
+long-term authoring plan (`trace-harness.md`: "QA (long-term): authors the
+brief-derived trace-scripts") — if the Architect intends literal `.script` text
+files (with a symbol-table contract to match), that is a small, additive
+follow-up ticket, not a rewrite of what's built here.
+
+### JC-051 · 2026-07-09 · TKT-P1.1R-01 · InputScript grammar edge cases — provisional
+**Serves:** `docs/spec/trace-harness.md` Contract 1 grammar + acceptance criteria
+1/2.
+**Decision.** (a) A repeated button letter within one token (e.g. `LL`) compiles
+without error — the grammar's `button...` literally permits repetition, and OR-ing
+the same bit twice is a no-op, so it is harmless rather than a typo class. (b)
+Digit `0`, and any character outside `1..9`/`L`/`M`/`H`, is a malformed token
+(hard error). (c) Button letters are case-sensitive — only uppercase `L`/`M`/`H`
+match; no lowercase convenience-aliasing was added.
+**Alternative considered.** Rejecting a repeated button letter as malformed (extra
+typo-catching strictness); accepting lowercase `l`/`m`/`h` as aliases (authoring
+convenience). Passed over both: the spec's literal grammar already answers (a)
+by definition and doesn't ask for (c), and adding either invents behavior beyond
+the letter of Contract 1 for no stated need.
+**Why latitude.** Pure grammar-boundary detail with one reasonable reading per
+the spec's own literal production rules; no design/feel consequence.
+
+### JC-052 · 2026-07-09 · TKT-P1.1R-01 · Hard-error mechanism + testing hook — provisional
+**Serves:** `docs/spec/trace-harness.md` Contract 1 "Validation"; acceptance
+criterion 1 ("a malformed token or reserved bit is a hard error, not a
+dropped/altered frame").
+**Decision.** `InputScript.compile`'s hard-error boundary is `assert(false, msg)`
+on a malformed token/count, mirroring the codebase's EXISTING hard-error-at-the-
+boundary convention (`InputSource.validate` / `InputFrame.is_valid`,
+`input_source.gd`) rather than inventing a new error-signaling shape — Contract 1
+fixes `compile`'s signature as the single pure `(text) -> PackedInt32Array`, which
+leaves no room for an error-tuple return without changing that contract. Because
+a tripped GDScript `assert` isn't reliably catchable/introspectable from a
+headless test (this codebase's own established precedent —
+`test_record_playback.gd`'s `_test_reproducibility_and_future_read_contract`
+note on the same class of boundary), added a non-asserting
+`InputScript.is_well_formed_token(token) -> bool` exposing the IDENTICAL grammar
+check as a plain bool, so malformed-input detection is testable without tripping
+the crash path. This helper is additive — not part of Contract 1's `compile`
+signature.
+**Alternative considered.** Changing `compile` to return an error-carrying
+Dictionary/tuple instead of a bare `PackedInt32Array`. Passed over: Contract 1
+fixes the signature; changing it would be a contract edit, not an implementation
+choice.
+**Why latitude.** The error-signaling MECHANISM (assert vs. a different return
+shape) is implementation detail once the contract's signature is held fixed; the
+codebase already has one established convention for this exact class of boundary,
+and this reuses it rather than inventing a second one.
+
+### JC-053 · 2026-07-09 · TKT-P1.1R-01 · P2 default-neutral via an empty buffer — provisional
+**Serves:** `docs/spec/trace-harness.md` Contract 2 ("The P2 source defaults to a
+neutral (idle) script when only P1 is driven").
+**Decision.** `TraceHarness.run`'s `p2_text` default (`""`) compiles to an empty
+`PackedInt32Array`, loaded into P2's `RecordPlaybackSource` as-is; that source's
+OWN already-documented empty-buffer behavior (`_read_playback_and_advance`:
+"An empty buffer plays back as NEUTRAL forever") supplies the neutral stream —
+no explicit N-tick neutral buffer is compiled for P2.
+**Alternative considered.** Compiling an explicit `"5*<ticks>"` P2 script sized to
+the run length. Passed over: it would require threading `ticks` into the default-
+script construction and produces byte-for-byte the same observable stream as the
+simpler empty-buffer path, which is already a first-class, tested behavior of
+`RecordPlaybackSource` (`test_record_playback.gd`) — reusing it is the smaller
+surface.
+**Why latitude.** Internal driver plumbing with one reasonable reading; the
+observable P2 behavior (neutral forever) is exactly what Contract 2 specifies
+either way.
