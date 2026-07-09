@@ -278,3 +278,24 @@ bytes sitting between two intact, coherent entries (an AD-028 resolution and the
 bytes and the entries read correctly on both sides. Restored the inter-entry blank line the
 padding had occupied. `flags-archive.md` now round-trips as plain UTF-8 (0 NUL bytes) and greps
 cleanly past the former offset.
+
+### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human re-gate, 2nd run) · owner: Architect (entry point) · re: character A movement incomplete vs brief + geometry Y-inversion — full reconciliation, see work-order
+Problem: the second P1.1 human re-gate (user, 2026-07-08) found character A materially
+incomplete against its own brief AND the geometry overlay rendering boxes with an inverted
+Y axis. Confirmed defects (all in-scope per `briefs/character-a.md`): walk enters but never
+exits to idle on release (state stuck at 101/102); no crouch stance on held 2 (crouch
+*attacks* work, crouch *stance/block* missing); no forward/back jump; no diagonal (7/9)
+jumps; a jump vertical anomaly to diagnose against the render fix; and boxes drawn Y-inverted
+(pushbox at top edge, hurtbox shrinks up) — likely the single root cause of the gate-1
+"crouching normals look head-high" observation too. **Scope: full reconciliation** (user's
+call) — audit ALL of A's specced movement, not just these symptoms. This is **P1.1-blocking**
+(P1.1 is not done until the re-gate passes) but **deferred to a fresh session** by the user.
+The complete, self-contained work-order — findings, scope, per-element checklist, routing
+(Architect-first for the coordinate convention + state-machine model, then Developer, ratify,
+QA, re-gate), and pickup instructions — is
+`docs/briefs/character-a-movement-reconciliation.md`. Root-cause process analysis:
+`docs/pipeline-analysis-completeness-gap.md`. Owner is the Architect as the entry point
+(reconcile spec vs brief, rule the vertical coordinate convention and the movement
+state-machine/release model, then ticket); fix-ownership fans out from there.
+---
+Resolution (owner fills): …

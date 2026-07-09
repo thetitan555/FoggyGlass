@@ -119,6 +119,17 @@ overlay draws both characters' boxes on screen; the two flags are resolved; and
 the **human-inspection gate clears** (the user confirms it live). Only then is P1
 actually done.
 
+**Status (2026-07-08):** the instrument work landed and passed QA's objective audit
+(`audits/audit-p1.1-instrument.md`), but the human re-gate — run twice — found that
+**character A itself is materially incomplete against its brief** (walk won't stop,
+no crouch stance, no forward/back or diagonal jumps) and the **geometry overlay
+renders boxes Y-inverted**. P1.1's scope therefore absorbs a **character-A movement
+reconciliation + geometry Y-fix** before it can be done — documented as a
+pickup-ready work-order in `briefs/character-a-movement-reconciliation.md` and
+**deferred to a fresh session**. Why the pipeline passed A as done while unplayable:
+`pipeline-analysis-completeness-gap.md`. The two feel calls (frame-step auto-pause,
+jump apex-hang) remain parked per the user.
+
 ## P2 — Second character + playable 1v1 match
 
 Proves the format generalizes and gives us a real matchup and a real game loop.
