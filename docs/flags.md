@@ -58,25 +58,6 @@ on this. Any feel change later is a data-only re-author within the same mechanis
 ---
 Resolution (owner fills): …
 
-### [open] 2026-07-09 · raised-by: Architect (character-A reconciliation, step 1) · owner: Strategist · re: character A forward/back DASH — slice scope decision (the brief's discretionary call)
-Problem: the reconciliation checklist asks whether the brief's *discretionary* grounded forward/back
-dash (`66`/`44`, "no air dash") was ever specced/built. **Findings:** the dash **states exist and are
-correct data** — `character-a.md` → Movement authors "Forward dash `66` 20f ~95px" / "Back dash `44`
-22f ~80px, invuln 1–7", and `content/character_a.gd` builds `STATE_DASH_F`/`STATE_DASH_B` with the
-authored motion + back-dash invuln. **But the dash is UNREACHABLE from input:** there is no `66`/`44`
-recognition — the input buffer has no double-tap detector (`_motion_tokens` is only `236`/`623`, which
-are direction *sequences*, not a *timed double-tap*), and `button_map` has no dash entry. So building
-the dash needs a **new recognizer mechanism** (double-tap `6 6` / `4 4` with a timing window) — real,
-non-trivial engine work, not a one-line wiring. Per the work-order, this is a **Strategist/user scope
-decision, not a Developer default** — I am neither adding nor omitting it. Question for you: **is the
-grounded dash in slice scope for P1.1?** If yes, it becomes an Architect-specced recognizer + a ticket
-(a new command shape, likely an AD-032-style schema extension for double-tap). If no (or deferred), the
-dash states remain authored-but-unreachable content, harmless, and the `44`/`66` note in `character-a.md`
-should be marked deferred. **Non-blocking for the rest of the reconciliation** (walk/crouch/jump/normals
-+ Y-fix proceed without it); the P1.1 checklist's dash line resolves to whatever you rule here.
----
-Resolution (owner fills): …
-
 ### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human re-gate, 2nd run) · owner: Architect (entry point) · re: character A movement incomplete vs brief + geometry Y-inversion — full reconciliation, see work-order
 Problem: the second P1.1 human re-gate (user, 2026-07-08) found character A materially
 incomplete against its own brief AND the geometry overlay rendering boxes with an inverted

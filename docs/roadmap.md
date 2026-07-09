@@ -204,6 +204,13 @@ not just runnable but defensible — and the architecture is proven extensible.*
   kit deliberately carries neither and its numbers are juiced to stand up to such
   a B. A **leaning, not a commitment**; the P2 brief decides, and no spec should
   treat B's identity as settled before then.
+- **Character A grounded dash** — *resolved 2026-07-09: deferred to P2.* The
+  brief's discretionary forward/back dash (`66`/`44`) is authored as correct move
+  data but **unreachable** — it needs a new double-tap recognizer (real engine
+  mechanism, not wiring), which is out of P1.1's additive close-the-gap scope. Not
+  cut: the **P2 brief decides** whether A gets the dash, folded into P2's
+  movement/ground-contact hardening unit where engine-movement work already lives.
+  Until then the dash states remain authored-but-unreachable (harmless).
 - **Match rules** — rounds, timer, health values: a P2-brief detail, defaulted
   to a conventional best-of for now unless you want otherwise.
 - **What the training mode must expose, exactly** — the P1 brief pins this; it's
