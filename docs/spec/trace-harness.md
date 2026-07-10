@@ -86,6 +86,15 @@ count   := integer >= 1                          # repeat this exact frame `coun
 hard compile error, never a silently-dropped frame. An unknown character is an error, not
 ignored (so a typo cannot quietly change the meaning of a shared setup).
 
+**Grammar edge cases (pinned — ratified from JC-051).** So a shared-artifact string has one
+durable reading:
+- A **repeated button letter** within one token (e.g. `LL`) compiles without error — it is
+  the same bit OR-ed twice, a no-op, not a typo class the grammar rejects.
+- **Button letters are case-sensitive:** only uppercase `L`/`M`/`H` are buttons; lowercase
+  is not aliased and is a malformed character.
+- Digit `0`, and any character outside `1`..`9` / `L` / `M` / `H` / `*` / `#` / whitespace,
+  is a **malformed token** (hard error), never ignored.
+
 **Debug rendering is the inverse.** `InputFrame.to_debug_string` already renders a frame as
 `U/D/L/R/B0..B7` — the trace's input column reuses it (or a numpad rendering) so a dumped
 trace is self-describing. The numpad string and the debug string are two views of the same
@@ -138,13 +147,22 @@ The default field-set (the movement-reconciliation set) is:
 `advantage` (`value`/`plus_player`/`neutral_restored`); `last_hit` (`attacker`/`defender`/
 `damage_dealt`/`was_block`/`contact_depth`/`air_height_hitstun_delta`).
 
+**Emitted row encoding (pinned — ratified from JC-049).** The literal token sequence a row
+emits is fixed (so a `.trace` is a stable, diffable, golden-able artifact): `tick=<n>`, then
+**player 0's full default block** as `p0.<field>=<value>` in the table's order
+(`state, frame, cat, px, py, vx, vy, act, stun, sk, face`), then **player 1's identical
+block** (`p1.*`) — a whole player per block, not interleaved per-field. Opt-in fields follow:
+`boxes` renders immediately after that player's default block as `p{i}.boxes=` with each box
+`KIND:x,y,w,h` (`KIND` ∈ `HURT/HIT/THROW/PUSH`), entries `;`-joined; `advantage` and
+`last_hit` render after both players' blocks.
+
 **Two output modes.**
 - **Dump** — write the trace rows (all ticks, or a chosen subset) to stdout / a `.trace`
   file. A `.trace` is plain text, diffable, golden-able.
 - **Assert** — the primary near-term mode. The script carries **inline, human-readable
   assertions derived from the brief**, each `(tick, field, expected)`, checked against the
   trace; a mismatch fails loudly with the tick, field, expected, and actual. This encodes
-  *intended* behavior, not "whatever the sim does today." Example, expressing the
+  *intended* behavior, not "whatever the sim does today." Illustration, expressing the
   walk-and-stop checklist item:
 
   ```
@@ -153,6 +171,21 @@ The default field-set (the movement-reconciliation set) is:
   assert tick=30 p0.state=WALK_F
   assert tick=41 p0.state=IDLE        # released at 31; idle by the next actionable tick
   ```
+
+  **Assert host (ratified from JC-050).** The block above illustrates the assertion
+  *semantics* — `(tick, field, expected)` checked against the trace, failing loudly by name
+  — **it is not a pinned text-file grammar.** The **ratified near-term assert host** (and
+  QA's near-term authoring surface) is the GDScript API — `TraceHarness.check(rows, tick,
+  field, expected)` plus `TraceHarness.row_at` — which delivers exactly those semantics
+  inside the codebase's existing test-authoring convention. It reads a raw `state_id`
+  directly; the illustration's **symbolic names** (`WALK_F`, `IDLE`) are shorthand for a
+  reader, not a built resolution step — resolving them would need a per-character
+  symbol-table (name→id) contract that **does not exist** and would break the harness's
+  **character-agnostic** seam property (inspection-surface.md criterion 5). A literal text
+  `.script` DSL (with such a symbol-table contract) is an **explicitly-deferred, additive
+  extension** — on the same build-for-extension horizon as the "share a setup" / P3-tutorial
+  hooks below — **not** part of this build's scope and not owed by it. It becomes a spec item
+  only if/when QA's authoring plan calls for pasteable text files.
 
 **Discipline (so the harness stays honest).** Inline brief-derived assertions **beat blind
 golden-diffs** for this purpose — a pure record-and-lock golden would enshrine current bugs
@@ -168,7 +201,12 @@ golden-lock is a QA long-term concern, not this build.
   Nothing else — no mirroring, no `.trace` golden tooling, no P2 AI. Sequences early (the
   ticket file) so the Developer can verify movement fixes **through it** as they land.
 - **QA (long-term):** authors the brief-derived trace-scripts (the coverage oracle) and,
-  once a run is human-confirmed, may lock golden `.trace` files.
+  once a run is human-confirmed, may lock golden `.trace` files. **Authoring surface
+  (ratified JC-050):** near-term, trace-scripts are authored against the GDScript assert API
+  (`TraceHarness.check`/`row_at`), not a text `.script` DSL — the text DSL is a deferred,
+  additive extension gated on a character symbol-table contract (see Contract 3 "Assert
+  host"). If QA's authoring plan later wants pasteable text scripts, that is a new
+  Architect-owned spec item, raised then — not a gap in this build.
 
 ## Acceptance criteria (QA-checkable)
 

@@ -47,7 +47,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-035** Render-framing contract: sim world projects into the viewport via a render-only camera transform (extends AD-019) — settled
 - **AD-036** No runtime ground clamp yet; a `pos_y ≥ ground_y` clamp + ground-contact landing is deferred defense-in-depth; interim guard is the net-zero-arc authoring invariant — provisional (deferred)
 - **AD-037** Vertical convention: up is −Y everywhere (world + character-local, one shared axis); feet-origin at `pos_y = ground_y`; the box-authoring Y-inversion is a DATA bug (reflect across the feet line), the render is correct — settled
-- **AD-038** Held-input looping-state exit: an actionable character in a looping state re-derives its state from input each tick, falling back to idle when no command matches (walk/crouch return to idle on release) — settled
+- **AD-038** Held-input looping-state exit: an actionable character in a looping state re-derives its state from input each tick, falling back to idle when no command matches (walk/crouch return to idle on release); stance selection reads CURRENT-tick input (not the command buffer) so release exits promptly, while discrete commands keep AD-022 buffer leniency — settled (2026-07-10 exit-lag correction)
 - **AD-039** Airborne-action model: directional/diagonal jumps via per-direction prejump lead-ins; air normals reached by jump-state cancels — data-only, no engine change — settled
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
@@ -1364,6 +1364,11 @@ move, goldens re-baselined, not "tolerated drift"); the sim's hit/hurt *relation
 unchanged (the reflection is uniform), so combat outcomes/advantage goldens are unaffected. Verify
 right-side-up rendering for every state — including that a jump apex clears the HUD panels (within
 AD-035's placeholder framing latitude; adjust zoom/anchor there if it does not, or flag).
+**Spawn-point reflection (ratified from JC-054).** An authored spawn *point* — a
+`Keyframe.spawn_offset_y` (e.g. the fireball release height), which has **no `h`** — reflects as
+`new_y = −old_y`, the degenerate `h = 0` case of the box formula `−(y+h)`. A future character
+authoring a spawn point inherits this rule (a point is a zero-height box reflected about its own
+single edge).
 
 ### AD-038 · Held-input looping-state exit: re-derive an actionable loop state from input each tick — settled (2026-07-09, character-A movement reconciliation)
 **Decision.** When a character is **actionable** and its current state is a **looping** state
@@ -1386,12 +1391,37 @@ bare-`DOWN` entry is wired — crouch).
 release, the thing the one-pattern state machine exists to prevent). Making walk/crouch
 once-through (they must persist while the input is held). A timed/auto exit (exit is input-driven,
 not a timer; a timed exit would feel wrong and is unnecessary).
-**Consequence (Developer).** In `step_phases.gd` `phase2_state_machine`, the actionable branch:
-when `Actionability.is_actionable(p, move)` **and** `move.loop`, compute
-`target = _buffered_command(...)`; if `target == -1`, set `target = character.idle_state_id`; then
-transition if `target != p.state_id`. Non-loop actionable states keep the existing "run a buffered
-command, else stay" behavior. Deterministic (a pure function of `input_history` + state); movement
-goldens change deliberately (walk now terminates).
+**Correction (2026-07-10 — the loop-state re-derivation reads CURRENT input, not the command
+buffer; resolves the AD-038 exit-lag flag, ruled an OVERSIGHT).** The AD-022 command buffer
+(`COMMAND_BUFFER = 6`) exists for **reversal/cancel entry leniency** — firing a *discrete,
+once-through* command (a normal, a motion special, a throw, or the prejump/jump lead-in) on the
+first actionable frame even when the press was slightly early. It must **not** govern **loop-state
+stance selection**. Wiring the whole re-derivation through `_buffered_command` (the buffered
+window) made a *released* direction linger for up to `COMMAND_BUFFER − 1` (~5) ticks, so a held
+walk/crouch kept re-selecting itself and did **not** exit on the release frame (empirically: held
+5 ticks, exited at tick 11 not tick 6). Applied to a held direction's exit the buffer's leniency
+has **no upside** — only ~83 ms of walk-stop imprecision, against the charter's precise-neutral-
+spacing play space (and the gate-1 "walk won't stop" defect this reconciliation exists to close).
+**Corrected contract:** the loop-state re-derivation decides the desired **stance** — a `loop`-state
+command (walk / crouch) or the `idle_state_id` fallback — from the character's **current-tick
+resolved input** (the direction held *this* tick), with **no command-buffer carry-over**, so a
+released direction returns to `idle_state_id` on the very next actionable tick (prompt release). A
+**discrete/committed command** (a command whose target state is **not** `loop`) still fires through
+the AD-022 buffer with full leniency and takes priority when one is buffered-ready — it leaves the
+loop state on entry, so it never lingers. Net: the buffer governs *entering an action*, current
+input governs *which held stance you are in*.
+**Consequence (Developer).** In `step_phases.gd` `phase2_state_machine`, the actionable **and**
+`move.loop` branch is two-tier: (1) if a **discrete** command (recognized command whose target
+state is not `loop`) is buffered-ready via the AD-022 command buffer, transition to it (unchanged
+leniency); (2) otherwise compute the stance `target` from the **current tick's** recognized
+pure-direction/`loop` command — NOT the buffered window — and if none is satisfied this tick set
+`target = character.idle_state_id`; transition if `target != p.state_id`. (The `loop`/non-`loop`
+target split is the clean discriminator — `MoveRegistry` already knows each state's `loop` flag.)
+Non-loop actionable states keep the existing "run a buffered command, else stay" behavior. Still
+deterministic (a pure function of `input_history` + state); movement goldens change deliberately
+(walk now terminates **on the release frame**, not ~5 ticks later). **Needs a small Developer
+follow-up ticket** (Strategist dispatches before the re-gate): change the loop-state exit read from
+buffered to current-tick input, re-baseline the walk/crouch release-timing goldens accordingly.
 
 ### AD-039 · Airborne-action model: per-direction prejump lead-ins + air-normal jump-state cancels — settled (2026-07-09, character-A movement reconciliation)
 **Decision.** Two data-only wirings (no engine or format change) complete character A's air game;
@@ -1410,7 +1440,11 @@ both use mechanisms the engine already has.
   "diagonal (7/9)".
 - **Air normals via jump-state cancels.** An airborne character acts by **cancelling its jump
   state into an air normal**: `JUMP_N/F/B` each carry three `CancelRule`s (condition `ALWAYS`,
-  `window` = the airborne frames, `input =` `BUTTON_0/1/2`) targeting `j.L`/`j.M`/`j.H`. The
+  `window` = the airborne frames `[1, JUMP_DURATION − 1]`, `input =` `BUTTON_0/1/2`) targeting
+  `j.L`/`j.M`/`j.H`. The window ends at `duration − 1` (ratified JC-059, same off-by-one as the
+  prejump lead-in per JC-038): on the `duration` frame itself the committed jump is already
+  actionable and phase 2's fixed priority takes the actionable/buffered branch over the cancel
+  branch, so a frame-`duration` window edge is silently unreachable. The
   cancel's raw-button `input` resolves through `CancelEval`'s **existing raw-button fallback**
   (`_input_buffered` matches `rule.input == BUTTON_n` as a bitmask when no `button_map` entry
   targets the air-normal state), so **no `button_map` entry is needed** for the air normals and no

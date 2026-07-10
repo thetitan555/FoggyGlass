@@ -107,7 +107,7 @@ Tickets: `docs/tickets/p1.1-reconciliation.md` (01 trace-harness → 02 geometry
 stances → 04 airborne-actions; per-ticket dispatch). Next: Developer executes; Architect ratifies the
 new JCs; QA audits (goldens move deliberately, JC-017 style); then the user re-gate drives the checklist.
 
-### [open] 2026-07-09 · raised-by: Strategist (from Developer's TKT-P1.1R-03 note) · owner: Architect · re: AD-038 held-stance EXIT reuses the reversal command-buffer → ~5-tick release lag — intended, or an oversight?
+### [resolved] 2026-07-09 · raised-by: Strategist (from Developer's TKT-P1.1R-03 note) · owner: Architect · re: AD-038 held-stance EXIT reuses the reversal command-buffer → ~5-tick release lag — intended, or an oversight?
 Problem: implementing AD-038 (TKT-P1.1R-03, JC-058 context), the walk/crouch exit was built by reusing
 `_buffered_command` — the same 6-frame `COMMAND_BUFFER` leniency AD-022 uses for **reversals**. Faithful
 to AD-038's text, but the consequence is that a held stance does **not** exit on the frame the direction
@@ -127,4 +127,20 @@ release), a small Developer follow-up landable **before** the re-gate. **Resolve
 ratification pass** (JC-049..058) — no extra cold-start. NON-BLOCKING for TKT-P1.1R-04 (airborne is
 independent); blocking only in that P1.1's re-gate should not run on a walk-stop feel nobody has ruled on.
 ---
-Resolution (owner fills): …
+Resolution (Architect, 2026-07-10, end-of-feature ratification pass): **RULED AN OVERSIGHT — AD-038
+corrected.** The AD-022 command buffer is reversal/cancel *entry* leniency (fire a discrete,
+once-through command slightly early, on the first actionable frame). Applied to a **held loop-state's
+selection/exit** it has no upside — the character is already actionable every tick (no gap to bridge),
+so all it does is let a *released* direction linger ~5 ticks, delaying walk/crouch stop against the
+charter's precise-neutral-spacing play space. Corrected AD-038: the loop-state re-derivation decides
+the desired **stance** (walk / crouch / idle-fallback) from the **current-tick resolved input**, with
+**no command-buffer carry-over**, so a released direction returns to idle on the very next actionable
+tick (prompt release). **Discrete commands** (target state not `loop` — normals, specials, throws, the
+prejump/jump lead-in) keep full AD-022 buffer leniency and take priority when buffered-ready; they
+leave the loop state on entry, so they never linger. Contract + developer consequence written into
+**AD-038** (`docs/spec/decisions.md`; index one-liner updated too). This is **NOT** a re-gate feel
+item — it is a corrected contract with an objective behavior (walk stops on the release frame). **Needs
+a small Developer follow-up ticket** (change the loop-state exit read from buffered to current-tick
+input; re-baseline the walk/crouch release-timing goldens) — the Strategist dispatches it before the
+re-gate; independent of TKT-P1.1R-04. Ratified JC-058/JC-059 confirmed the held-direction integration
+tests still hold under this correction (a continuously-held direction re-selects its stance identically).
