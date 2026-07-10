@@ -56,6 +56,12 @@ const STATE_JUMP_N: int = 106
 const STATE_JUMP_F: int = 107
 const STATE_JUMP_B: int = 108
 const STATE_CROUCH: int = 109
+# Directional prejump lead-ins (AD-039, TKT-P1.1R-04) -- mirror STATE_PREJUMP
+# (the neutral lead-in) but each ALWAYS-cancels into JUMP_F/JUMP_B instead of
+# JUMP_N. Numbered outside the contiguous 100-109 movement block (already
+# full) rather than renumbering existing ids.
+const STATE_PREJUMP_F: int = 160
+const STATE_PREJUMP_B: int = 161
 
 # --- Normals ------------------------------------------------------------------
 const STATE_5L: int = 110
@@ -203,6 +209,17 @@ static func _build_button_map() -> Array[ButtonMapEntry]:
 	# below (so a down-forward hold, e.g. numpad 3, crouches rather than walks --
 	# DOWN is checked first in authored order).
 	map.append(_map(-1, InputFrame.DOWN, 0, STATE_CROUCH))
+	# Diagonal jumps (composite pure-direction command, AD-032/AD-039): UP held
+	# together with forward/back routes to PREJUMP_F/PREJUMP_B instead of the
+	# neutral PREJUMP -- each carries its own ALWAYS cancel into JUMP_F/JUMP_B
+	# (_build_movement). `_required_direction_held` ANDs every bit in
+	# required_direction, so UP|RIGHT (forward) / UP|LEFT (back) both gate
+	# correctly off one entry each -- no new recognizer mechanism. Listed
+	# BEFORE the bare-UP neutral entry below (first-match-wins, AD-032) so a
+	# diagonal hold resolves to the directional prejump, not the neutral one;
+	# 9 (up+forward) = forward jump, 7 (up+back) = back jump (character-a.md).
+	map.append(_map(-1, InputFrame.UP | InputFrame.RIGHT, 0, STATE_PREJUMP_F))
+	map.append(_map(-1, InputFrame.UP | InputFrame.LEFT, 0, STATE_PREJUMP_B))
 	# Jump (pure-direction command, AD-032): held UP, no button, routes to the
 	# prejump lead-in (whose own ALWAYS cancel carries it into the neutral jump
 	# arc -- see _build_movement's PREJUMP note). Listed before the bare standing
@@ -379,21 +396,52 @@ static func _build_movement() -> Array[MoveState]:
 	dash_b.timeline = [db_invuln_kf, db_tail_kf]
 	out.append(dash_b)
 
-	# PREJUMP: 4f, grounded, then airborne (transitions to STATE_JUMP_N once
-	# duration elapses -- authored as a plain once-through move; the neutral
-	# jump target is what phase 2's "once-through move ended -> idle" would
-	# otherwise route to, so PREJUMP instead ends INTO the jump arc via its own
-	# short timeline immediately followed by the jump states in sequence is not
-	# expressible as a chain without a cancel/transition target. Reasonable
-	# data-only reading (logged): PREJUMP carries a single CancelRule
-	# (condition ALWAYS, window = its own full duration) into JUMP_N, so a
-	# jump command always resolves prejump -> neutral jump automatically; a
-	# directional jump is chosen by the ORIGINAL command remaining buffered
-	# (still within the 6f command buffer) once the prejump's cancel opens the
-	# window -- see _build_movement's jump section below for JUMP_F/JUMP_B's
-	# own prejump-alike lead-in, authored the same way.)
+	# PREJUMP (neutral): 4f, grounded, then airborne (transitions to STATE_JUMP_N
+	# once duration elapses -- authored as a plain once-through move; the jump
+	# target is what phase 2's "once-through move ended -> idle" would otherwise
+	# route to, so PREJUMP instead ends INTO the jump arc via its own short
+	# timeline; a state sequence like this is not expressible as a chain
+	# without a cancel/transition target. Reasonable data-only reading (logged):
+	# PREJUMP carries a single CancelRule (condition ALWAYS, window = its own
+	# full duration) into JUMP_N, so a jump command always resolves prejump ->
+	# neutral jump automatically.
+	#
+	# DIRECTIONAL/DIAGONAL JUMPS (AD-039, TKT-P1.1R-04): a jump's horizontal
+	# direction is decided at TAKEOFF (the input frame), so button_map routes
+	# UP|FORWARD / UP|BACK to their OWN prejump lead-ins -- PREJUMP_F / PREJUMP_B
+	# below -- rather than branching one prejump's cancel by direction (a
+	# CancelRule has no direction gate to express that on). Each is authored
+	# identically to this neutral PREJUMP (same 4f duration, same window-3
+	# ALWAYS cancel), differing only in its cancel target (JUMP_F / JUMP_B).
+	# Window is the LAST frame BEFORE duration (3, not 4): Actionability.is_actionable
+	# treats a committed once-through move as actionable once frame_in_state >= duration
+	# (the reasonable "recovery has ended" reading elsewhere), which on frame 4 itself
+	# would make phase 2 take the actionable/buffered-command branch INSTEAD of the
+	# cancel branch (see phase2_state_machine's fixed priority order) -- the ALWAYS
+	# cancel would then never be reached and PREJUMP would loop forever re-satisfying
+	# the held-UP jump command back into itself. Firing one frame earlier, on 3 (still
+	# unambiguously committed), reaches the jump arc before that race window opens,
+	# while each prejump's own duration/timeline stay the spec's authored 4f
+	# (TKT-P1-12 latitude, extended identically to PREJUMP_F/PREJUMP_B below;
+	# logged, docs/judgment-log.md).
+	out.append(_build_prejump(STATE_PREJUMP, STATE_JUMP_N))
+	out.append(_build_prejump(STATE_PREJUMP_F, STATE_JUMP_F))
+	out.append(_build_prejump(STATE_PREJUMP_B, STATE_JUMP_B))
+
+	out.append_array(_build_jump_arcs())
+
+	return out
+
+
+## One prejump lead-in (AD-039): 4f grounded once-through move whose sole
+## CancelRule (condition ALWAYS, input 0 -- no gate) fires on frame 3 (see the
+## window-3 rationale above `_build_movement`'s prejump block) into `target`
+## (JUMP_N/F/B). PREJUMP/PREJUMP_F/PREJUMP_B differ ONLY in id + target -- the
+## shared shape is why this is factored into one builder rather than three
+## hand-copies.
+static func _build_prejump(state_id: int, target: int) -> MoveState:
 	var prejump := MoveState.new()
-	prejump.id = STATE_PREJUMP
+	prejump.id = state_id
 	prejump.category = MoveState.CATEGORY_GROUNDED
 	prejump.duration = 4
 	prejump.loop = false
@@ -402,28 +450,14 @@ static func _build_movement() -> Array[MoveState]:
 	pj_kf.frame_end = 4
 	pj_kf.hurtboxes = [_hurt_stand()]
 	prejump.timeline = [pj_kf]
-	# Window is the LAST frame BEFORE duration (3, not 4): Actionability.is_actionable
-	# treats a committed once-through move as actionable once frame_in_state >= duration
-	# (the reasonable "recovery has ended" reading elsewhere), which on frame 4 itself
-	# would make phase 2 take the actionable/buffered-command branch INSTEAD of the
-	# cancel branch (see phase2_state_machine's fixed priority order) -- the ALWAYS
-	# cancel would then never be reached and PREJUMP would loop forever re-satisfying
-	# the held-UP jump command back into itself. Firing one frame earlier, on 3 (still
-	# unambiguously committed), reaches JUMP_N before that race window opens, while
-	# PREJUMP's own duration/timeline stay the spec's authored 4f (TKT-P1-12 latitude;
-	# logged, docs/judgment-log.md).
 	var pj_cancel := CancelRule.new()
-	pj_cancel.target = STATE_JUMP_N
+	pj_cancel.target = target
 	pj_cancel.condition = CancelRule.CONDITION_ALWAYS
 	pj_cancel.window_start = 3
 	pj_cancel.window_end = 3
 	pj_cancel.input = 0
 	prejump.cancels = [pj_cancel]
-	out.append(prejump)
-
-	out.append_array(_build_jump_arcs())
-
-	return out
+	return prejump
 
 
 ## The jump arc (movement table: "~45f airborne, no air dash, no double jump,
@@ -494,8 +528,42 @@ static func _build_jump_arcs() -> Array[MoveState]:
 				kf.motion_vel_y = FP.from_units(FALL_SPEED)
 			timeline.append(kf)
 		m.timeline = timeline
+		m.cancels = _air_normal_cancels(JUMP_DURATION)
 		out.append(m)
 	return out
+
+
+## Air-normal reachability (AD-039): each of JUMP_N/F/B carries three ALWAYS
+## CancelRules -- one per button -- targeting j.L/j.M/j.H. `input` is the raw
+## BUTTON_n bitmask (no button_map entry targets a j.* state, so CancelEval.
+## _input_buffered's raw-button fallback resolves it directly, exactly as
+## AD-039 specifies -- "no button_map entry is needed for the air normals").
+## Window [1, duration-1]: open from the first airborne frame through the
+## frame before the jump's own duration elapses (frame `duration` itself is
+## the jump's "once-through move ended" tick, at which point phase 2's
+## actionable-return-to-idle branch already runs ahead of the cancel branch --
+## the same reasoning the prejump's own window-below-duration authoring uses
+## above, so a button held through the true last frame still lands one frame
+## earlier rather than racing the idle-return). This is NOT a "jump cancel" in
+## the movement table's sense (a grounded normal cancelling INTO a jump, which
+## stays unauthored) -- it is the airborne character's OWN move (the jump arc)
+## cancelling into an air normal, the mechanism AD-039 names.
+static func _air_normal_cancels(jump_duration: int) -> Array[CancelRule]:
+	var targets := [
+		[STATE_JL, InputFrame.BUTTON_0],
+		[STATE_JM, InputFrame.BUTTON_1],
+		[STATE_JH, InputFrame.BUTTON_2],
+	]
+	var rules: Array[CancelRule] = []
+	for t in targets:
+		var r := CancelRule.new()
+		r.target = t[0]
+		r.condition = CancelRule.CONDITION_ALWAYS
+		r.window_start = 1
+		r.window_end = jump_duration - 1
+		r.input = t[1]
+		rules.append(r)
+	return rules
 
 
 # =============================================================================

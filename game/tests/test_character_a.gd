@@ -263,17 +263,29 @@ func _test_no_gatlings_no_jump_cancels() -> void:
 		CharacterA.STATE_2L, CharacterA.STATE_2M, CharacterA.STATE_2H,
 		CharacterA.STATE_JL, CharacterA.STATE_JM, CharacterA.STATE_JH,
 	]
+	var jump_state_ids: Array[int] = [CharacterA.STATE_JUMP_N, CharacterA.STATE_JUMP_F, CharacterA.STATE_JUMP_B]
+	# No GROUNDED gatling: no normal (standing/crouching/air) has a CancelRule
+	# targeting another normal. Skip the jump states themselves here -- AD-039's
+	# airborne-action model has JUMP_N/F/B legitimately cancel into j.L/M/H
+	# (TKT-P1.1R-04); that is the airborne character's own move cancelling into
+	# an air normal, not a grounded normal->normal gatling chain, so it is not
+	# what this check guards against.
 	for st in c.states:
+		if st.id in jump_state_ids:
+			continue
 		for rule in st.cancels:
 			_false(rule.target in normal_state_ids,
 				"state %d has no CancelRule targeting a normal (no gatlings)" % st.id)
 	# No jump-cancel: no CancelRule anywhere targets a jump state, and the only
-	# rule touching a jump state is PREJUMP's own ALWAYS->JUMP_N lead-in (not a
-	# player-granted "cancel a move into a jump").
-	var jump_state_ids: Array[int] = [CharacterA.STATE_JUMP_N, CharacterA.STATE_JUMP_F, CharacterA.STATE_JUMP_B]
+	# rules touching a jump state are the prejump lead-ins' own ALWAYS cancels
+	# (PREJUMP/PREJUMP_F/PREJUMP_B -> JUMP_N/F/B, AD-039) -- not a player-granted
+	# "cancel a move into a jump".
+	var prejump_state_ids: Array[int] = [
+		CharacterA.STATE_PREJUMP, CharacterA.STATE_PREJUMP_F, CharacterA.STATE_PREJUMP_B,
+	]
 	for st in c.states:
-		if st.id == CharacterA.STATE_PREJUMP:
-			continue   # the authored prejump->jump lead-in itself, not a jump-cancel grant
+		if st.id in prejump_state_ids:
+			continue   # the authored prejump->jump lead-ins themselves, not a jump-cancel grant
 		for rule in st.cancels:
 			_false(rule.target in jump_state_ids,
 				"state %d grants no jump-cancel (reserved for a later character)" % st.id)

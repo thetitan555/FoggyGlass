@@ -94,6 +94,9 @@
 - JC-056 · 2026-07-10 · TKT-P1.1R-03 · Crouch `button_map` entry placed immediately after the DOWN+button crouch normals (still before the walk entries) — provisional
 - JC-057 · 2026-07-10 · TKT-P1.1R-03 · Crouch-block scenario verified via a direct `SimState.step` + `InspectionView` test, not `TraceHarness` (fixed 200-unit spawn gap has no position-override hook) — provisional
 - JC-058 · 2026-07-10 · TKT-P1.1R-03 · `TestSupport` (P0 test character) gains a bare-RIGHT `button_map` entry -> `STATE_WALK` so `test_combat.gd`'s walk-integration test can hold AD-038's re-derivation — provisional
+- JC-059 · 2026-07-10 · TKT-P1.1R-04 · Air-normal `CancelRule` window authored as `[1, JUMP_DURATION-1]` (frames 1..44 of the 45-frame arc), not `[1, JUMP_DURATION]` — provisional
+- JC-060 · 2026-07-10 · TKT-P1.1R-04 · `PREJUMP_F`/`PREJUMP_B` factored through a shared `_build_prejump(state_id, target)` builder; new state ids (160/161) placed outside the full 100-109 movement block rather than renumbering existing ids — provisional
+- JC-061 · 2026-07-10 · TKT-P1.1R-04 · `test_character_a.gd::_test_no_gatlings_no_jump_cancels` updated to exempt `JUMP_N/F/B` (source) and `PREJUMP_F/B` (source) from the pre-existing gatling/jump-cancel guards, since AD-039 makes a jump state's ALWAYS-cancel into `j.L/M/H` (and each prejump's into its jump) sanctioned content, not a violation the guard was meant to catch — provisional
 
 ---
 
@@ -366,3 +369,83 @@ character, no contract) needed to keep a pre-existing, in-scope-suite test
 green under this ticket's own engine change; the pattern added is not new
 (copies AD-032's established pure-direction shape) and record-worthy only
 because it touches a shared fixture other tests also depend on.
+
+### JC-059 · 2026-07-10 · TKT-P1.1R-04 · Air-normal `CancelRule` window authored as `[1, JUMP_DURATION-1]` — provisional
+**Serves:** AD-039 ("air normals via jump-state cancels" — "window = the
+airborne frames"); the ticket's own worked example (`[1, JUMP_DURATION - 1]`).
+**Decision.** Each of `JUMP_N/F/B`'s three air-normal `CancelRule`s
+(`_air_normal_cancels`, `content/character_a.gd`) is windowed `[1,
+JUMP_DURATION-1]` = `[1, 44]` — open from the first airborne frame through the
+frame BEFORE the jump's own 45-frame duration elapses, not `[1, 45]` (the full
+duration).
+**Alternative considered.** `[1, JUMP_DURATION]` (the full arc, frame 45
+included). Passed over: `Actionability.is_actionable` treats a committed
+once-through move as actionable once `frame_in_state >= duration` (the same
+"recovery has ended" reading `PREJUMP`'s own window-3 authoring already
+relies on, JC-038) — on frame 45 itself, phase 2's fixed priority order
+(`phase2_state_machine`) takes the ACTIONABLE/buffered-command branch INSTEAD
+of the cancel branch, so a `CancelRule` window that included frame 45 would
+never actually be evaluated there; the cancel is legal-on-paper but
+dead-on-that-frame either way. `JUMP_DURATION-1` states the TRUE reachable
+window instead of an window whose top edge is silently unreachable.
+**Why latitude.** The ticket's own worked example already writes `[1,
+JUMP_DURATION - 1]` verbatim — this is confirming/authoring exactly that
+bound, not inventing a new one; recorded because AD-039 says "e.g." (leaves
+the precise bound to the Developer) and the off-by-one reasoning is the same
+class of authoring subtlety JC-038 already established for the prejump
+lead-ins, worth citing for a future reader/character.
+
+### JC-060 · 2026-07-10 · TKT-P1.1R-04 · `PREJUMP_F`/`PREJUMP_B` factored through a shared builder; new state ids placed outside the movement block — provisional
+**Serves:** AD-039 ("author `PREJUMP_F`/`PREJUMP_B` mirroring the existing
+`PREJUMP`"); `content/character_a.gd`'s state-id allocation.
+**Decision.** (a) `PREJUMP`/`PREJUMP_F`/`PREJUMP_B` are all built by one new
+`_build_prejump(state_id, target) -> MoveState` (same 4f duration, same
+window-3 ALWAYS cancel, differing only in id and cancel target) rather than
+three hand-copied blocks. (b) `STATE_PREJUMP_F = 160` / `STATE_PREJUMP_B =
+161` — placed outside the contiguous `100-109` "Movement states" id block
+(already fully allocated) rather than renumbering any existing state id.
+**Alternative considered.** (a) Three separate hand-authored `MoveState`
+blocks (mirrors the ORIGINAL `PREJUMP` code's own shape most literally).
+Passed over: the three states are identical apart from id/target, and the
+existing code's own comment already flagged the eventual F/B lead-ins as
+"authored the same way" — a shared builder is the smaller, more obviously-
+correct diff and removes two copies of the window-3 rationale comment that
+would otherwise need to stay in lockstep. (b) Renumbering the movement block
+to make room for contiguous ids. Passed over: would touch `STATE_CROUCH`/
+`STATE_JUMP_*`'s existing values for no behavioral gain — ids are opaque
+integers to the engine, and gratuitously renumbering shipped, already-baked
+ids is pure churn/risk for a cosmetic grouping preference.
+**Why latitude.** Both are internal data-structure/id-allocation choices with
+no design consequence and one reasonable reading each; invisible across the
+seam (nothing outside this builder reads a `MoveState`'s numeric id as
+meaningful beyond equality).
+
+### JC-061 · 2026-07-10 · TKT-P1.1R-04 · `_test_no_gatlings_no_jump_cancels` updated to exempt the new AD-039-sanctioned jump-state cancels — provisional
+**Serves:** keeping the full suite green under AD-039's deliberate, spec'd
+content (air normals reachable via a jump-state cancel); `test_character_a.gd`
+criterion-9 test (pre-existing, not part of this ticket's named read-set).
+**Decision.** `_test_no_gatlings_no_jump_cancels` (character-a.md criterion 9:
+"no gatlings... no jump cancels") had two blanket guards written before any
+jump state carried a `CancelRule`: (1) no state's `CancelRule` targets a
+"normal" (`5L/5M/5H/2L/2M/2H/j.L/j.M/j.H`) — the anti-gatling check; (2) no
+state's `CancelRule` targets a jump state, except `PREJUMP` itself (its own
+lead-in). AD-039 legitimately adds `CancelRule`s FROM `JUMP_N/F/B` INTO
+`j.L/M/H`, which trips guard (1) as written (the air normals are in its
+`normal_state_ids` list), and adds `PREJUMP_F`/`PREJUMP_B`'s own lead-ins into
+`JUMP_F`/`JUMP_B`, which trips guard (2)'s single-exception (`PREJUMP` only).
+Fixed: guard (1) now skips `JUMP_N/F/B` as SOURCE states (a jump state
+cancelling into its own air normal is the airborne-action model, not a
+grounded normal-to-normal gatling chain); guard (2)'s exception list now
+includes all three prejump states.
+**Alternative considered.** Splitting `normal_state_ids` into a grounded-only
+list for guard (1) instead of skipping the jump states as sources. Passed
+over: equivalent in effect, but skipping the jump states as sources reads
+more directly as "this guard is about a NORMAL cancelling into another
+normal" (matching the criterion's own "no gatlings" framing) — the target
+list stays the single complete "these are the normals" list used elsewhere in
+the file, and only the source-side loop changes.
+**Why latitude.** Test-only content change (no engine, no shipped character
+behavior, no contract) required to keep a pre-existing, in-scope-suite test
+green under this ticket's own AD-039-sanctioned content — the same class of
+call JC-058 already made one ticket ago for an analogous pre-existing-test
+collision.
