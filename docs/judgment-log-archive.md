@@ -2841,3 +2841,84 @@ guard with what AD-039 now sanctions (a jump state cancelling into its own air n
 the airborne-action model, not a grounded gatling); the guard's target list stays the
 single complete "these are the normals" list. No engine or shipped-character change. No
 spec change.
+
+**JC-062** · 2026-07-10 · TKT-P1.1R-05 · AD-038 (corrected) two-tier detection mechanism.
+**Decision.** Implemented the loop-state branch's two tiers as two independent full
+scans over `character.button_map`, each first-match-wins in authored order:
+`_buffered_discrete_command` (tier 1 — skips any entry whose target's `move.loop` is
+true, returns the first entry satisfied via the existing buffered `InputBuffer.
+entry_satisfied`) and `_current_tick_loop_command` (tier 2 — skips any entry whose
+target is not `loop`, returns the first entry satisfied via a new `InputBuffer.
+entry_satisfied_now`). An entry whose target state cannot be resolved (`character.
+get_state` returns null) is treated as discrete (tier 1's job) — the same default the
+pre-correction single-tier code implicitly had for an unresolvable target. `entry_
+satisfied_now` mirrors `entry_satisfied`'s structure (chord / pure-direction / plain
+button) but checks ONLY `hist.at(0)` — no `COMMAND_BUFFER`/`MOTION_WINDOW` lookback —
+and unconditionally returns false for a motion entry (a multi-frame ordered sequence
+cannot complete in one tick; no authored loop-state target in this slice uses a motion
+command, so this is a completeness guarantee, not a reachability path).
+**Alternatives passed over.** (a) One combined scan branching per-entry on `target.
+loop` inside a single loop, tracking the first discrete AND first loop-target match in
+one pass — rejected as marginally more efficient but harder to read as "two independent
+questions," and the ticket's own framing ("tier 1 / tier 2") maps cleanly onto two named
+functions. (b) Reusing `entry_satisfied` with a new `window` parameter (defaulting the
+existing buffered calls to `COMMAND_BUFFER`/`MOTION_WINDOW` and passing 1 for the
+current-tick case) instead of a sibling function — rejected: motion recognition's
+window is structurally different from a lookback count (it is "the last N frames, in
+order," not "look back N frames each"), so forcing both call shapes through one
+parameterized function would have made the motion branch's "always false at window=1"
+case implicit/fragile rather than the explicit early-return `entry_satisfied_now` gives
+it.
+**Why.** Both are read-only implementation shape with no observable behavioral
+difference from any other reasonable factoring — a genuine "how," not a "what": the
+corrected AD-038 already specifies the discriminator (`move.loop`), the priority order
+(discrete first), and the current-tick-only semantics (no buffer carry-over) exactly.
+Cheaply reversible; invisible across the seam (nothing outside `step_phases.gd`/
+`input_buffer.gd` calls either new function). — ratified
+**Ruling (Architect, 2026-07-10).** Ratified — this is a faithful realization of the
+corrected AD-038 contract, not a reinterpretation of it: (1) discrete-first **priority**
+holds (tier 1 scanned/preferred before tier 2); (2) the **discriminator** is `move.loop`
+on the target, as the contract specifies; (3) the load-bearing **current-tick-only / no
+buffer carry-over** stance semantics are exactly what `entry_satisfied_now`'s age-0-only
+check delivers (a released direction is neutral at age 0 ⇒ not satisfied ⇒ idle
+fallback). Two separate scans vs. one combined scan is observably identical (both yield
+first-discrete-then-first-loop-target). The two-scan shape, the sibling `entry_satisfied_
+now`, and the "unresolvable target ⇒ discrete" default are read-only implementation
+factoring. **Folded into AD-038** the two contract-adjacent facts this surfaced (so future
+content/implementers inherit them): a **loop-state (stance) command must be current-tick-
+recognizable** — a multi-frame **motion cannot be a stance command** (it can never satisfy
+the current-tick tier), and an **unresolvable target defaults to the discrete tier**.
+
+**JC-063** · 2026-07-10 · TKT-P1.1R-05 · AD-022 regression-guard test instrument +
+golden-scope confirmation.
+**Decision.** The new AD-022 discrete-command regression guard (`test_held_input_
+stances.gd::_test_discrete_command_buffered_through_hitstun_still_fires_first_
+actionable_frame`) is written as a direct `SimState.step` loop over a hand-injected
+`PlayerState` (`state_id = CharacterA.STATE_HITSTUN`, `stun = 4`, held forward+L every
+tick), not through `TraceHarness`/`InputScript` — mirrors the existing crouch-block
+scenario's instrument choice (JC-057) and the invuln suite's state-injection pattern
+(JC-036), for the same reason: `TraceHarness.run` has no hook to start a player mid-move
+in a stun category, and this guard needs exactly that ("recovering from a real hit," not
+"idle at tick 0"). Also recorded: the ticket's "surgical golden scope" held —
+`test_held_input_stances.gd`'s three walk/crouch release-timing assertions (tick values
++ expected state) are the ONLY assertion values changed anywhere in the suite; every
+combat/advantage/determinism test and every held-direction (continuously-fed) movement
+test (`test_combat.gd`'s walk-integration test, `test_command_recognition.gd`'s
+walk-forward/back end-to-end tests, `test_character_a.gd`'s 5H-advance test) was left
+untouched and stayed green unmodified.
+**Alternatives passed over.** Driving the guard through a live hit exchange (attacker
+actually connects a normal on the defender) instead of directly injecting `STATE_
+HITSTUN` — rejected as unnecessary indirection for what this guard is actually testing
+(the phase-2 branch's tier priority, not hit resolution itself); the existing combat
+suite already covers live hit-into-stun paths.
+**Why.** Test-authoring latitude only — reads the same `InspectionView`/`SimState.step`
+surface either way (AD-011), no contract or behavior difference from how the assertion
+is driven. — ratified
+**Ruling (Architect, 2026-07-10).** Ratified as test-instrument latitude — the same
+state-injection pattern already ratified for exactly this shape of scenario (JC-057
+crouch-block, JC-036 invuln), correctly chosen because `TraceHarness` cannot start a
+player mid-move in a stun category, and the guard needs "recovering from a real hit," not
+"idle at tick 0." The **surgical golden-scope confirmation** (only the three walk/crouch
+release-timing assertions moved; combat/advantage/determinism and every *held*-direction
+movement test untouched and green) is exactly the ticket's scope bar — recorded here as
+evidence for QA's audit; no spec change. Both reads are AD-011.
