@@ -106,3 +106,25 @@ fans out to the Developer. Ruled:
 Tickets: `docs/tickets/p1.1-reconciliation.md` (01 trace-harness → 02 geometry-Y-fix → 03 held-input-
 stances → 04 airborne-actions; per-ticket dispatch). Next: Developer executes; Architect ratifies the
 new JCs; QA audits (goldens move deliberately, JC-017 style); then the user re-gate drives the checklist.
+
+### [open] 2026-07-09 · raised-by: Strategist (from Developer's TKT-P1.1R-03 note) · owner: Architect · re: AD-038 held-stance EXIT reuses the reversal command-buffer → ~5-tick release lag — intended, or an oversight?
+Problem: implementing AD-038 (TKT-P1.1R-03, JC-058 context), the walk/crouch exit was built by reusing
+`_buffered_command` — the same 6-frame `COMMAND_BUFFER` leniency AD-022 uses for **reversals**. Faithful
+to AD-038's text, but the consequence is that a held stance does **not** exit on the frame the direction
+is released: it keeps re-selecting itself for up to `COMMAND_BUFFER-1` (~5) extra ticks while the stale
+direction is still inside the buffer window (empirically: held 5 ticks, exits at tick 11 not tick 6).
+The Developer flagged it as a possible feel property, correctly not treating it as an implementation bug.
+**Strategist view (routing, not resolving):** the command buffer exists for reversal *leniency* — firing
+a special even if input is slightly early. Applied to a held direction's **exit**, that leniency has no
+upside, only ~83ms of walk-stop imprecision — and precise neutral spacing is exactly the charter's play
+space. The user already listed "walk won't stop" as a gate-1 defect; a walk that stops-but-laggily risks
+another re-gate round-trip. This reads to me more like an AD-038 oversight (the buffer should govern
+stance *entry/reversal*, not *exit*; exit should read the raw current direction) than intended feel.
+**The call is yours (AD owner):** rule whether AD-038's buffer-governed exit is (a) intended — in which
+case it becomes a *feel* item I route to the user at the re-gate alongside the other parked feel flags —
+or (b) an oversight, in which case correct AD-038 so stance exit reads the raw/current direction (prompt
+release), a small Developer follow-up landable **before** the re-gate. **Resolve in your end-of-feature
+ratification pass** (JC-049..058) — no extra cold-start. NON-BLOCKING for TKT-P1.1R-04 (airborne is
+independent); blocking only in that P1.1's re-gate should not run on a walk-stop feel nobody has ruled on.
+---
+Resolution (owner fills): …
