@@ -52,6 +52,9 @@ func _run() -> void:
 	_test_character_a_walk_forward_reachable_end_to_end()
 	_test_character_a_walk_back_reachable_end_to_end()
 	_test_character_a_button_beats_walk_on_same_frame()
+	_test_entry_satisfied_now_current_tick_only()
+	_test_entry_satisfied_now_no_buffer_carry_over()
+	_test_entry_satisfied_now_never_satisfied_by_motion()
 
 
 # --- Scenario setup ----------------------------------------------------------
@@ -278,3 +281,60 @@ func _test_character_a_button_beats_walk_on_same_frame() -> void:
 	_eq(s.players[0].state_id, CharacterA.STATE_5L,
 		"forward + L on the same frame performs 5L, not a walk")
 	_cleanup()
+
+
+# --- InputBuffer.entry_satisfied_now (AD-038 correction, TKT-P1.1R-05) -------
+# The loop-state STANCE re-derivation reads CURRENT-TICK input only, no
+# COMMAND_BUFFER carry-over — the recognizer entry_satisfied_now backs it.
+
+## Satisfied when the required direction is held on the NEWEST frame.
+func _test_entry_satisfied_now_current_tick_only() -> void:
+	var e := ButtonMapEntry.new()
+	e.button_index = -1
+	e.chord_button_index = -1
+	e.required_direction = InputFrame.RIGHT
+	e.motion = 0
+	e.target_state_id = 999
+	var hist := _history([InputFrame.NEUTRAL, InputFrame.NEUTRAL, InputFrame.RIGHT])
+	_true(InputBuffer.entry_satisfied_now(hist, e, 1),
+		"entry_satisfied_now recognizes a pure-direction command held on the newest frame")
+
+
+## The load-bearing contrast: a direction held several frames ago but RELEASED
+## on the newest frame satisfies the BUFFERED recognizer (AD-022 leniency) but
+## must NOT satisfy the current-tick-only recognizer — this is exactly the
+## "released direction stops being satisfied the instant it releases" behavior
+## AD-038's correction needs.
+func _test_entry_satisfied_now_no_buffer_carry_over() -> void:
+	var e := ButtonMapEntry.new()
+	e.button_index = -1
+	e.chord_button_index = -1
+	e.required_direction = InputFrame.RIGHT
+	e.motion = 0
+	e.target_state_id = 999
+	# RIGHT was held 5 ticks ago (age 5, within the 6-frame command buffer), then
+	# released — the newest frame (age 0) is neutral.
+	var hist := _history([InputFrame.RIGHT, InputFrame.NEUTRAL, InputFrame.NEUTRAL,
+		InputFrame.NEUTRAL, InputFrame.NEUTRAL, InputFrame.NEUTRAL])
+	_true(InputBuffer.entry_satisfied(hist, e, 1),
+		"the BUFFERED recognizer still sees the released direction within the command buffer (AD-022, unrelated leniency)")
+	_false(InputBuffer.entry_satisfied_now(hist, e, 1),
+		"entry_satisfied_now does NOT carry a released direction across ticks — current-tick only")
+
+
+## A motion command (multi-frame ordered sequence) can never be satisfied by a
+## single tick — entry_satisfied_now always returns false for one, by construction
+## (no authored loop-state target uses a motion command in this slice; this
+## documents the completeness case, not a reachability path).
+func _test_entry_satisfied_now_never_satisfied_by_motion() -> void:
+	var e := ButtonMapEntry.new()
+	e.button_index = -1
+	e.chord_button_index = -1
+	e.required_direction = 0
+	e.motion = InputBuffer.MOTION_236
+	e.target_state_id = 999
+	# Even a frame that alone satisfies the FINAL token of the motion (down-forward)
+	# cannot complete a multi-token sequence in one tick.
+	var hist := _history([InputFrame.DOWN | InputFrame.RIGHT])
+	_false(InputBuffer.entry_satisfied_now(hist, e, 1),
+		"a motion entry is never satisfied by entry_satisfied_now (single-tick evaluation)")

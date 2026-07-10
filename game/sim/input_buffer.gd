@@ -190,6 +190,44 @@ static func chord_buffered(hist: InputHistory, button_index: int, chord_button_i
 	return false
 
 
+## CURRENT-TICK-ONLY recognition for one ButtonMapEntry (AD-038 correction, 2026-07-10):
+## true iff the entry's command is satisfied by the NEWEST history frame alone (age 0) —
+## no COMMAND_BUFFER/MOTION_WINDOW carry-over. Used ONLY by phase 2's loop-state stance
+## re-derivation (walk/crouch): a released direction must stop being "satisfied" the very
+## tick it is released, which the buffered `entry_satisfied` below cannot express (it is
+## deliberately lenient for DISCRETE commands, AD-022). A motion entry can never be
+## satisfied by a single frame (its tokens are an ordered multi-frame sequence) and
+## correctly returns false here — no authored loop-state target uses a motion command in
+## this slice, so this is a completeness guarantee, not a reachability path. Still a pure
+## function of (input_history, facing) — deterministic (Tenet 2).
+static func entry_satisfied_now(hist: InputHistory, entry: ButtonMapEntry, facing: int) -> bool:
+	if entry.motion != MOTION_NONE:
+		return false
+	var raw: int = hist.at(0)
+	var frame: int = StepPhases.socd_normalize(raw)
+	if entry.chord_button_index >= 0:
+		var bit_a: int = 1 << (4 + entry.button_index)
+		var bit_b: int = 1 << (4 + entry.chord_button_index)
+		var both_bits: int = bit_a | bit_b
+		if (raw & both_bits) != both_bits:
+			return false
+		if entry.required_direction != 0 and not _required_direction_held(frame, entry.required_direction, facing):
+			return false
+		return true
+	if entry.button_index < 0:
+		# Pure-direction command (AD-032): no button at all, held direction only.
+		if entry.required_direction == 0:
+			return false
+		return _required_direction_held(frame, entry.required_direction, facing)
+	# Plain button command (+ optional required direction), THIS frame only.
+	var bit: int = 1 << (4 + entry.button_index)
+	if (raw & bit) == 0:
+		return false
+	if entry.required_direction != 0 and not _required_direction_held(frame, entry.required_direction, facing):
+		return false
+	return true
+
+
 ## The full recognition for one ButtonMapEntry against a player's history: true iff the
 ## entry's command is satisfied within its buffer window. A motion entry (motion != 0)
 ## requires the motion recognized within MOTION_WINDOW AND (if it also names a button)

@@ -97,6 +97,8 @@
 - JC-059 · 2026-07-10 · TKT-P1.1R-04 · Air-normal `CancelRule` window authored as `[1, JUMP_DURATION-1]` (frames 1..44 of the 45-frame arc), not `[1, JUMP_DURATION]` — ratified (true reachable window; folded into AD-039)
 - JC-060 · 2026-07-10 · TKT-P1.1R-04 · `PREJUMP_F`/`PREJUMP_B` factored through a shared `_build_prejump(state_id, target)` builder; new state ids (160/161) placed outside the full 100-109 movement block rather than renumbering existing ids — ratified (data-structure/id-allocation latitude)
 - JC-061 · 2026-07-10 · TKT-P1.1R-04 · `test_character_a.gd::_test_no_gatlings_no_jump_cancels` updated to exempt `JUMP_N/F/B` (source) and `PREJUMP_F/B` (source) from the pre-existing gatling/jump-cancel guards, since AD-039 makes a jump state's ALWAYS-cancel into `j.L/M/H` (and each prejump's into its jump) sanctioned content, not a violation the guard was meant to catch — ratified (test-guard latitude; JC-058 class)
+- JC-062 · 2026-07-10 · TKT-P1.1R-05 · The two-tier loop-state branch implemented as two SEPARATE full `button_map` scans (`_buffered_discrete_command` / `_current_tick_loop_command`, each first-match-wins in authored order) rather than one combined scan branching per-entry on `target.loop`; a new `InputBuffer.entry_satisfied_now` (age-0-only recognizer, motion entries always false) backs tier 2 instead of reusing `entry_satisfied` with a window param of 1 — provisional
+- JC-063 · 2026-07-10 · TKT-P1.1R-05 · AD-022 regression guard test uses direct `SimState.step` + `PlayerState` state-injection into `STATE_HITSTUN` (mirrors JC-057/JC-036), not `TraceHarness`; walk/crouch release-timing goldens re-baselined to the corrected release-tick values in `test_held_input_stances.gd` (ticket-named surgical scope — no other test file's assertions changed) — provisional
 
 ---
 
@@ -106,4 +108,62 @@
 > overturns them; then the status flips and the Strategist sweeps the body to the
 > archive. New entries append to this section.
 
-*(none — all recorded calls are ratified/closed; their bodies are in `judgment-log-archive.md`.)*
+**JC-062** · 2026-07-10 · TKT-P1.1R-05 · AD-038 (corrected) two-tier detection mechanism.
+**Decision.** Implemented the loop-state branch's two tiers as two independent full
+scans over `character.button_map`, each first-match-wins in authored order:
+`_buffered_discrete_command` (tier 1 — skips any entry whose target's `move.loop` is
+true, returns the first entry satisfied via the existing buffered `InputBuffer.
+entry_satisfied`) and `_current_tick_loop_command` (tier 2 — skips any entry whose
+target is not `loop`, returns the first entry satisfied via a new `InputBuffer.
+entry_satisfied_now`). An entry whose target state cannot be resolved (`character.
+get_state` returns null) is treated as discrete (tier 1's job) — the same default the
+pre-correction single-tier code implicitly had for an unresolvable target. `entry_
+satisfied_now` mirrors `entry_satisfied`'s structure (chord / pure-direction / plain
+button) but checks ONLY `hist.at(0)` — no `COMMAND_BUFFER`/`MOTION_WINDOW` lookback —
+and unconditionally returns false for a motion entry (a multi-frame ordered sequence
+cannot complete in one tick; no authored loop-state target in this slice uses a motion
+command, so this is a completeness guarantee, not a reachability path).
+**Alternatives passed over.** (a) One combined scan branching per-entry on `target.
+loop` inside a single loop, tracking the first discrete AND first loop-target match in
+one pass — rejected as marginally more efficient but harder to read as "two independent
+questions," and the ticket's own framing ("tier 1 / tier 2") maps cleanly onto two named
+functions. (b) Reusing `entry_satisfied` with a new `window` parameter (defaulting the
+existing buffered calls to `COMMAND_BUFFER`/`MOTION_WINDOW` and passing 1 for the
+current-tick case) instead of a sibling function — rejected: motion recognition's
+window is structurally different from a lookback count (it is "the last N frames, in
+order," not "look back N frames each"), so forcing both call shapes through one
+parameterized function would have made the motion branch's "always false at window=1"
+case implicit/fragile rather than the explicit early-return `entry_satisfied_now` gives
+it.
+**Why.** Both are read-only implementation shape with no observable behavioral
+difference from any other reasonable factoring — a genuine "how," not a "what": the
+corrected AD-038 already specifies the discriminator (`move.loop`), the priority order
+(discrete first), and the current-tick-only semantics (no buffer carry-over) exactly.
+Cheaply reversible; invisible across the seam (nothing outside `step_phases.gd`/
+`input_buffer.gd` calls either new function). — provisional
+
+**JC-063** · 2026-07-10 · TKT-P1.1R-05 · AD-022 regression-guard test instrument +
+golden-scope confirmation.
+**Decision.** The new AD-022 discrete-command regression guard (`test_held_input_
+stances.gd::_test_discrete_command_buffered_through_hitstun_still_fires_first_
+actionable_frame`) is written as a direct `SimState.step` loop over a hand-injected
+`PlayerState` (`state_id = CharacterA.STATE_HITSTUN`, `stun = 4`, held forward+L every
+tick), not through `TraceHarness`/`InputScript` — mirrors the existing crouch-block
+scenario's instrument choice (JC-057) and the invuln suite's state-injection pattern
+(JC-036), for the same reason: `TraceHarness.run` has no hook to start a player mid-move
+in a stun category, and this guard needs exactly that ("recovering from a real hit," not
+"idle at tick 0"). Also recorded: the ticket's "surgical golden scope" held —
+`test_held_input_stances.gd`'s three walk/crouch release-timing assertions (tick values
++ expected state) are the ONLY assertion values changed anywhere in the suite; every
+combat/advantage/determinism test and every held-direction (continuously-fed) movement
+test (`test_combat.gd`'s walk-integration test, `test_command_recognition.gd`'s
+walk-forward/back end-to-end tests, `test_character_a.gd`'s 5H-advance test) was left
+untouched and stayed green unmodified.
+**Alternatives passed over.** Driving the guard through a live hit exchange (attacker
+actually connects a normal on the defender) instead of directly injecting `STATE_
+HITSTUN` — rejected as unnecessary indirection for what this guard is actually testing
+(the phase-2 branch's tier priority, not hit resolution itself); the existing combat
+suite already covers live hit-into-stun paths.
+**Why.** Test-authoring latitude only — reads the same `InspectionView`/`SimState.step`
+surface either way (AD-011), no contract or behavior difference from how the assertion
+is driven. — provisional

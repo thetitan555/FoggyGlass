@@ -106,10 +106,16 @@ static func resolve_intent(raw_frame: int, facing: int) -> Dictionary:
 #      hitstop path (a 623 held through blockstun comes out frame-1) AND the ordinary
 #      "press a button in neutral" path — unified: an actionable character runs a
 #      buffered command (AD-022). If the CURRENT state is a LOOPING state (idle/walk/
-#      crouch — MoveState.loop), the target is instead RE-DERIVED every tick (no
-#      buffered command -> character.idle_state_id), so a held-input stance exits to
-#      idle the instant the direction is released (AD-038); a non-loop actionable state
-#      keeps the plain "run a buffered command, else stay" behavior.
+#      crouch — MoveState.loop), the branch is TWO-TIER (AD-038, corrected 2026-07-10):
+#      (a) a DISCRETE command (recognized command whose TARGET state is not `loop`) that
+#      is buffered-ready via the AD-022 command buffer takes priority — unchanged
+#      reversal/cancel-entry leniency, and it leaves the loop state on entry so it never
+#      lingers; (b) otherwise the STANCE target is RE-DERIVED from the CURRENT TICK's
+#      input alone (no command-buffer carry-over) — a `loop`-target command if satisfied
+#      THIS tick, else character.idle_state_id — so a released direction returns to idle
+#      on the very next actionable tick (prompt release, no ~COMMAND_BUFFER-tick lag). A
+#      non-loop actionable state keeps the plain "run a buffered command, else stay"
+#      behavior.
 #   6. Else (committed move, not frozen): evaluate CancelRules; a legal cancel whose
 #      input is buffered and whose window is open executes (special-cancel / gatling /
 #      whiff-cancel — AD-015). Cancels buffer during hitstop but execute only here,
@@ -207,12 +213,25 @@ static func phase2_state_machine(next: SimState) -> void:
 		# BUFFERED button_map command. This is BOTH the ordinary "press a button in
 		# neutral" transition AND the reversal-on-wakeup: a command pressed up to
 		# COMMAND_BUFFER frames early (e.g. a 623 held through blockstun) fires on this
-		# first actionable frame as a frame-1 reversal (AD-022).
+		# first actionable frame as a frame-1 reversal (AD-022). A LOOPING current state
+		# (idle/walk/crouch) is TWO-TIER instead (AD-038, corrected 2026-07-10): a
+		# discrete buffered-ready command still takes full AD-022 priority; otherwise the
+		# stance is re-derived from CURRENT-TICK input only (see _buffered_discrete_command
+		# / _current_tick_loop_command below).
 		if Actionability.is_actionable(p, move):
-			var target_state: int = _buffered_command(character, p)
 			if move != null and move.loop:
-				if target_state == -1:
-					target_state = character.idle_state_id
+				var discrete_target: int = _buffered_discrete_command(character, p)
+				if discrete_target != -1:
+					if discrete_target != p.state_id:
+						_enter_state(p, character, discrete_target)
+					continue
+				var stance_target: int = _current_tick_loop_command(character, p)
+				if stance_target == -1:
+					stance_target = character.idle_state_id
+				if stance_target != p.state_id:
+					_enter_state(p, character, stance_target)
+				continue
+			var target_state: int = _buffered_command(character, p)
 			if target_state != -1 and target_state != p.state_id:
 				_enter_state(p, character, target_state)
 			continue
@@ -236,6 +255,42 @@ static func phase2_state_machine(next: SimState) -> void:
 static func _buffered_command(character: Character, p: PlayerState) -> int:
 	for entry in character.button_map:
 		if InputBuffer.entry_satisfied(p.input_history, entry, p.facing):
+			return entry.target_state_id
+	return -1
+
+
+## Tier 1 of the loop-state branch (AD-038, corrected 2026-07-10): the target state of
+## the first BUFFERED button_map command whose TARGET is a DISCRETE (non-`loop`) state,
+## or -1 if none. A discrete command keeps FULL AD-022 leniency (a special/normal/throw/
+## prejump pressed slightly early still fires the moment it is legal) — this is what
+## keeps reversal/cancel-entry behavior intact for a character currently standing in a
+## looping state (idle/walk/crouch). Authored order, first satisfied wins (AD-032).
+## `target.loop` defaults false for an unresolvable state, so it is treated as discrete
+## (matches the prior, single-tier behavior for any state the roster can't resolve).
+static func _buffered_discrete_command(character: Character, p: PlayerState) -> int:
+	for entry in character.button_map:
+		if not InputBuffer.entry_satisfied(p.input_history, entry, p.facing):
+			continue
+		var target: MoveState = character.get_state(entry.target_state_id)
+		if target != null and target.loop:
+			continue   # a loop-target command is tier 2's job, not this discrete tier.
+		return entry.target_state_id
+	return -1
+
+
+## Tier 2 of the loop-state branch (AD-038, corrected 2026-07-10): the target state of
+## the first button_map command whose TARGET is a LOOP state (walk/crouch/…) satisfied
+## by the CURRENT TICK's input ALONE — no COMMAND_BUFFER carry-over (InputBuffer.
+## entry_satisfied_now). Returns -1 if no loop-target command is satisfied this tick
+## (the caller falls back to character.idle_state_id). This is the "released direction
+## exits promptly" half of the correction: a stance is never held alive by the buffer
+## window once its direction is no longer held. Authored order, first satisfied wins.
+static func _current_tick_loop_command(character: Character, p: PlayerState) -> int:
+	for entry in character.button_map:
+		var target: MoveState = character.get_state(entry.target_state_id)
+		if target == null or not target.loop:
+			continue   # a discrete-target command is tier 1's job, not this stance tier.
+		if InputBuffer.entry_satisfied_now(p.input_history, entry, p.facing):
 			return entry.target_state_id
 	return -1
 

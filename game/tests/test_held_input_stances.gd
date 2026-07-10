@@ -1,20 +1,27 @@
 extends SceneTree
 
 ## Headless test for TKT-P1.1R-03 (held-input stances — AD-038 loop-state
-## re-derivation + the crouch pure-direction command). Serves AD-038, AD-032
-## (the crouch entry half), combat-resolution.md phase 2, character-a.md
-## Movement ("standing and crouching blocking").
+## re-derivation + the crouch pure-direction command) AND TKT-P1.1R-05 (the
+## AD-038 exit-lag correction: the loop-state STANCE re-derivation reads
+## CURRENT-TICK input, not the command buffer, while a DISCRETE command
+## buffered-ready still takes tier-1 priority). Serves AD-038 (both its original
+## ruling and its 2026-07-10 correction), AD-022 (the discrete-command buffer
+## this correction must NOT weaken), AD-032 (the crouch entry half),
+## combat-resolution.md phase 2, character-a.md Movement ("standing and
+## crouching blocking").
 ##
 ## Movement scenarios (walk-forward/back enter+exit, crouch enter+exit) are
 ## driven through TraceHarness/InputScript (TKT-P1.1R-01) — the instrument the
-## ticket names for exactly this shape of assertion. The crouch-BLOCK scenario
-## is a hit-resolution check that needs precise attacker/defender proximity,
-## which TraceHarness's fixed 200-unit two-idle-character spawn does not expose
-## a hook for (trace-harness.md names no position-override contract) — that one
-## scenario uses a direct SimState.step loop + InspectionView read, mirroring
-## the rest of the combat suite's proximity-controlled hit tests (e.g.
-## test_character_a.gd's `_two_char_state`). Recorded as a judgment call
-## (docs/judgment-log.md).
+## ticket names for exactly this shape of assertion; their release-frame-exit
+## assertions are the TKT-P1.1R-05 release-timing goldens (re-baselined from
+## the original ~COMMAND_BUFFER-tick-lag values). The crouch-BLOCK scenario is a
+## hit-resolution check that needs precise attacker/defender proximity, which
+## TraceHarness's fixed 200-unit two-idle-character spawn does not expose a hook
+## for (trace-harness.md names no position-override contract) — that one
+## scenario, and the AD-022 discrete-command regression guard (TKT-P1.1R-05),
+## use a direct SimState.step loop + InspectionView read, mirroring the rest of
+## the combat suite's proximity-controlled hit tests (e.g. test_character_a.gd's
+## `_two_char_state`). Recorded as a judgment call (docs/judgment-log.md).
 ##
 ## Run:  godot --headless --path game -s res://tests/test_held_input_stances.gd
 ## Exits non-zero on any failure so a harness/CI can gate on it.
@@ -52,6 +59,7 @@ func _run() -> void:
 	_test_crouch_enters_and_exits_on_release()
 	_test_crouch_hurtbox_resolves_while_crouching()
 	_test_crouching_held_back_defender_blocks()
+	_test_discrete_command_buffered_through_hitstun_still_fires_first_actionable_frame()
 
 
 func _roster() -> Dictionary:
@@ -64,19 +72,19 @@ func _roster() -> Dictionary:
 
 func _test_walk_forward_enters_and_exits_on_release() -> void:
 	# Hold RIGHT (forward for P1, who faces right) for 5 ticks, then release to
-	# neutral for the rest. InputBuffer's COMMAND_BUFFER (6-frame) leniency means
-	# the walk state keeps RE-SELECTING itself (a no-op transition, AD-038's own
-	# "target == current, no-op" case) for as long as the released direction is
-	# still within the last 6 raw frames — i.e. through tick (last_held + 6) = 11.
-	# Tick 12 is the first tick whose 6-frame window contains no RIGHT frame.
-	var rows: Array[Dictionary] = TraceHarness.run("6*5 5*10", "", 15, _roster(), CharacterA.CHAR_ID)
+	# neutral. AD-038's corrected contract (2026-07-10): the STANCE re-derivation
+	# reads CURRENT-TICK input only (no COMMAND_BUFFER carry-over), so walk exits
+	# to IDLE on the very next actionable tick after release — tick 6 — not once
+	# the release has cleared the 6-frame command buffer (the old, corrected-away
+	# ~tick-11 behavior).
+	var rows: Array[Dictionary] = TraceHarness.run("6*5 5*8", "", 8, _roster(), CharacterA.CHAR_ID)
 	_true(TraceHarness.check(rows, 5, "p0.state", CharacterA.STATE_WALK_F),
 		"holding forward enters STATE_WALK_F while held")
-	_true(TraceHarness.check(rows, 15, "p0.state", CharacterA.STATE_IDLE),
-		"walk forward returns to STATE_IDLE once the release has cleared the command buffer")
+	_true(TraceHarness.check(rows, 6, "p0.state", CharacterA.STATE_IDLE),
+		"walk forward returns to STATE_IDLE on the release frame's next actionable tick (prompt release)")
 	# Once idle, position stops changing tick over tick (no residual drift).
-	var last: Dictionary = TraceHarness.row_at(rows, 15)
-	var prev: Dictionary = TraceHarness.row_at(rows, 14)
+	var last: Dictionary = TraceHarness.row_at(rows, 8)
+	var prev: Dictionary = TraceHarness.row_at(rows, 7)
 	_eq(int(last["p0.px"]), int(prev["p0.px"]), "p0.px is stationary once walk has released to idle")
 	MoveRegistry.clear()
 
@@ -86,11 +94,14 @@ func _test_walk_forward_enters_and_exits_on_release() -> void:
 # ---------------------------------------------------------------------------
 
 func _test_walk_back_enters_and_exits_on_release() -> void:
-	var rows: Array[Dictionary] = TraceHarness.run("4*5 5*10", "", 15, _roster(), CharacterA.CHAR_ID)
+	# AD-038 corrected (2026-07-10): current-tick stance re-derivation, no buffer
+	# carry-over — walk back exits to IDLE on the release frame's next actionable
+	# tick (tick 6), not once the release has cleared the command buffer.
+	var rows: Array[Dictionary] = TraceHarness.run("4*5 5*6", "", 6, _roster(), CharacterA.CHAR_ID)
 	_true(TraceHarness.check(rows, 5, "p0.state", CharacterA.STATE_WALK_B),
 		"holding back enters STATE_WALK_B while held")
-	_true(TraceHarness.check(rows, 15, "p0.state", CharacterA.STATE_IDLE),
-		"walk back returns to STATE_IDLE once the release has cleared the command buffer")
+	_true(TraceHarness.check(rows, 6, "p0.state", CharacterA.STATE_IDLE),
+		"walk back returns to STATE_IDLE on the release frame's next actionable tick (prompt release)")
 	MoveRegistry.clear()
 
 
@@ -99,11 +110,14 @@ func _test_walk_back_enters_and_exits_on_release() -> void:
 # ---------------------------------------------------------------------------
 
 func _test_crouch_enters_and_exits_on_release() -> void:
-	var rows: Array[Dictionary] = TraceHarness.run("2*5 5*10", "", 15, _roster(), CharacterA.CHAR_ID)
+	# AD-038 corrected (2026-07-10): current-tick stance re-derivation, no buffer
+	# carry-over — crouch exits to STAND (idle) on the release frame's next
+	# actionable tick (tick 6), not once the release has cleared the command buffer.
+	var rows: Array[Dictionary] = TraceHarness.run("2*5 5*6", "", 6, _roster(), CharacterA.CHAR_ID)
 	_true(TraceHarness.check(rows, 5, "p0.state", CharacterA.STATE_CROUCH),
 		"holding down enters STATE_CROUCH while held")
-	_true(TraceHarness.check(rows, 15, "p0.state", CharacterA.STATE_IDLE),
-		"crouch returns to STATE_IDLE (stand) once the release has cleared the command buffer")
+	_true(TraceHarness.check(rows, 6, "p0.state", CharacterA.STATE_IDLE),
+		"crouch returns to STATE_IDLE (stand) on the release frame's next actionable tick (prompt release)")
 	MoveRegistry.clear()
 
 
@@ -177,4 +191,50 @@ func _test_crouching_held_back_defender_blocks() -> void:
 	var reaction_move: MoveState = character.get_state(p1_view.state_id)
 	_eq(reaction_move.category, MoveState.CATEGORY_BLOCKSTUN,
 		"the defender's reaction state is a blockstun category (stance-agnostic hold-back block)")
+	MoveRegistry.clear()
+
+
+# ---------------------------------------------------------------------------
+# AD-022 regression guard (TKT-P1.1R-05): a DISCRETE command buffered slightly
+# early through hitstun still fires on the first actionable frame — even though
+# the loop-state branch that frame is entering is now current-tick-only for the
+# STANCE decision. Tier 1 (buffered discrete command) must still win over tier 2
+# (current-tick stance) the instant the character becomes actionable again.
+# ---------------------------------------------------------------------------
+
+func _test_discrete_command_buffered_through_hitstun_still_fires_first_actionable_frame() -> void:
+	MoveRegistry.install(_roster())
+	var s := SimState.new_initial()
+	s.stage = StageState.new_initial(FP.from_int(-400), FP.from_int(400), 0)
+	s.players[0].character_id = CharacterA.CHAR_ID
+	s.players[0].facing = 1
+	s.players[0].pos_x = FP.from_int(0)
+	s.players[1].character_id = CharacterA.CHAR_ID
+	s.players[1].facing = -1
+	s.players[1].pos_x = FP.from_int(200)
+
+	# Drop P0 directly into HITSTUN (non-loop, non-actionable) with a few frames
+	# of stun remaining — mirrors a defender recovering from a real hit, without
+	# needing to drive a whole exchange to set it up (same direct-injection
+	# pattern as the crouch-block scenario above).
+	s.players[0].state_id = CharacterA.STATE_HITSTUN
+	s.players[0].frame_in_state = 1
+	s.players[0].stun = 4
+	s.players[0].hitstop = 0
+
+	# Hold FORWARD (RIGHT, P0 faces +1) AND L together every tick through stun and
+	# beyond: forward alone would satisfy tier 2's stance re-derivation into
+	# STATE_WALK_F once idle is reached, but L (bare button, no direction gate) is
+	# a DISCRETE command listed before the walk entries (character_a.gd
+	# _build_button_map) and buffers within COMMAND_BUFFER (AD-022) — it must win.
+	var input: int = InputFrame.RIGHT | InputFrame.BUTTON_0
+	var transitioned: bool = false
+	for k in range(8):
+		s = SimState.step(s, input, InputFrame.NEUTRAL)
+		if s.players[0].state_id != CharacterA.STATE_HITSTUN:
+			_eq(s.players[0].state_id, CharacterA.STATE_5L,
+				"tick %d: buffered discrete L fires into STATE_5L the first actionable frame, not STATE_WALK_F/IDLE" % k)
+			transitioned = true
+			break
+	_true(transitioned, "P0 left STATE_HITSTUN within the loop (stun expired) and was observed transitioning")
 	MoveRegistry.clear()
