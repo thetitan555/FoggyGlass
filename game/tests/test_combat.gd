@@ -98,10 +98,17 @@ func _test_facing_intent() -> void:
 func _test_movement_integration() -> void:
 	# Walk state carries motion_vel_x = 2 units/tick forward. Put P0 in WALK; one step
 	# advances pos_x by +2 units * facing (integer add, fixed-point).
+	#
+	# AD-038 (TKT-P1.1R-03): WALK is a LOOP state, so phase 2 re-derives it from
+	# input EVERY actionable tick (target = the first buffered command, else idle).
+	# P0 must therefore hold the RIGHT input that TestSupport's button_map maps to
+	# STATE_WALK (added alongside AD-038, judgment-log.md) so the re-derivation
+	# re-selects WALK (target == current, no-op) instead of collapsing to idle
+	# before phase 3 can integrate its motion.
 	var s := _two_char_state(300)   # far apart so no pushbox interference
 	s.players[0].state_id = TestSupport.STATE_WALK
 	var before: int = s.players[0].pos_x
-	s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+	s = SimState.step(s, InputFrame.RIGHT, InputFrame.NEUTRAL)
 	_eq(s.players[0].pos_x - before, FP.from_units(2.0),
 		"walk integrates +2 units/tick along facing (fixed-point add)")
 	MoveRegistry.clear()

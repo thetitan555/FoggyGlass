@@ -119,12 +119,20 @@ static func build_test_character() -> Character:
 	#   - UP + BUTTON_0   -> FIREBALL (spawns a projectile, TKT-P1-0P; UP-gated so it does
 	#     not clash the bare-BUTTON_0 LIGHT command).
 	#   - BUTTON_0        -> LIGHT (the normal; special-cancellable into SPECIAL).
+	#   - RIGHT (pure-direction, AD-032) -> WALK. LAST (least specific — no button to
+	#     shadow, mirrors character_a.gd's own walk entries). Added alongside AD-038
+	#     (TKT-P1.1R-03): once phase 2 re-derives an actionable LOOP state from input
+	#     every tick, WALK is only reachable/holdable through a real recognized command
+	#     like every other loop state — this test character needs one too for
+	#     test_combat.gd's walk-motion-integration check to hold a walk tick under the
+	#     new contract (judgment-log.md).
 	c.button_map = [
 		_map(-1, 0, InputBuffer.MOTION_623, STATE_REVERSAL, 2),   # 623 + B2
 		_map(1, 0, 0, STATE_SPECIAL),                             # B1
 		_map(2, InputFrame.DOWN, 0, STATE_THROW),                 # B2 + down
 		_map(0, InputFrame.UP, 0, STATE_FIREBALL),                # B0 + up
 		_map(0, 0, 0, STATE_LIGHT),                               # B0
+		_map(-1, InputFrame.RIGHT, 0, STATE_WALK),                # RIGHT (pure direction)
 	]
 	return c
 

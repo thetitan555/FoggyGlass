@@ -193,6 +193,16 @@ static func _build_button_map() -> Array[ButtonMapEntry]:
 	map.append(_map(1, InputFrame.DOWN, 0, STATE_2M))   # 2M before 2L/2H so authored order picks the more specific gate first (all DOWN-gated -- direction alone does not disambigguate button index, so button_index is what actually selects the move; order is for readability)
 	map.append(_map(0, InputFrame.DOWN, 0, STATE_2L))
 	map.append(_map(2, InputFrame.DOWN, 0, STATE_2H))
+	# Crouch stance (pure-direction command, AD-032/AD-038): held bare DOWN, no
+	# button, routes to the already-authored STATE_CROUCH (a `loop` state -- AD-038
+	# re-derives it every tick, so releasing DOWN falls through to no satisfied
+	# command and phase 2 returns to idle). Listed AFTER the DOWN+button crouching
+	# normals immediately above (so 2L/2M/2H still win when a button is held -- a
+	# bare DOWN entry would otherwise never lose to them since first-match-wins
+	# already favors the button entries by list order) and BEFORE the walk entries
+	# below (so a down-forward hold, e.g. numpad 3, crouches rather than walks --
+	# DOWN is checked first in authored order).
+	map.append(_map(-1, InputFrame.DOWN, 0, STATE_CROUCH))
 	# Jump (pure-direction command, AD-032): held UP, no button, routes to the
 	# prejump lead-in (whose own ALWAYS cancel carries it into the neutral jump
 	# arc -- see _build_movement's PREJUMP note). Listed before the bare standing

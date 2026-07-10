@@ -91,6 +91,9 @@
 - JC-053 · 2026-07-09 · TKT-P1.1R-01 · An empty/omitted P2 script defaults to neutral via `RecordPlaybackSource`'s existing empty-buffer-loops-neutral behavior, not an explicitly-compiled N-tick neutral buffer — provisional
 - JC-054 · 2026-07-10 · TKT-P1.1R-02 · A `Keyframe.spawn_offset_y` (fireball release point) reflected as a scalar-point negation (`new_y = -old_y`) rather than the box formula `-(y+h)` — provisional
 - JC-055 · 2026-07-10 · TKT-P1.1R-02 · Orientation verified via direct `InspectionView`/`PlayerView` reads, not `TraceHarness`'s formatted `boxes` string; CROUCH exercised by direct state-injection, not scripted input — provisional
+- JC-056 · 2026-07-10 · TKT-P1.1R-03 · Crouch `button_map` entry placed immediately after the DOWN+button crouch normals (still before the walk entries) — provisional
+- JC-057 · 2026-07-10 · TKT-P1.1R-03 · Crouch-block scenario verified via a direct `SimState.step` + `InspectionView` test, not `TraceHarness` (fixed 200-unit spawn gap has no position-override hook) — provisional
+- JC-058 · 2026-07-10 · TKT-P1.1R-03 · `TestSupport` (P0 test character) gains a bare-RIGHT `button_map` entry -> `STATE_WALK` so `test_combat.gd`'s walk-integration test can hold AD-038's re-derivation — provisional
 
 ---
 
@@ -270,3 +273,96 @@ outside the test file; the sim-truth surface read (`InspectionView`) is
 identical either way, and the acceptance bar ("a harness/test asserts...") is
 satisfied by a test using the same AD-011 surface the harness is built on, not
 necessarily `TraceHarness`'s own row-string API.
+
+### JC-056 · 2026-07-10 · TKT-P1.1R-03 · Crouch `button_map` entry placed immediately after the DOWN+button crouch normals — provisional
+**Serves:** TKT-P1.1R-03's ordering instruction ("after the DOWN+button crouching
+normals... and before the walk entries"); AD-032's first-match-wins shadowing
+rule; `character_a.gd` `_build_button_map`.
+**Decision.** `_map(-1, InputFrame.DOWN, 0, STATE_CROUCH)` is appended
+immediately after the three `2L/2M/2H` entries (before the jump entry, the
+standing normals, and the walk entries) rather than, say, immediately before
+the walk entries at the bottom of the list.
+**Alternative considered.** Placing the bare-`DOWN` entry directly above the
+walk entries (still satisfying "before the walk entries," the ticket's literal
+floor) instead of directly below the crouching normals. Passed over: nothing in
+the recognizer requires it further down (`button_index == -1` pure-direction
+entries never compete with the `button_index >= 0` jump/standing-normal entries
+above them — different `button_index`, so first-match-wins never has to choose
+between them), so placement anywhere in `[after 2L/2M/2H, before WALK_F/WALK_B]`
+is behaviorally identical; adjacency to the crouching normals it is ordered
+against (readability — the "DOWN routes low, with or without a button" cluster
+stays together) was the only real consideration, not a reachability difference.
+**Why latitude.** Any placement satisfying the ticket's two named constraints
+produces the identical recognizer result (verified: `2L/2M/2H` still win over
+bare `2` when a button is held; `3` — DOWN+FORWARD — still crouches, not walks,
+regardless of where in that span CROUCH sits). Purely a readability/authoring-
+order call with no behavioral difference among the reasonable alternatives.
+
+### JC-057 · 2026-07-10 · TKT-P1.1R-03 · Crouch-block scenario verified via a direct `SimState.step` + `InspectionView` test, not `TraceHarness` — provisional
+**Serves:** TKT-P1.1R-03 acceptance ("a crouching held-back defender blocks a
+hit — enters a blockstun category"); `trace-harness.md` (the named instrument).
+**Decision.** `game/tests/test_held_input_stances.gd`'s walk-exit and crouch-
+enter/exit assertions run through `TraceHarness`/`InputScript` (the ticket's
+named instrument, a clean fit — pure scripted-input movement). The crouch-BLOCK
+scenario instead builds a `SimState` directly (attacker/defender positioned at
+a proximity gap that puts 5L's hitbox in reach of the defender's crouching
+hurtbox — mirrors `test_character_a.gd`'s `_two_char_state`/`_test_5h_5m_link_
+window` gap pattern) and steps it directly, reading the result through
+`InspectionView` (still AD-011).
+**Alternative considered.** Driving the block scenario through `TraceHarness.
+run` too, for one consistent instrument across the whole file. Passed over:
+`TraceHarness.run` fixes both players at `SimState.new_initial()`'s spawn gap
+(200 units) with no position-override parameter (`trace-harness.md` names no
+such contract) — closing that gap by scripted walking alone (character A's
+walk speed is ~2.2 units/tick) would need ~70+ scripted ticks of pure
+choreography with no bearing on what the assertion is actually about (block
+resolution on contact), obscuring the scenario's point for no verification
+gain over the direct-`SimState` proximity pattern the rest of the combat suite
+(`test_character_a.gd`, `test_invuln.gd`) already uses for exactly this shape
+of test. `trace-harness.md`'s own header calls out that it is "not a TAS
+framework" for elaborate choreography — this is that case.
+**Why latitude.** Test-instrument choice per scenario, not a contract or feel
+call; both paths read sim truth exclusively through `InspectionView`/
+`PlayerView` (AD-011), so the thing being verified (a crouching held-back
+defender's hit resolves to a blockstun category) is identical either way.
+
+### JC-058 · 2026-07-10 · TKT-P1.1R-03 · `TestSupport` (P0 test character) gains a bare-RIGHT `button_map` entry -> `STATE_WALK`, and `test_combat.gd`'s walk-integration test now holds that input — provisional
+**Serves:** keeping the full suite green under AD-038's deliberate, spec'd
+behavior change ("movement goldens change deliberately — walk now terminates");
+`test_combat.gd::_test_movement_integration` (pre-existing, not part of this
+ticket's named read-set).
+**Decision.** AD-038 makes every ACTIONABLE LOOP state (idle/walk/crouch)
+re-derive from input every tick, for every character generically (the engine
+change is character-agnostic by design). `TestSupport` (the P0 test character,
+`game/tests/test_support.gd`), unlike `character_a.gd`, had `STATE_WALK`
+authored as data but no `button_map` entry ever targeting it — walking was only
+ever reached by test code poking `p.state_id` directly, a path AD-038 now
+immediately re-derives away from on the very same actionable tick (no held
+input recognizes it, so `target` resolves to idle before phase 3 can integrate
+its motion). This broke `test_combat.gd::_test_movement_integration` ("walk
+integrates +2 units/tick"), a pre-existing engine-level (not character-A)
+regression test. Fix: add `_map(-1, InputFrame.RIGHT, 0, STATE_WALK)` (the same
+AD-032 pure-direction pattern character A's own walk entries use) as the LAST
+`button_map` entry, and change the test to feed `InputFrame.RIGHT` (P0 faces
++1) instead of `InputFrame.NEUTRAL` so the re-derivation re-selects WALK
+(`target == current`, a no-op) instead of collapsing to idle.
+**Alternative considered.** Leaving `test_combat.gd` red as a known, documented
+"movement golden that changed" and letting QA/the Architect decide. Passed
+over: the ticket's own acceptance bar is "run the full suite and confirm
+green," and this is squarely the class of change the ticket already
+anticipates and blesses ("movement goldens change deliberately"), not a new
+design question — the fix is mechanical (bring the shared test fixture's
+`button_map` in line with the same pattern already used for the shipped
+character) and carries no risk (test-only content, no engine or character-A
+change). Also considered: making P0 non-actionable that tick via some other
+means (e.g. injecting stun) to dodge AD-038's re-derivation entirely without
+adding a `button_map` entry. Passed over: stun's absence of a real input-driven
+walk command was the actual gap this exposed (mirrors the exact class of gap
+AD-032 fixed for character A); routing around it with an artificial non-
+actionable state would leave `TestSupport` permanently unable to express a real
+walk command, a worse and less honest fixture than character A's own.
+**Why latitude.** Test-fixture-only content change (no engine, no shipped
+character, no contract) needed to keep a pre-existing, in-scope-suite test
+green under this ticket's own engine change; the pattern added is not new
+(copies AD-032's established pure-direction shape) and record-worthy only
+because it touches a shared fixture other tests also depend on.

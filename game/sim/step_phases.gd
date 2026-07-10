@@ -105,7 +105,11 @@ static func resolve_intent(raw_frame: int, facing: int) -> Dictionary:
 #      button_map command. This is the reversal-on-wakeup / after-blockstun / after-
 #      hitstop path (a 623 held through blockstun comes out frame-1) AND the ordinary
 #      "press a button in neutral" path — unified: an actionable character runs a
-#      buffered command (AD-022).
+#      buffered command (AD-022). If the CURRENT state is a LOOPING state (idle/walk/
+#      crouch — MoveState.loop), the target is instead RE-DERIVED every tick (no
+#      buffered command -> character.idle_state_id), so a held-input stance exits to
+#      idle the instant the direction is released (AD-038); a non-loop actionable state
+#      keeps the plain "run a buffered command, else stay" behavior.
 #   6. Else (committed move, not frozen): evaluate CancelRules; a legal cancel whose
 #      input is buffered and whose window is open executes (special-cancel / gatling /
 #      whiff-cancel — AD-015). Cancels buffer during hitstop but execute only here,
@@ -206,6 +210,9 @@ static func phase2_state_machine(next: SimState) -> void:
 		# first actionable frame as a frame-1 reversal (AD-022).
 		if Actionability.is_actionable(p, move):
 			var target_state: int = _buffered_command(character, p)
+			if move != null and move.loop:
+				if target_state == -1:
+					target_state = character.idle_state_id
 			if target_state != -1 and target_state != p.state_id:
 				_enter_state(p, character, target_state)
 			continue
