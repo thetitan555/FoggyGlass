@@ -76,6 +76,11 @@ const HITSTUN_DURATION: int = 16
 const BLOCKSTUN_DURATION: int = 10
 
 
+## AD-037: every standing hurtbox literal below (`Box.make(-15, -80, 30, 80)`)
+## is the reflected form (was `(-15, 0, 30, 80)`; new_y = -(old_y+old_h) =
+## -(0+80) = -80) -- feet at local y=0 (pos_y), head at y=-80. Mirrors
+## CharacterA._hurt_stand()'s convention (TKT-P1.1R-02) so the one box
+## convention holds slice-wide.
 ## Build the trivial test character (move-format.md, hand-computable).
 static func build_test_character() -> Character:
 	var c := Character.new()
@@ -88,8 +93,8 @@ static func build_test_character() -> Character:
 	phys.jump_velocity = 0
 	c.physics = phys
 
-	c.default_pushbox = Box.make(
-		FP.from_int(-10), FP.from_int(0), FP.from_int(20), FP.from_int(40))
+	c.default_pushbox = Box.make(   # AD-037: reflected -> lower/nearer-to-feet portion of the hurtbox
+		FP.from_int(-10), FP.from_int(-40), FP.from_int(20), FP.from_int(40))
 
 	c.states = [
 		_build_idle(),
@@ -145,7 +150,7 @@ static func _build_idle() -> MoveState:
 	var kf := Keyframe.new()
 	kf.frame_start = 1
 	kf.frame_end = 1
-	kf.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(80))]
+	kf.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(-80), FP.from_int(30), FP.from_int(80))]
 	m.timeline = [kf]
 	return m
 
@@ -159,7 +164,7 @@ static func _build_walk() -> MoveState:
 	var kf := Keyframe.new()
 	kf.frame_start = 1
 	kf.frame_end = 1
-	kf.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(80))]
+	kf.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(-80), FP.from_int(30), FP.from_int(80))]
 	kf.has_motion = true
 	kf.motion_vel_x = FP.from_units(2.0)   # forward walk speed
 	m.timeline = [kf]
@@ -177,23 +182,25 @@ static func _build_light() -> MoveState:
 	var kf_start := Keyframe.new()
 	kf_start.frame_start = 1
 	kf_start.frame_end = 3
-	kf_start.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(80))]
+	kf_start.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(-80), FP.from_int(30), FP.from_int(80))]
 
 	# Active: hurtbox + hitbox, frames 4..6. Two OVERLAPPING hitboxes sharing one
 	# id_group so the single-hit rule (criterion 5) is testable — both point forward.
-	var hb1 := _make_light_hitbox(FP.from_int(30), FP.from_int(40))
-	var hb2 := _make_light_hitbox(FP.from_int(40), FP.from_int(40))   # overlaps hb1
+	# AD-037: the y arg passed here is the already-REFLECTED box top edge
+	# (_make_light_hitbox's fixed h=20, so new_y = -(40+20) = -60; was 40).
+	var hb1 := _make_light_hitbox(FP.from_int(30), FP.from_int(-60))
+	var hb2 := _make_light_hitbox(FP.from_int(40), FP.from_int(-60))   # overlaps hb1
 	var kf_active := Keyframe.new()
 	kf_active.frame_start = 4
 	kf_active.frame_end = 6
-	kf_active.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(80))]
+	kf_active.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(-80), FP.from_int(30), FP.from_int(80))]
 	kf_active.hitboxes = [hb1, hb2]
 
 	# Recovery: hurtbox only, frames 7..12.
 	var kf_rec := Keyframe.new()
 	kf_rec.frame_start = 7
 	kf_rec.frame_end = 12
-	kf_rec.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(80))]
+	kf_rec.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(-80), FP.from_int(30), FP.from_int(80))]
 
 	m.timeline = [kf_start, kf_active, kf_rec]
 
@@ -239,7 +246,7 @@ static func _build_hitstun() -> MoveState:
 	var kf := Keyframe.new()
 	kf.frame_start = 1
 	kf.frame_end = HITSTUN_DURATION
-	kf.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(80))]
+	kf.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(-80), FP.from_int(30), FP.from_int(80))]
 	m.timeline = [kf]
 	return m
 
@@ -253,7 +260,7 @@ static func _build_blockstun() -> MoveState:
 	var kf := Keyframe.new()
 	kf.frame_start = 1
 	kf.frame_end = BLOCKSTUN_DURATION
-	kf.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(80))]
+	kf.hurtboxes = [Box.make(FP.from_int(-15), FP.from_int(-80), FP.from_int(30), FP.from_int(80))]
 	m.timeline = [kf]
 	return m
 
@@ -262,13 +269,13 @@ static func _build_blockstun() -> MoveState:
 
 ## A standard hurtbox (the character-local shape shared by every non-attacking frame).
 static func _hurt() -> Box:
-	return Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(80))
+	return Box.make(FP.from_int(-15), FP.from_int(-80), FP.from_int(30), FP.from_int(80))
 
 
 ## A forward hitbox reaching into where the opponent's hurtbox sits.
 static func _fwd_hitbox(damage: int, id_group: int, rehit_interval: int = 0) -> HitBox:
 	var hb := HitBox.new()
-	hb.box = Box.make(FP.from_int(30), FP.from_int(40), FP.from_int(30), FP.from_int(20))
+	hb.box = Box.make(FP.from_int(30), FP.from_int(-60), FP.from_int(30), FP.from_int(20))   # AD-037 reflected
 	hb.damage = damage
 	hb.hitstun = LIGHT_HITSTUN
 	hb.blockstun = LIGHT_BLOCKSTUN
@@ -335,7 +342,7 @@ static func _build_throw() -> MoveState:
 	m.duration = 12
 	m.loop = false
 	var tb := HitBox.new()
-	tb.box = Box.make(FP.from_int(20), FP.from_int(0), FP.from_int(40), FP.from_int(60))
+	tb.box = Box.make(FP.from_int(20), FP.from_int(-60), FP.from_int(40), FP.from_int(60))   # AD-037 reflected
 	tb.damage = THROW_DAMAGE
 	tb.hitstun = THROW_HITSTUN
 	tb.tech_window = THROW_TECH_WINDOW   # dedicated tech-window frame count (AD-029)
@@ -448,7 +455,7 @@ static func _build_fireball() -> MoveState:
 	kf_spawn.has_spawn = true
 	kf_spawn.spawn_projectile = build_projectile_data()
 	kf_spawn.spawn_offset_x = FP.from_int(20)   # released in front of the character
-	kf_spawn.spawn_offset_y = FP.from_int(40)
+	kf_spawn.spawn_offset_y = FP.from_int(-40)   # AD-037: reflected (scalar point, spawn_y = pos_y + offset_y)
 	kf_spawn.spawn_velocity_x = FP.from_units(float(FIREBALL_SPEED))
 	kf_spawn.spawn_velocity_y = 0
 
@@ -470,6 +477,8 @@ static func build_projectile_data() -> ProjectileData:
 	data.lifetime = FIREBALL_LIFETIME
 	data.max_per_owner = FIREBALL_MAX_PER_OWNER
 	var hb := HitBox.new()
+	# AD-037: NOT reflected -- symmetric about the projectile's own center
+	# ([-10,+10], not feet-anchored); new_y = -(y+h) = -(-10+20) = -10, unchanged.
 	hb.box = Box.make(FP.from_int(-10), FP.from_int(-10), FP.from_int(20), FP.from_int(20))
 	hb.hit_kind = HitBox.HIT_KIND_PROJECTILE   # AD-031: a projectile's carried hitbox is PROJECTILE
 	hb.damage = FIREBALL_DAMAGE

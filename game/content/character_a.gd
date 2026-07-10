@@ -117,18 +117,21 @@ const PROJ_FIREBALL_M: int = 202
 const PROJ_FIREBALL_H: int = 203
 
 # --- Standard hurtbox (character-local, shared across most grounded frames) --
-# local (-15,0,30,80) -> matches TestSupport's convention.
+# AD-037: reflected across the feet line (new_y = -(old_y+old_h), h unchanged).
+# local (-15,-80,30,80) -> feet at y=0 (pos_y), head at y=-80 -> matches
+# TestSupport's convention (also reflected, TKT-P1.1R-02).
 static func _hurt_stand() -> Box:
-	return Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(80))
+	return Box.make(FP.from_int(-15), FP.from_int(-80), FP.from_int(30), FP.from_int(80))
 
 ## Crouching hurtbox: shorter (crouch lows/blocks present a smaller profile).
+## AD-037: reflected; top edge -55 (was 0), still feet-anchored at y=0.
 static func _hurt_crouch() -> Box:
-	return Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(55))
+	return Box.make(FP.from_int(-15), FP.from_int(-55), FP.from_int(30), FP.from_int(55))
 
 ## Airborne hurtbox (jump normals / jump arc): same width, full height, offset
-## up isn't needed since pos_y itself carries height.
+## up isn't needed since pos_y itself carries height. AD-037: reflected.
 static func _hurt_air() -> Box:
-	return Box.make(FP.from_int(-15), FP.from_int(0), FP.from_int(30), FP.from_int(75))
+	return Box.make(FP.from_int(-15), FP.from_int(-75), FP.from_int(30), FP.from_int(75))
 
 
 ## Build character A (character-a.md). One entry point; the .tres baker and the
@@ -144,8 +147,8 @@ static func build_character() -> Character:
 	phys.jump_velocity = 0
 	c.physics = phys
 
-	c.default_pushbox = Box.make(
-		FP.from_int(-10), FP.from_int(0), FP.from_int(20), FP.from_int(40))
+	c.default_pushbox = Box.make(   # AD-037: reflected -> lower/nearer-to-feet portion of the hurtbox
+		FP.from_int(-10), FP.from_int(-40), FP.from_int(20), FP.from_int(40))
 
 	c.states = []
 	c.states.append_array(_build_movement())
@@ -549,7 +552,7 @@ static func _build_5l() -> MoveState:
 	kf_start.frame_end = 4
 	kf_start.hurtboxes = [_hurt_stand()]
 	var hb := HitBox.new()
-	hb.box = Box.make(FP.from_int(25), FP.from_int(45), FP.from_int(25), FP.from_int(20))
+	hb.box = Box.make(FP.from_int(25), FP.from_int(-65), FP.from_int(25), FP.from_int(20))   # AD-037 reflected
 	hb.damage = 30
 	hb.hitstun = 12
 	hb.blockstun = 9
@@ -587,7 +590,7 @@ static func _build_5m() -> MoveState:
 	kf_start.frame_end = 5
 	kf_start.hurtboxes = [_hurt_stand()]
 	var hb := HitBox.new()
-	hb.box = Box.make(FP.from_int(25), FP.from_int(40), FP.from_int(30), FP.from_int(22))
+	hb.box = Box.make(FP.from_int(25), FP.from_int(-62), FP.from_int(30), FP.from_int(22))   # AD-037 reflected
 	hb.damage = 60
 	hb.hitstun = 16
 	hb.blockstun = 12
@@ -632,7 +635,7 @@ static func _build_5h() -> MoveState:
 	kf_start.has_motion = true
 	kf_start.motion_vel_x = FP.from_units(1.07)
 	var hb := HitBox.new()
-	hb.box = Box.make(FP.from_int(30), FP.from_int(35), FP.from_int(35), FP.from_int(25))
+	hb.box = Box.make(FP.from_int(30), FP.from_int(-60), FP.from_int(35), FP.from_int(25))   # AD-037 reflected
 	hb.damage = 80
 	hb.hitstun = 22
 	hb.blockstun = 18
@@ -688,7 +691,7 @@ static func _build_2l() -> MoveState:
 	kf_start.frame_end = 4
 	kf_start.hurtboxes = [_hurt_crouch()]
 	var hb := HitBox.new()
-	hb.box = Box.make(FP.from_int(20), FP.from_int(5), FP.from_int(25), FP.from_int(15))
+	hb.box = Box.make(FP.from_int(20), FP.from_int(-20), FP.from_int(25), FP.from_int(15))   # AD-037 reflected
 	hb.damage = 20
 	hb.hitstun = 15
 	hb.blockstun = 10
@@ -726,7 +729,7 @@ static func _build_2m() -> MoveState:
 	kf_start.frame_end = 6
 	kf_start.hurtboxes = [_hurt_crouch()]
 	var hb := HitBox.new()
-	hb.box = Box.make(FP.from_int(30), FP.from_int(10), FP.from_int(45), FP.from_int(18))   # long range
+	hb.box = Box.make(FP.from_int(30), FP.from_int(-28), FP.from_int(45), FP.from_int(18))   # long range; AD-037 reflected
 	hb.damage = 70
 	hb.hitstun = 18
 	hb.blockstun = 14
@@ -769,7 +772,7 @@ static func _build_2h() -> MoveState:
 	kf_start.hurtboxes = [_hurt_crouch()]
 	kf_start.invuln_strike = true   # frames 1-8 per spec; consumed in phase 4 (AD-031)
 	var hb := HitBox.new()
-	hb.box = Box.make(FP.from_int(15), FP.from_int(30), FP.from_int(35), FP.from_int(60))   # tall anti-air box
+	hb.box = Box.make(FP.from_int(15), FP.from_int(-90), FP.from_int(35), FP.from_int(60))   # tall anti-air box; AD-037 reflected
 	hb.damage = 60
 	hb.hitstun = 20   # air reset stun (defender knocked away, no follow-up)
 	hb.blockstun = 13
@@ -808,13 +811,13 @@ static func _build_2h() -> MoveState:
 ## -- outside the move-format schema, not a missing field here).
 static func _build_jl() -> MoveState:
 	return _build_air_normal(STATE_JL, 4, 6, 30, 9, IDG_JL,
-		Box.make(FP.from_int(15), FP.from_int(20), FP.from_int(25), FP.from_int(20)))
+		Box.make(FP.from_int(15), FP.from_int(-40), FP.from_int(25), FP.from_int(20)))   # AD-037 reflected
 
 
 ## j.M: 6 startup / 5 active, air-to-air / jump-in. dmg 50, hitstop 10.
 static func _build_jm() -> MoveState:
 	return _build_air_normal(STATE_JM, 6, 5, 50, 10, IDG_JM,
-		Box.make(FP.from_int(15), FP.from_int(15), FP.from_int(30), FP.from_int(25)))
+		Box.make(FP.from_int(15), FP.from_int(-40), FP.from_int(30), FP.from_int(25)))   # AD-037 reflected
 
 
 ## j.H: 8 startup / 5 active -- the jump-in starter (deep hit links into
@@ -822,7 +825,7 @@ static func _build_jm() -> MoveState:
 ## dmg 80, hitstop 11.
 static func _build_jh() -> MoveState:
 	return _build_air_normal(STATE_JH, 8, 5, 80, 11, IDG_JH,
-		Box.make(FP.from_int(15), FP.from_int(10), FP.from_int(35), FP.from_int(30)))
+		Box.make(FP.from_int(15), FP.from_int(-40), FP.from_int(35), FP.from_int(30)))   # AD-037 reflected
 
 
 ## Shared air-normal builder: startup (airborne hurtbox only), active (+ hitbox),
@@ -1007,7 +1010,7 @@ static func _build_fireball(state_id: int, proj_id: int, speed: float) -> MoveSt
 	kf_spawn.has_spawn = true
 	kf_spawn.spawn_projectile = _build_projectile_data(proj_id, speed)
 	kf_spawn.spawn_offset_x = FP.from_int(25)        # released in front of the character
-	kf_spawn.spawn_offset_y = FP.from_int(45)
+	kf_spawn.spawn_offset_y = FP.from_int(-45)       # AD-037: reflected (scalar point, spawn_y = pos_y + offset_y) -- chest/hand height, now above the feet-origin
 	kf_spawn.spawn_velocity_x = FP.from_units(speed)
 	kf_spawn.spawn_velocity_y = 0
 
@@ -1030,6 +1033,10 @@ static func _build_projectile_data(proj_id: int, speed: float) -> ProjectileData
 	data.lifetime = FIREBALL_LIFETIME
 	data.max_per_owner = FIREBALL_MAX_PER_OWNER
 	var hb := HitBox.new()
+	# AD-037: NOT reflected -- this box is symmetric about the projectile's own
+	# center ([-12,+12], not feet-anchored), so new_y = -(y+h) = -(-12+24) = -12,
+	# unchanged by construction (a projectile has no "feet line" to reflect
+	# against; its local origin IS its center).
 	hb.box = Box.make(FP.from_int(-12), FP.from_int(-12), FP.from_int(24), FP.from_int(24))
 	hb.hit_kind = HitBox.HIT_KIND_PROJECTILE   # AD-031: a projectile's carried hitbox is PROJECTILE
 	hb.damage = FIREBALL_DAMAGE
@@ -1129,7 +1136,7 @@ static func _build_dp(state_id: int, startup: int, invuln_end: int, active: int,
 	var last_active: int = startup + active
 
 	var hb1 := HitBox.new()
-	hb1.box = Box.make(FP.from_int(10), FP.from_int(20), FP.from_int(35), FP.from_int(55))
+	hb1.box = Box.make(FP.from_int(10), FP.from_int(-75), FP.from_int(35), FP.from_int(55))   # AD-037 reflected
 	hb1.damage = damage if id_group2 == -1 else int(damage * 0.6)   # 2-hit DP splits damage across both hits
 	hb1.hitstun = 30
 	hb1.blockstun = DP_BLOCKSTUN
@@ -1158,7 +1165,7 @@ static func _build_dp(state_id: int, startup: int, invuln_end: int, active: int,
 	# two distinct id_groups, each lands once).
 	if id_group2 != -1:
 		var hb2 := HitBox.new()
-		hb2.box = Box.make(FP.from_int(10), FP.from_int(10), FP.from_int(35), FP.from_int(45))
+		hb2.box = Box.make(FP.from_int(10), FP.from_int(-55), FP.from_int(35), FP.from_int(45))   # AD-037 reflected
 		hb2.damage = damage - hb1.damage
 		hb2.hitstun = 30
 		hb2.blockstun = DP_BLOCKSTUN
@@ -1220,7 +1227,7 @@ static func _build_throw() -> Array[MoveState]:
 	kf_start.hurtboxes = [_hurt_stand()]
 
 	var tb := HitBox.new()
-	tb.box = Box.make(FP.from_int(10), FP.from_int(0), FP.from_int(60), FP.from_int(60))   # ~60px range
+	tb.box = Box.make(FP.from_int(10), FP.from_int(-60), FP.from_int(60), FP.from_int(60))   # ~60px range; AD-037 reflected
 	tb.damage = THROW_DAMAGE
 	tb.hitstun = THROW_HITSTUN   # the hard-knockdown length (see const note above)
 	tb.tech_window = THROW_TECH_WINDOW

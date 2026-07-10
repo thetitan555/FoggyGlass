@@ -89,6 +89,8 @@
 - JC-051 · 2026-07-09 · TKT-P1.1R-01 · `InputScript` grammar edge cases: a repeated button letter in one token (e.g. `LL`) is accepted (idempotent OR); digit `0` and any character outside `1-9`/`L`/`M`/`H` is malformed; button letters are case-sensitive (no lowercase aliasing) — provisional
 - JC-052 · 2026-07-09 · TKT-P1.1R-01 · `InputScript.compile`'s hard-error boundary uses `assert(false, msg)` (mirrors `InputSource.validate`); added a non-asserting `InputScript.is_well_formed_token` as an additive testing hook, not part of Contract 1's `compile` signature — provisional
 - JC-053 · 2026-07-09 · TKT-P1.1R-01 · An empty/omitted P2 script defaults to neutral via `RecordPlaybackSource`'s existing empty-buffer-loops-neutral behavior, not an explicitly-compiled N-tick neutral buffer — provisional
+- JC-054 · 2026-07-10 · TKT-P1.1R-02 · A `Keyframe.spawn_offset_y` (fireball release point) reflected as a scalar-point negation (`new_y = -old_y`) rather than the box formula `-(y+h)` — provisional
+- JC-055 · 2026-07-10 · TKT-P1.1R-02 · Orientation verified via direct `InspectionView`/`PlayerView` reads, not `TraceHarness`'s formatted `boxes` string; CROUCH exercised by direct state-injection, not scripted input — provisional
 
 ---
 
@@ -212,3 +214,59 @@ surface.
 **Why latitude.** Internal driver plumbing with one reasonable reading; the
 observable P2 behavior (neutral forever) is exactly what Contract 2 specifies
 either way.
+
+### JC-054 · 2026-07-10 · TKT-P1.1R-02 · Spawn-offset vertical reflection as scalar-point negation — provisional
+**Serves:** AD-037's consequence note ("record any box whose 'correct' reflected
+height is a judgment call, e.g. a spawn offset"); `character_a.gd`'s
+`STATE_FIREBALL_*` spawn keyframes and `TestSupport._build_fireball`'s mirror.
+**Decision.** `Keyframe.spawn_offset_y` (the fireball's vertical release point,
+consumed as `spawn_y = p.pos_y + kf.spawn_offset_y`, `step_phases.gd
+_try_spawn_projectile` — the identical `pos_y + local_y` shape `MoveData.
+resolve_box` uses for a box) is reflected as a bare scalar negation:
+`new_offset_y = -old_offset_y` (character A: `45 -> -45`; TestSupport: `40 ->
+-40`). Not run through the box formula `new_y = -(y+h)` with some inferred `h`.
+**Alternative considered.** Treating the offset as a box with an authored-but-
+implicit height (e.g. some notional "hand width") and reflecting via the full
+box formula. Passed over: a spawn offset is a POINT (no `w`/`h` fields exist on
+it at all — `move-format.md`'s `Keyframe` has no such fields), and the box
+formula's `-(y+h)` is exactly `-y` in the degenerate `h=0` case — a point is a
+zero-height box reflected about its own single edge, so the two readings
+coincide; there is no second box-shaped alternative that produces a different
+number, only a question of which formula-instance to cite.
+**Why latitude.** The reflected VALUE is unambiguous (both framings agree); the
+only judgment is characterizing it as "the point form of AD-037's formula" for
+a future reader who might otherwise wonder why no `+h` term appears. Logged per
+AD-037's explicit instruction to record spawn-offset reflections, not because
+another value was plausible.
+
+### JC-055 · 2026-07-10 · TKT-P1.1R-02 · Orientation verified via direct InspectionView reads; CROUCH exercised by state-injection — provisional
+**Serves:** AD-037 acceptance ("a harness/test asserts the sim-truth
+orientation... right-side-up"); `training-mode.md` criteria 5/14.
+**Decision.** The new `game/tests/test_geometry_reflection.gd` asserts box
+orientation by reading `InspectionView.new(state, roster).player(0).boxes`
+directly (typed `BoxView.rect` ints) rather than driving `TraceHarness.run` and
+parsing its formatted `"KIND:x,y,w,h"` `boxes` string field, and exercises
+`STATE_CROUCH` by setting `s.players[0].state_id` directly (mirrors the
+existing state-injection pattern in `test_character_a.gd`/
+`test_geometry_overlay.gd`) rather than through a scripted held-`2` input.
+**Alternative considered.** Driving everything through `TraceHarness.run` +
+`TraceHarness.check`/`row_at` (the ticket's named verification instrument) for
+uniformity. Passed over for CROUCH specifically: held-`DOWN` -> `STATE_CROUCH`
+command recognition is AD-038/TKT-P1.1R-03's engine change (the bare-`DOWN`
+`button_map` entry does not exist yet this ticket), so no scripted input
+reaches CROUCH at all pre-TKT-03 — direct injection is the only way to assert
+its geometry now, and using the same direct-read approach for the standing/
+pushbox/hitbox assertions keeps one consistent test shape rather than splitting
+the file across two verification styles for no reason. Passed over for the
+STRING-matching alternative specifically (even where scripted input does
+reach, e.g. standing IDLE): matching `TraceHarness`'s exact formatted string
+requires hand-computing scaled fixed-point values (`FP.SCALE = 65536`) inline,
+which is exactly the "elaborate assertion scaffolding" JC-050 says not to
+over-invest in for this provisional surface; reading the same underlying
+`BoxView` ints directly is the smaller, more robust surface (AD-011 still
+respected — `InspectionView` is `TraceHarness`'s own read path).
+**Why latitude.** Internal test-authoring choice with no observable consequence
+outside the test file; the sim-truth surface read (`InspectionView`) is
+identical either way, and the acceptance bar ("a harness/test asserts...") is
+satisfied by a test using the same AD-011 surface the harness is built on, not
+necessarily `TraceHarness`'s own row-string API.
