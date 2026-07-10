@@ -97,8 +97,8 @@
 - JC-059 · 2026-07-10 · TKT-P1.1R-04 · Air-normal `CancelRule` window authored as `[1, JUMP_DURATION-1]` (frames 1..44 of the 45-frame arc), not `[1, JUMP_DURATION]` — ratified (true reachable window; folded into AD-039)
 - JC-060 · 2026-07-10 · TKT-P1.1R-04 · `PREJUMP_F`/`PREJUMP_B` factored through a shared `_build_prejump(state_id, target)` builder; new state ids (160/161) placed outside the full 100-109 movement block rather than renumbering existing ids — ratified (data-structure/id-allocation latitude)
 - JC-061 · 2026-07-10 · TKT-P1.1R-04 · `test_character_a.gd::_test_no_gatlings_no_jump_cancels` updated to exempt `JUMP_N/F/B` (source) and `PREJUMP_F/B` (source) from the pre-existing gatling/jump-cancel guards, since AD-039 makes a jump state's ALWAYS-cancel into `j.L/M/H` (and each prejump's into its jump) sanctioned content, not a violation the guard was meant to catch — ratified (test-guard latitude; JC-058 class)
-- JC-062 · 2026-07-10 · TKT-P1.1R-05 · The two-tier loop-state branch implemented as two SEPARATE full `button_map` scans (`_buffered_discrete_command` / `_current_tick_loop_command`, each first-match-wins in authored order) rather than one combined scan branching per-entry on `target.loop`; a new `InputBuffer.entry_satisfied_now` (age-0-only recognizer, motion entries always false) backs tier 2 instead of reusing `entry_satisfied` with a window param of 1 — provisional
-- JC-063 · 2026-07-10 · TKT-P1.1R-05 · AD-022 regression guard test uses direct `SimState.step` + `PlayerState` state-injection into `STATE_HITSTUN` (mirrors JC-057/JC-036), not `TraceHarness`; walk/crouch release-timing goldens re-baselined to the corrected release-tick values in `test_held_input_stances.gd` (ticket-named surgical scope — no other test file's assertions changed) — provisional
+- JC-062 · 2026-07-10 · TKT-P1.1R-05 · The two-tier loop-state branch implemented as two SEPARATE full `button_map` scans (`_buffered_discrete_command` / `_current_tick_loop_command`, each first-match-wins in authored order) rather than one combined scan branching per-entry on `target.loop`; a new `InputBuffer.entry_satisfied_now` (age-0-only recognizer, motion entries always false) backs tier 2 instead of reusing `entry_satisfied` with a window param of 1 — ratified (faithful realization of corrected AD-038; current-tick/motion clarification folded into AD-038)
+- JC-063 · 2026-07-10 · TKT-P1.1R-05 · AD-022 regression guard test uses direct `SimState.step` + `PlayerState` state-injection into `STATE_HITSTUN` (mirrors JC-057/JC-036), not `TraceHarness`; walk/crouch release-timing goldens re-baselined to the corrected release-tick values in `test_held_input_stances.gd` (ticket-named surgical scope — no other test file's assertions changed) — ratified (test-instrument latitude; surgical golden scope confirmed)
 
 ---
 
@@ -140,7 +140,20 @@ difference from any other reasonable factoring — a genuine "how," not a "what"
 corrected AD-038 already specifies the discriminator (`move.loop`), the priority order
 (discrete first), and the current-tick-only semantics (no buffer carry-over) exactly.
 Cheaply reversible; invisible across the seam (nothing outside `step_phases.gd`/
-`input_buffer.gd` calls either new function). — provisional
+`input_buffer.gd` calls either new function). — ratified
+**Ruling (Architect, 2026-07-10).** Ratified — this is a faithful realization of the
+corrected AD-038 contract, not a reinterpretation of it: (1) discrete-first **priority**
+holds (tier 1 scanned/preferred before tier 2); (2) the **discriminator** is `move.loop`
+on the target, as the contract specifies; (3) the load-bearing **current-tick-only / no
+buffer carry-over** stance semantics are exactly what `entry_satisfied_now`'s age-0-only
+check delivers (a released direction is neutral at age 0 ⇒ not satisfied ⇒ idle
+fallback). Two separate scans vs. one combined scan is observably identical (both yield
+first-discrete-then-first-loop-target). The two-scan shape, the sibling `entry_satisfied_
+now`, and the "unresolvable target ⇒ discrete" default are read-only implementation
+factoring. **Folded into AD-038** the two contract-adjacent facts this surfaced (so future
+content/implementers inherit them): a **loop-state (stance) command must be current-tick-
+recognizable** — a multi-frame **motion cannot be a stance command** (it can never satisfy
+the current-tick tier), and an **unresolvable target defaults to the discrete tier**.
 
 **JC-063** · 2026-07-10 · TKT-P1.1R-05 · AD-022 regression-guard test instrument +
 golden-scope confirmation.
@@ -166,4 +179,12 @@ HITSTUN` — rejected as unnecessary indirection for what this guard is actually
 suite already covers live hit-into-stun paths.
 **Why.** Test-authoring latitude only — reads the same `InspectionView`/`SimState.step`
 surface either way (AD-011), no contract or behavior difference from how the assertion
-is driven. — provisional
+is driven. — ratified
+**Ruling (Architect, 2026-07-10).** Ratified as test-instrument latitude — the same
+state-injection pattern already ratified for exactly this shape of scenario (JC-057
+crouch-block, JC-036 invuln), correctly chosen because `TraceHarness` cannot start a
+player mid-move in a stun category, and the guard needs "recovering from a real hit," not
+"idle at tick 0." The **surgical golden-scope confirmation** (only the three walk/crouch
+release-timing assertions moved; combat/advantage/determinism and every *held*-direction
+movement test untouched and green) is exactly the ticket's scope bar — recorded here as
+evidence for QA's audit; no spec change. Both reads are AD-011.

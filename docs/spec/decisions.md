@@ -1419,9 +1419,16 @@ pure-direction/`loop` command — NOT the buffered window — and if none is sat
 target split is the clean discriminator — `MoveRegistry` already knows each state's `loop` flag.)
 Non-loop actionable states keep the existing "run a buffered command, else stay" behavior. Still
 deterministic (a pure function of `input_history` + state); movement goldens change deliberately
-(walk now terminates **on the release frame**, not ~5 ticks later). **Needs a small Developer
-follow-up ticket** (Strategist dispatches before the re-gate): change the loop-state exit read from
-buffered to current-tick input, re-baseline the walk/crouch release-timing goldens accordingly.
+(walk now terminates **on the release frame**, not ~5 ticks later).
+**Authoring constraints (ratified from JC-062, built in TKT-P1.1R-05).** Two facts fall out of the
+current-tick stance tier: (1) a **loop-state (stance) command must be current-tick-recognizable** —
+a pure-direction or plain-button command read from the current frame only; a multi-frame **motion
+cannot be a stance command** (it can never satisfy the current-tick tier, which does no
+`MOTION_WINDOW`/`COMMAND_BUFFER` lookback), so do not author a `loop`-state `button_map` target
+behind a motion. (2) A `button_map` entry whose **target state cannot be resolved** defaults to the
+**discrete** tier (the pre-correction behavior). Built via a two-tier scan
+(`_buffered_discrete_command` / `_current_tick_loop_command`) over `button_map` and a current-tick
+`InputBuffer.entry_satisfied_now` recognizer.
 
 ### AD-039 · Airborne-action model: per-direction prejump lead-ins + air-normal jump-state cancels — settled (2026-07-09, character-A movement reconciliation)
 **Decision.** Two data-only wirings (no engine or format change) complete character A's air game;
