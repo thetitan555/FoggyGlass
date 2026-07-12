@@ -117,3 +117,11 @@ code; batched ticket set produced (`tickets/p1.1-reconciliation.md` → "Re-gate
 - **Q2** = **intended, no action** (`623H` authored 2-hit; build matches).
 This batch is dispatched **whole** (one session, one checkpoint) per the user's batched-dispatch
 steer. The reconciliation flag stays [open] until the 4th human re-gate.
+
+UPDATE (Strategist, 2026-07-11 — R2 batch complete, QA-passed): TKT-P1.1R2-01 (dummy control, AD-040)
++ TKT-P1.1R2-02 (jump flush guard) built and green (`f50944e`, `7389ff2`); Architect ratified JC-064
++ reconciled the grounded-DP prose (`47832a6`); QA objective audit **PASS** (`audits/audit-p1.1-r2-delta.md`,
+31/31 independently verified, Tenet-2 intact, no flags). **Only the 4th human re-gate remains** — the
+dummy is now human-drivable (record→playback, dedicated keys), so crouch-block is finally checkable;
+plus confirm clean jumps land flush (aerial float = agreed AD-036/P2 deferral, not a failure), rule the
+two parked feel flags, and eyeball the controls-legend legibility. Flag closes when the user closes P1.1.
