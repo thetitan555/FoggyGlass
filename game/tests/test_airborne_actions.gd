@@ -79,6 +79,15 @@ func _test_forward_jump_reaches_prejump_f_then_jump_f_and_carries_forward() -> v
 	var mid_arc: Dictionary = TraceHarness.row_at(rows, 20)
 	_true(int(mid_arc["p0.px"]) > int(pre_jump["p0.px"]),
 		"pos_x carries FORWARD (increases) during the forward jump arc")
+	# TKT-P1.1R2-02 (D2 regression guard): the forward arc shares the SAME
+	# net-zero vel_y profile as the neutral jump (JC-047) — only motion_vel_x
+	# differs by direction (re-gate-3 D2 refutation). Assert it lands flush
+	# too, mirroring the neutral-jump test's shape, so a future edit that
+	# de-syncs JUMP_F's vertical profile from JUMP_N's is caught.
+	_true(TraceHarness.check(rows, 48, "p0.state", CharacterA.STATE_IDLE),
+		"the forward jump arc completes and returns to STATE_IDLE")
+	_true(TraceHarness.check(rows, 48, "p0.py", 0),
+		"the forward jump arc nets EXACTLY zero vertical displacement -- lands flush at ground_y (D2 guard)")
 	MoveRegistry.clear()
 
 
@@ -99,6 +108,12 @@ func _test_back_jump_reaches_prejump_b_then_jump_b_and_carries_back() -> void:
 	var mid_arc: Dictionary = TraceHarness.row_at(rows, 20)
 	_true(int(mid_arc["p0.px"]) < int(pre_jump["p0.px"]),
 		"pos_x carries BACK (decreases) during the back jump arc")
+	# TKT-P1.1R2-02 (D2 regression guard): same net-zero vel_y profile as
+	# JUMP_N/JUMP_F (JC-047) — assert the back jump lands flush too.
+	_true(TraceHarness.check(rows, 48, "p0.state", CharacterA.STATE_IDLE),
+		"the back jump arc completes and returns to STATE_IDLE")
+	_true(TraceHarness.check(rows, 48, "p0.py", 0),
+		"the back jump arc nets EXACTLY zero vertical displacement -- lands flush at ground_y (D2 guard)")
 	MoveRegistry.clear()
 
 
