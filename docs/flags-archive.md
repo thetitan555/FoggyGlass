@@ -1333,3 +1333,34 @@ deferred.** User: the apex-hang "will need future tweaking that can be set aside
 zero-velocity apex hang stands for P1.1 (correctness intact — arc nets zero, lands flush); a future
 jump-feel re-bake (e.g. parabolic) is a deferred, data-only re-author within the same mechanism,
 non-blocking, not owed by P1.1. Closed as accepted-with-deferred-polish.
+
+### [resolved] 2026-07-11 · raised-by: Architect (re-gate-4 diagnosis) · owner: Strategist · re: E2 fix pulls AD-036's landing half from P2 into P1.1 (and resolves D3) — roadmap/scope call
+Problem: re-gate 4 (E2) — jumps still wedge off-floor live. I reproduced a **genuine clean-jump bug**
+via the trace harness (NOT the deferred aerial case): holding the jump direction (`8*100` — the
+natural "jump repeatedly" input) drifts the character **+6 units up per jump, never recovering**
+(JUMP_N starts at py=-6, then -12, -18…). Root cause: a **held** jump transitions from its `duration`
+frame straight back to a grounded state (idle-rederive → prejump) with no settled idle tick, **dropping
+the arc's final fall frame**. The arc is correctly authored (net-zero over a full play); the transition
+drops a frame. A single jump / re-pressed jump with a release gap both land flush, which is why the
+isolated R2 net-zero test never caught it. **The fix (AD-042): snap `pos_y → ground_y` on entry to a
+GROUNDED-category state** — the minimal *landing-semantics half* of **AD-036**, which re-gate 3
+deferred to P2. As a correct side effect it also **resolves re-gate-3 D3** (the aerial-interrupted
+float). So the E2 fix **pulls AD-036's landing half forward into P1.1** — a roadmap/scope call that is
+yours, not mine to default. **Recommendation: pull it in.** A natural input wedges the character
+off-floor, so the P1.1 gate genuinely needs it; the snap stays legible (the net-zero authoring
+invariant + TKT-P1.1R2-02's per-direction assertion still catch a mis-authored arc, so the snap
+doesn't mask one), and the **full** runtime `pos_y ≥ ground_y` clamp + variable-height air-move /
+knockdown-into-ground semantics **stay deferred to P2** (AD-036 remains open for the rest). If you'd
+rather re-defer E2 or scope it narrower (e.g. a jump-only fix that leaves D3 floating), that redirects
+TKT-P1.1R3-02; AD-042 is marked settled *pending your confirmation*. NON-BLOCKING to E1/frame-step.
+---
+Resolution (Strategist, 2026-07-11 — user's call): **PULL IT IN. AD-042 approved.** The re-gate-3 defer
+was premised on "clean jumps are fine, only aerials float" — the Architect's repro proves that premise
+false (a natural hold-to-jump wedges the character permanently off-floor), so the fact that grounds the
+decision changed. Pull AD-036's minimal **landing half** (snap `pos_y → ground_y` on grounded-state
+entry) into P1.1 as AD-042: it robustly fixes E2 and resolves D3 (aerial float) as a side effect, stays
+legible (net-zero authoring invariant + the per-direction assertion still catch a mis-authored arc, so
+the snap does not mask one), and leaves the **full** runtime clamp + variable-height air-move / knockdown
+semantics deferred to P2 (AD-036 stays open for the rest). TKT-P1.1R3-02 proceeds as specced. Roadmap
+already places the remaining AD-036 work at P2's open; no roadmap edit needed (the pulled-forward half is
+recorded in AD-042). Closed.

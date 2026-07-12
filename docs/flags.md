@@ -106,25 +106,3 @@ diagnose clean-jump-bug vs the aerial/AD-036 deferral precisely, do NOT re-close
 Plus the frame-step auto-pause change to implement. Full detail in the work-order's "Re-gate 4 findings".
 Routed to the Architect for diagnosis + a coherent batched ticket set. Dummy-control has now failed the
 human gate twice while passing headless once — the fix must add in-app observability, not just re-wire blind.
-
-### [open] 2026-07-11 · raised-by: Architect (re-gate-4 diagnosis) · owner: Strategist · re: E2 fix pulls AD-036's landing half from P2 into P1.1 (and resolves D3) — roadmap/scope call
-Problem: re-gate 4 (E2) — jumps still wedge off-floor live. I reproduced a **genuine clean-jump bug**
-via the trace harness (NOT the deferred aerial case): holding the jump direction (`8*100` — the
-natural "jump repeatedly" input) drifts the character **+6 units up per jump, never recovering**
-(JUMP_N starts at py=-6, then -12, -18…). Root cause: a **held** jump transitions from its `duration`
-frame straight back to a grounded state (idle-rederive → prejump) with no settled idle tick, **dropping
-the arc's final fall frame**. The arc is correctly authored (net-zero over a full play); the transition
-drops a frame. A single jump / re-pressed jump with a release gap both land flush, which is why the
-isolated R2 net-zero test never caught it. **The fix (AD-042): snap `pos_y → ground_y` on entry to a
-GROUNDED-category state** — the minimal *landing-semantics half* of **AD-036**, which re-gate 3
-deferred to P2. As a correct side effect it also **resolves re-gate-3 D3** (the aerial-interrupted
-float). So the E2 fix **pulls AD-036's landing half forward into P1.1** — a roadmap/scope call that is
-yours, not mine to default. **Recommendation: pull it in.** A natural input wedges the character
-off-floor, so the P1.1 gate genuinely needs it; the snap stays legible (the net-zero authoring
-invariant + TKT-P1.1R2-02's per-direction assertion still catch a mis-authored arc, so the snap
-doesn't mask one), and the **full** runtime `pos_y ≥ ground_y` clamp + variable-height air-move /
-knockdown-into-ground semantics **stay deferred to P2** (AD-036 remains open for the rest). If you'd
-rather re-defer E2 or scope it narrower (e.g. a jump-only fix that leaves D3 floating), that redirects
-TKT-P1.1R3-02; AD-042 is marked settled *pending your confirmation*. NON-BLOCKING to E1/frame-step.
----
-Resolution (owner fills): …
