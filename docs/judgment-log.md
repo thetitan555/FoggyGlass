@@ -102,6 +102,8 @@
 - JC-064 · 2026-07-11 · TKT-P1.1R2-01 · Dummy given a DEDICATED live sampler (`_sample_device_dummy`, new `tm_dummy_up/down/left/right/button_0/1/2` actions on WASD+U/I/O) rather than reusing `_sample_device_p1`'s key set; P1's passthrough source is untouched and left mirroring the SAME device the whole time (no "hold P1 neutral" mechanism needed) — ratified (operability latitude under AD-040; folded into AD-040)
 - JC-065 · 2026-07-11 · TKT-P1.1R3-01 · Dummy-mode indicator built as `scenes/dummy_mode_indicator.gd` (sibling to `ControlsLegend`, outside `scenes/overlays/`), one Label + a static `build_indicator_text`, refreshed every `_process` frame rather than on `TrainingMode.ticked` — provisional
 - JC-066 · 2026-07-11 · TKT-P1.1R3-01 · Fresh-record implemented as a new `RecordPlaybackSource.reset_playback_cursor()` primitive, invoked from `TrainingMode.set_dummy_mode` guarded on the PASSTHROUGH/PLAYBACK -> RECORDING transition (not `_cycle_dummy_mode`, so a direct `set_dummy_mode` call also gets fresh-record) — provisional
+- JC-067 · 2026-07-11 · TKT-P1.1R3-02 · AD-042's grounded-entry snap placed INSIDE the shared `_enter_state` helper (widened to take `next: SimState` for `stage.ground_y`) rather than as a separate post-transition pass in `phase2_state_machine` — provisional
+
 ---
 
 ## Provisional (awaiting ratification)
@@ -167,4 +169,37 @@ placement matches AD-041's own words ("orchestrated in the shell — `_cycle_dum
 `set_dummy_mode`"). **Scope/reversibility.** `reset_playback_cursor()` is a small, additive
 `RecordPlaybackSource` method (no existing behavior changed); the guard is a few lines in
 `set_dummy_mode`. Log for ratification.
+
+### JC-067 · 2026-07-11 · TKT-P1.1R3-02 · AD-042 grounded-entry snap hook point — provisional
+**Decision.** Placed the ground-contact landing snap **inside the shared `_enter_state` helper**
+in `step_phases.gd` (widened its signature from `_enter_state(p, character, state_id)` to
+`_enter_state(next: SimState, p, character, state_id)` so it can read `next.stage.ground_y`),
+rather than as a separate check run after each of `phase2_state_machine`'s six `_enter_state`
+call sites. The snap reads the **target** state (`character.get_state(state_id)`) and, if its
+category is `CATEGORY_GROUNDED` and `p.pos_y != next.stage.ground_y`, sets `p.pos_y =
+next.stage.ground_y` — placed after `_enter_state`'s existing bookkeeping resets (hit-id/contact/
+cancel-tag clears), so it runs unconditionally on literally every state transition in the sim
+(idle, walk, crouch, normals, specials, throws, reactions — not just jump-related ones).
+**Alternatives considered.** (a) A dedicated helper (`_snap_to_ground_on_grounded_entry`) called
+individually at each of the 10 call sites — rejected: `_enter_state` is already the single,
+unconditional "a state transition just happened" hook every call site already funnels through
+(AD-001's "one state-machine pattern" spirit extended to this correction); duplicating the check
+at 10 call sites is strictly more code with more chances to miss one (e.g. a future 11th call
+site added without the paired snap call). (b) A check scoped only to the airborne-related
+call sites (the once-through-ended and cancel branches phase2 uses for jumps/air-normals) —
+rejected: AD-042 explicitly wants a GENERIC, category-driven rule ("on entry to any
+GROUNDED-category state"), not a jump-specific patch; scoping it narrower would silently miss
+a future grounded transition from an unexpected source (e.g. a knockdown-recovery state, P2)
+that also needs the invariant. **Why this reading.** `_enter_state` is the one place `state_id`/
+`frame_in_state`/velocity/hit-memory are reset together for a transition — the natural single
+point to also reconcile height, and it is trivially character-agnostic (reads only the target's
+authored `category` + the stage's `ground_y`, per AD-042's own text). Widening the private
+static helper's signature is internal packaging (no `SimState.step`, `MoveState`, or any
+documented contract signature changes) — every call site already had `next: SimState` in local
+scope, so the change is mechanical. **Category-edge note.** No category besides `GROUNDED`
+triggers the snap (an `AIRBORNE`-entry, e.g. a jump's own re-entry into another jump variant,
+correctly does NOT snap — verified by the widened harness coverage: the mid-arc position is
+untouched while airborne). **Scope/reversibility.** Confined to `step_phases.gd`'s private
+`_enter_state` and its 10 call sites (all in the same file); no public signature, format, or
+seam surface changes. Log for ratification.
 

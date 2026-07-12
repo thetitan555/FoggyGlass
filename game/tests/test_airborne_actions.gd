@@ -51,6 +51,13 @@ func _run() -> void:
 	_test_back_jump_reaches_prejump_b_then_jump_b_and_carries_back()
 	_test_neutral_jump_reaches_jump_n_and_lands_flush()
 	_test_mid_jump_button_reaches_matching_air_normal()
+	# TKT-P1.1R3-02 (AD-042, re-gate-4 E2) — widened coverage the isolated R2
+	# per-direction test omits (it releases the jump direction after 3 ticks, so
+	# it never reproduces a HELD/repeated jump's transition-frame-loss drift).
+	_test_held_up_repeated_jumps_land_flush_no_cumulative_drift()
+	_test_held_forward_repeated_jumps_land_flush_no_cumulative_drift()
+	_test_held_back_repeated_jumps_land_flush_no_cumulative_drift()
+	_test_air_normal_interrupted_jump_lands_flush()
 
 
 func _roster() -> Dictionary:
@@ -171,3 +178,110 @@ func _test_mid_jump_button_reaches_matching_air_normal() -> void:
 		_true(TraceHarness.check(rows, 14, "p0.cat", MoveState.CATEGORY_AIRBORNE),
 			"the reached air normal (%s) is category AIRBORNE" % button)
 		MoveRegistry.clear()
+
+
+# ---------------------------------------------------------------------------
+# TKT-P1.1R3-02 (AD-042, re-gate-4 E2) — held/repeated jumps must not drift.
+#
+# Root cause (E2 diagnosis): a HELD jump direction reaches the jump's `duration`
+# frame and transitions straight back into a grounded state (once-through-move-
+# ended -> idle -> SAME-TICK re-derive of the still-held direction -> prejump,
+# AD-038) with no settled idle tick in between -- silently dropping the arc's
+# final fall frame. Each held/back-to-back jump therefore nets -6 (upward, since
+# rising is -Y) instead of 0. The isolated per-direction test (TKT-P1.1R2-02)
+# releases the direction after 3 ticks, so it never reaches this transition and
+# never reproduces the drift.
+#
+# Cycle arithmetic (derived by ACTUALLY REPLAYING headless, not hand-derived —
+# see the judgment-log entry for the exact off-by-one this uncovered). Holding
+# a jump direction continuously, each PREJUMP*/JUMP* cycle is exactly 46
+# ticks: PREJUMP*'s ALWAYS cancel fires on frame 3 (2 ticks after entry) into
+# the JUMP_*'s 45-frame arc; a HELD jump direction makes `JUMP_*` exit one tick
+# BEFORE its own once-through-ended check would fire, because Actionability.
+# is_actionable treats a committed move as actionable once `frame_in_state >=
+# duration` (JC-011/038's documented off-by-one straddle: actionable at `==
+# duration`, "ended" only at `> duration`) — so on the arc's OWN last frame
+# (frame_in_state == duration == 45) the still-held direction's DISCRETE
+# buffered command (PREJUMP*, a non-loop target) already fires via the plain
+# actionable-buffered-command branch, transitioning JUMP_* -> PREJUMP*
+# directly and skipping idle AND that final frame's own motion (phase 2 runs
+# before phase 3, so the frame-45 fall keyframe is authored but never
+# integrated) — the arc's dropped final frame the E2 diagnosis names. So
+# consecutive PREJUMP*-reentry ticks are 1, 47, 93, 139, ... (1 + 46*(n-1));
+# PREJUMP* then occupies TWO ticks (frames 1-2) before its own frame-3 cancel
+# re-enters JUMP_*. Before the AD-042 fix, `p0.py` at the reentry ticks
+# drifted 0, -6, -12, -18 (one FALL_SPEED unit lost per completed jump, never
+# recovered -- the "+6 units upward per jump" the ticket names). After the
+# fix, every GROUNDED-category entry (idle OR prejump) snaps pos_y back to
+# ground_y (0), so these ticks read flush every time -- NO cumulative drift.
+# ---------------------------------------------------------------------------
+
+func _test_held_up_repeated_jumps_land_flush_no_cumulative_drift() -> void:
+	var rows: Array[Dictionary] = TraceHarness.run("8*141", "", 141, _roster(), CharacterA.CHAR_ID)
+	_true(TraceHarness.check(rows, 1, "p0.state", CharacterA.STATE_PREJUMP),
+		"tick 1: holding 8 enters STATE_PREJUMP (first cycle)")
+	_true(TraceHarness.check(rows, 47, "p0.state", CharacterA.STATE_PREJUMP),
+		"tick 47: the FIRST held jump completes and re-enters STATE_PREJUMP the same tick (AD-038)")
+	_true(TraceHarness.check(rows, 47, "p0.py", 0),
+		"tick 47 lands FLUSH after 1 completed held jump (pre-fix: py=-6, E2 drift)")
+	_true(TraceHarness.check(rows, 93, "p0.state", CharacterA.STATE_PREJUMP),
+		"tick 93: the SECOND held jump completes and re-enters STATE_PREJUMP")
+	_true(TraceHarness.check(rows, 93, "p0.py", 0),
+		"tick 93 lands FLUSH after 2 completed held jumps (pre-fix: py=-12, cumulative E2 drift)")
+	_true(TraceHarness.check(rows, 139, "p0.state", CharacterA.STATE_PREJUMP),
+		"tick 139: the THIRD held jump completes and re-enters STATE_PREJUMP")
+	_true(TraceHarness.check(rows, 139, "p0.py", 0),
+		"tick 139 lands FLUSH after 3 completed held jumps (pre-fix: py=-18, cumulative E2 drift) -- NO cumulative drift")
+	MoveRegistry.clear()
+
+
+func _test_held_forward_repeated_jumps_land_flush_no_cumulative_drift() -> void:
+	var rows: Array[Dictionary] = TraceHarness.run("9*141", "", 141, _roster(), CharacterA.CHAR_ID)
+	_true(TraceHarness.check(rows, 1, "p0.state", CharacterA.STATE_PREJUMP_F),
+		"tick 1: holding 9 (forward jump) enters STATE_PREJUMP_F")
+	_true(TraceHarness.check(rows, 47, "p0.state", CharacterA.STATE_PREJUMP_F),
+		"tick 47: the FIRST held forward jump completes and re-enters STATE_PREJUMP_F")
+	_true(TraceHarness.check(rows, 47, "p0.py", 0),
+		"tick 47 (forward jump) lands FLUSH after 1 completed held jump")
+	_true(TraceHarness.check(rows, 93, "p0.py", 0),
+		"tick 93 (forward jump) lands FLUSH after 2 completed held jumps -- no cumulative vertical drift")
+	_true(TraceHarness.check(rows, 139, "p0.py", 0),
+		"tick 139 (forward jump) lands FLUSH after 3 completed held jumps -- no cumulative vertical drift")
+	MoveRegistry.clear()
+
+
+func _test_held_back_repeated_jumps_land_flush_no_cumulative_drift() -> void:
+	var rows: Array[Dictionary] = TraceHarness.run("7*141", "", 141, _roster(), CharacterA.CHAR_ID)
+	_true(TraceHarness.check(rows, 1, "p0.state", CharacterA.STATE_PREJUMP_B),
+		"tick 1: holding 7 (back jump) enters STATE_PREJUMP_B")
+	_true(TraceHarness.check(rows, 47, "p0.state", CharacterA.STATE_PREJUMP_B),
+		"tick 47: the FIRST held back jump completes and re-enters STATE_PREJUMP_B")
+	_true(TraceHarness.check(rows, 47, "p0.py", 0),
+		"tick 47 (back jump) lands FLUSH after 1 completed held jump")
+	_true(TraceHarness.check(rows, 93, "p0.py", 0),
+		"tick 93 (back jump) lands FLUSH after 2 completed held jumps -- no cumulative vertical drift")
+	_true(TraceHarness.check(rows, 139, "p0.py", 0),
+		"tick 139 (back jump) lands FLUSH after 3 completed held jumps -- no cumulative vertical drift")
+	MoveRegistry.clear()
+
+
+# ---------------------------------------------------------------------------
+# TKT-P1.1R3-02 (AD-042) — the D3 side effect: an air-normal-interrupted jump
+# (JUMP_F cut short by a mid-air L, mirroring
+# _test_mid_jump_button_reaches_matching_air_normal's script) now lands FLUSH
+# once the air normal's active window ends and the once-through-move-ended
+# transition returns to idle. Before AD-042 this was the re-gate-3 D3 aerial
+# float (the arc's frozen mid-air height was never reconciled to the floor);
+# the grounded-entry snap resolves it as an intended side effect (AD-042
+# "Rejected (a)" / the ticket's "resolves re-gate-3 D3").
+# ---------------------------------------------------------------------------
+
+func _test_air_normal_interrupted_jump_lands_flush() -> void:
+	var rows: Array[Dictionary] = TraceHarness.run("9*3 5*10 L*1 5*20", "", 26, _roster(), CharacterA.CHAR_ID)
+	_true(TraceHarness.check(rows, 14, "p0.state", CharacterA.STATE_JL),
+		"L mid-jump cancels JUMP_F into STATE_JL (unchanged reachability)")
+	_true(TraceHarness.check(rows, 24, "p0.state", CharacterA.STATE_IDLE),
+		"JL's active window ends and the once-through move returns to STATE_IDLE")
+	_true(TraceHarness.check(rows, 24, "p0.py", 0),
+		"the air-normal-interrupted jump now lands FLUSH at ground_y -- the AD-042 grounded-entry snap resolves the D3 aerial float")
+	MoveRegistry.clear()

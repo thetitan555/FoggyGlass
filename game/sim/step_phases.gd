@@ -162,7 +162,7 @@ static func phase2_state_machine(next: SimState) -> void:
 				p.combo_hits = 0
 				p.combo_damage = 0
 				p.combo_scaling = FP.ONE
-			_enter_state(p, character, character.idle_state_id)
+			_enter_state(next, p, character, character.idle_state_id)
 			move = character.get_state(p.state_id)
 			entered_this_tick = true
 
@@ -204,7 +204,7 @@ static func phase2_state_machine(next: SimState) -> void:
 		move = character.get_state(p.state_id)
 		if move != null and not move.loop and not _is_stun_category(move) \
 				and p.frame_in_state > move.duration and p.stun == 0:
-			_enter_state(p, character, character.idle_state_id)
+			_enter_state(next, p, character, character.idle_state_id)
 			move = character.get_state(p.state_id)
 			entered_this_tick = true
 
@@ -223,17 +223,17 @@ static func phase2_state_machine(next: SimState) -> void:
 				var discrete_target: int = _buffered_discrete_command(character, p)
 				if discrete_target != -1:
 					if discrete_target != p.state_id:
-						_enter_state(p, character, discrete_target)
+						_enter_state(next, p, character, discrete_target)
 					continue
 				var stance_target: int = _current_tick_loop_command(character, p)
 				if stance_target == -1:
 					stance_target = character.idle_state_id
 				if stance_target != p.state_id:
-					_enter_state(p, character, stance_target)
+					_enter_state(next, p, character, stance_target)
 				continue
 			var target_state: int = _buffered_command(character, p)
 			if target_state != -1 and target_state != p.state_id:
-				_enter_state(p, character, target_state)
+				_enter_state(next, p, character, target_state)
 			continue
 
 		# --- Cancels in a committed move (AD-015/017) ------------------------
@@ -243,7 +243,7 @@ static func phase2_state_machine(next: SimState) -> void:
 		# guard at the top) — they buffer and fire here on the first unfrozen tick.
 		var cancel_target: int = CancelEval.find_cancel(p, move, character)
 		if cancel_target != -1:
-			_enter_state(p, character, cancel_target)
+			_enter_state(next, p, character, cancel_target)
 
 
 ## The target state of the first BUFFERED button_map command, or -1 if none. Reads each
@@ -791,7 +791,7 @@ static func _resolve_one_hit(next: SimState, attacker: int, defender: int, hb: H
 
 	# --- Reaction state + stun ----------------------------------------------
 	if character_def != null and reaction_state != 0:
-		_enter_state(def, character_def, reaction_state)
+		_enter_state(next, def, character_def, reaction_state)
 	def.stun = stun_frames
 	def.stun_kind = stun_kind
 
@@ -937,7 +937,7 @@ static func _resolve_throw(next: SimState, attacker: int, defender: int, hb: Hit
 	# Throw bypasses block: the defender enters the throw reaction (hit_reaction) and
 	# takes throw hitstun regardless of holding back.
 	if character_def != null and hb.hit_reaction != 0:
-		_enter_state(def, character_def, hb.hit_reaction)
+		_enter_state(next, def, character_def, hb.hit_reaction)
 	def.stun = hb.hitstun
 	def.stun_kind = PlayerView.STUN_HIT
 
@@ -1000,10 +1000,10 @@ static func _try_throw_tech(next: SimState, defender: int, character: Character)
 	def.stun = 0
 	def.stun_kind = PlayerView.STUN_NONE
 	if character != null:
-		_enter_state(def, character, character.idle_state_id)
+		_enter_state(next, def, character, character.idle_state_id)
 	var atk_char: Character = MoveRegistry.character(atk.character_id)
 	if atk_char != null:
-		_enter_state(atk, atk_char, atk_char.idle_state_id)
+		_enter_state(next, atk, atk_char, atk_char.idle_state_id)
 	# Push apart to neutral (symmetric); use the throw's authored tech pushback if any.
 	var push: int = FP.from_int(20)
 	var def_left: bool = def.pos_x <= atk.pos_x
@@ -1160,7 +1160,22 @@ static func _advance_and_despawn_projectiles(next: SimState, existing_count: int
 ## for a state entered this tick). Zeroes horizontal velocity on entry (a new move sets
 ## its own keyframe motion in phase 3). Clears active_hit_ids: a NEW move is a new
 ## "contact," so its hitboxes may connect again (single-hit is per-move — F-005).
-static func _enter_state(p: PlayerState, character: Character, state_id: int) -> void:
+##
+## GROUNDED-ENTRY LANDING SNAP (TKT-P1.1R3-02, AD-042, re-gate-4 E2). On entry to any
+## CATEGORY_GROUNDED state, reconcile pos_y to the stage floor if it isn't already
+## there. This is the landing-semantics half of AD-036, pulled into P1.1: a held/
+## repeated jump transitions straight from the jump's `duration` frame back into a
+## grounded state (idle re-derive -> prejump, AD-038) with no settled idle tick,
+## silently dropping the arc's final fall frame (a genuine +6-unit-per-jump upward
+## drift, confirmed via the trace harness). The snap corrects that ENGINE transition-
+## frame loss, not the arc data (already net-zero) — it is paired with the net-zero
+## authoring invariant + TKT-P1.1R2-02's per-direction assertions, which still catch a
+## mis-authored arc, so this does not mask one (AD-042 "not a bare clamp"). As an
+## intended side effect, an air normal ending mid-arc also snaps to floor on its own
+## once-through-ended -> idle transition, resolving the re-gate-3 D3 aerial float.
+## Character-agnostic (reads the TARGET state's category + the stage's ground_y; no
+## character-A branch). Deterministic — a pure function of state.
+static func _enter_state(next: SimState, p: PlayerState, character: Character, state_id: int) -> void:
 	p.state_id = state_id
 	p.frame_in_state = 1
 	p.vel_x = 0
@@ -1171,6 +1186,10 @@ static func _enter_state(p: PlayerState, character: Character, state_id: int) ->
 	p.active_hit_frames = PackedInt32Array()
 	p.move_contact = PlayerState.CONTACT_NONE
 	p.cancel_tags = PackedInt32Array()
+
+	var target: MoveState = character.get_state(state_id) if character != null else null
+	if target != null and target.category == MoveState.CATEGORY_GROUNDED and p.pos_y != next.stage.ground_y:
+		p.pos_y = next.stage.ground_y
 
 
 ## True iff the player has already connected `id_group` during its current move.
