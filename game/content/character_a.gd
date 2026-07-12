@@ -1229,7 +1229,9 @@ static func _build_dp(state_id: int, startup: int, invuln_end: int, active: int,
 	var kf_active := Keyframe.new()
 	kf_active.frame_start = first_active
 	kf_active.frame_end = last_active
-	kf_active.hurtboxes = [_hurt_air()]   # DP leaves the ground; airborne-shaped hurtbox during active
+	kf_active.hurtboxes = [_hurt_air()]   # grounded move (CATEGORY_GROUNDED, no rise); reuses the
+	# narrower _hurt_air() profile during active only because the DP's extended-limb pose presents a
+	# smaller silhouette here, not because the character leaves the ground (character-a.md Q1, 2026-07-11)
 	kf_active.hitboxes = [hb1]
 	# Invuln coverage extending into the active window (e.g. 623H: through frame 8).
 	if invuln_end > startup:
