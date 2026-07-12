@@ -87,7 +87,13 @@ func _ready() -> void:
 		_install_roster()
 
 	_source_p1 = RecordPlaybackSource.new(Callable(self, "_sample_device_p1"))
-	_source_p2 = RecordPlaybackSource.new()   # dummy: PASSTHROUGH-empty == NEUTRAL until scripted
+	# TKT-P1.1R2-01 (AD-040): the dummy carries its OWN injected live sampler
+	# (a distinct key set from P1's, see _sample_device_dummy below) so
+	# RECORDING actually captures a human's input instead of silently emitting
+	# NEUTRAL (the D1 defect — the dummy source previously had no live sampler
+	# at all, so PASSTHROUGH/RECORDING both answered NEUTRAL and cycling `M`
+	# was inert-in-effect). Starts in PASSTHROUGH, same default as before.
+	_source_p2 = RecordPlaybackSource.new(Callable(self, "_sample_device_dummy"))
 
 	var state := SimState.new_initial()
 	_init_players_as_installed_character(state)
@@ -198,6 +204,36 @@ func _sample_device_p1() -> int:
 	if Input.is_action_pressed("tm_button_1"):
 		frame |= InputFrame.BUTTON_1
 	if Input.is_action_pressed("tm_button_2"):
+		frame |= InputFrame.BUTTON_2
+	return InputFrame.mask(frame)
+
+
+## TKT-P1.1R2-01 (AD-040 "dummy-control operability model"). The dummy's own
+## live-device sampler, mirroring _sample_device_p1's shape exactly (same
+## InputFrame construction, same three-button convention) but on a DISTINCT
+## key set (tm_dummy_*, project.godot) — a deliberate Developer latitude call
+## (AD-040 offered "reuse P1's sampler" or "a dedicated dummy sampler";
+## recorded in docs/judgment-log.md): a dedicated key set lets a human record
+## a dummy sequence (e.g. hold down-back to crouch-block) WITHOUT also driving
+## P1 on the same keys, and still resume driving P1 normally afterward — the
+## AD-040 workflow ("the dummy loops it while the human resumes driving P1")
+## reads cleanest when the two are never on the same physical keys. Still
+## exactly the one InputSource shape (Tenet 2): no move/button semantics here.
+func _sample_device_dummy() -> int:
+	var frame: int = InputFrame.NEUTRAL
+	if Input.is_action_pressed("tm_dummy_up"):
+		frame |= InputFrame.UP
+	if Input.is_action_pressed("tm_dummy_down"):
+		frame |= InputFrame.DOWN
+	if Input.is_action_pressed("tm_dummy_left"):
+		frame |= InputFrame.LEFT
+	if Input.is_action_pressed("tm_dummy_right"):
+		frame |= InputFrame.RIGHT
+	if Input.is_action_pressed("tm_dummy_button_0"):
+		frame |= InputFrame.BUTTON_0
+	if Input.is_action_pressed("tm_dummy_button_1"):
+		frame |= InputFrame.BUTTON_1
+	if Input.is_action_pressed("tm_dummy_button_2"):
 		frame |= InputFrame.BUTTON_2
 	return InputFrame.mask(frame)
 

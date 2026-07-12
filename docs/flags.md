@@ -117,23 +117,3 @@ code; batched ticket set produced (`tickets/p1.1-reconciliation.md` → "Re-gate
 - **Q2** = **intended, no action** (`623H` authored 2-hit; build matches).
 This batch is dispatched **whole** (one session, one checkpoint) per the user's batched-dispatch
 steer. The reconciliation flag stays [open] until the 4th human re-gate.
-
-### [open] 2026-07-11 · raised-by: Architect (re-gate-3 diagnosis) · owner: Strategist · re: character A's DP does not rise — grounded vs rising is a character-identity + roadmap call (Q1)
-Problem: re-gate 3 (Q1) — A's shoryuken does **not rise** in the air; a shoto DP traditionally
-rises. **Diagnosis:** the DP is authored **grounded** (no `motion_vel_y` in `content/character_a.gd`),
-but `spec/character-a.md`'s **prose** gestures at airborne-ness — the recovery column is
-"`28 + 12(land)`", the text says "full **landing** recovery," and the active-frame comment says "DP
-leaves the ground." No rise trajectory is authored and no AD covers DP verticality, so the spec is
-**ambiguous**, not clearly "rise" nor clearly "grounded." Critically, a **rising** DP would need the
-exact airborne→ground **landing mechanism AD-036 defers to P2** — it would rise-and-**float**,
-reproducing D3. So the architecturally coherent reading is: the DP is grounded **for the slice**
-because the landing mechanism doesn't exist yet, and "+land" models landing-recovery **duration** as
-data (parallel to the jump arc / air normals). This is a **character-identity call (brief-owned) with
-a roadmap consequence**, so I do **not** default it. **Recommendation:** rule the grounded DP
-**intended for P1.1** (→ intended, no action; I then reconcile the spec prose so "+land"/"leaves the
-ground" reads as authored recovery, not an un-built rise). If A's signature reversal **should** rise,
-it **binds to AD-036** and defers to **P2** alongside D3 — **not** a P1.1 data fix (adding `vel_y`
-now yields a floating DP). Either way, not ticketed this batch. NON-BLOCKING to the D1 fix; your call
-on identity + placement.
----
-Resolution (owner fills): …

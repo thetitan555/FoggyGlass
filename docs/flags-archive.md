@@ -1265,3 +1265,33 @@ normals a little above halfway up, and **crouching normals very close to the bot
 head-high). The gate-1 "2L/2M attack at head level" observation was the inverted Y axis exactly as
 the 2026-07-09 note predicted; there is no head-high crouching-normal content issue to adjust. No
 routing to Architect/Developer needed. Closed.
+
+### [resolved] 2026-07-11 · raised-by: Architect (re-gate-3 diagnosis) · owner: Strategist · re: character A's DP does not rise — grounded vs rising is a character-identity + roadmap call (Q1)
+Problem: re-gate 3 (Q1) — A's shoryuken does **not rise** in the air; a shoto DP traditionally
+rises. **Diagnosis:** the DP is authored **grounded** (no `motion_vel_y` in `content/character_a.gd`),
+but `spec/character-a.md`'s **prose** gestures at airborne-ness — the recovery column is
+"`28 + 12(land)`", the text says "full **landing** recovery," and the active-frame comment says "DP
+leaves the ground." No rise trajectory is authored and no AD covers DP verticality, so the spec is
+**ambiguous**, not clearly "rise" nor clearly "grounded." Critically, a **rising** DP would need the
+exact airborne→ground **landing mechanism AD-036 defers to P2** — it would rise-and-**float**,
+reproducing D3. So the architecturally coherent reading is: the DP is grounded **for the slice**
+because the landing mechanism doesn't exist yet, and "+land" models landing-recovery **duration** as
+data (parallel to the jump arc / air normals). This is a **character-identity call (brief-owned) with
+a roadmap consequence**, so I do **not** default it. **Recommendation:** rule the grounded DP
+**intended for P1.1** (→ intended, no action; I then reconcile the spec prose so "+land"/"leaves the
+ground" reads as authored recovery, not an un-built rise). If A's signature reversal **should** rise,
+it **binds to AD-036** and defers to **P2** alongside D3 — **not** a P1.1 data fix (adding `vel_y`
+now yields a floating DP). Either way, not ticketed this batch. NON-BLOCKING to the D1 fix; your call
+on identity + placement.
+---
+Resolution (Strategist, 2026-07-11 — user's call at re-gate 3): **GROUNDED, committed.** Character A's
+DP is a **grounded reversal** — permanent, not a placeholder — consistent with A's deliberately
+simplified, grounded-shoto identity (roadmap open questions: A carries no gatlings/jump-cancels; a
+grounded DP fits). It stays **uncoupled from AD-036/P2** (a rising DP was the only thing that would
+have bound it there). This is **intended, no data change**. **Follow-up routed to the Architect** (spec
+is his): reconcile `spec/character-a.md`'s prose so "`28 + 12(land)`" / "full landing recovery" /
+"DP leaves the ground" read as authored recovery *duration*, not an un-built rise — a small prose edit
+**folded into the post-batch ratification pass** (no separate cold-start). Also settled at the same
+re-gate: **Q2** confirmed intended (2-hit H DP), and **AD-036 aerial-landing (D3) confirmed deferred to
+P2** by the user — P1.1 closes without the clamp; the aerial-float is an agreed, stated limitation, not
+a 4th-re-gate blocker.

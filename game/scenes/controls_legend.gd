@@ -32,7 +32,21 @@ const _ACTIONS: Array = [
 	["tm_button_0", "Attack - Button 0"],
 	["tm_button_1", "Attack - Button 1"],
 	["tm_button_2", "Attack - Button 2"],
+	["tm_dummy_up", "Dummy Up"],
+	["tm_dummy_down", "Dummy Down"],
+	["tm_dummy_left", "Dummy Left"],
+	["tm_dummy_right", "Dummy Right"],
+	["tm_dummy_button_0", "Dummy Attack - Button 0"],
+	["tm_dummy_button_1", "Dummy Attack - Button 1"],
+	["tm_dummy_button_2", "Dummy Attack - Button 2"],
 ]
+
+## TKT-P1.1R2-01 (AD-040 "Human control surface" → dummy operability). A
+## static, one-line hint on the record->playback WORKFLOW itself (not just
+## the mode-cycle key's name) — the D1 gap was a human not knowing *how* to
+## make the dummy do anything, not that the M key was unbound. Plain prose,
+## no InputMap lookup (a workflow description, not a key binding).
+const _DUMMY_WORKFLOW_HINT: String = "Record dummy: cycle to Recording, input a sequence with the Dummy keys, cycle to Playback to loop it"
 
 @onready var _label: Label = $Label
 
@@ -50,6 +64,7 @@ static func build_legend_text() -> String:
 		var action: String = entry[0]
 		var desc: String = entry[1]
 		lines.append("%s: %s" % [desc, key_names_for(action)])
+	lines.append(_DUMMY_WORKFLOW_HINT)
 	return "\n".join(lines)
 
 
