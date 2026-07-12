@@ -1467,8 +1467,17 @@ already expresses "hold a stance." (b) A second live human takeover of P2 via a 
 different model than the specced record/playback dummy, and heavier than the operability need (verify
 crouch-block) warrants. (c) Re-binding or "fixing" `M` — `M` was never broken; the missing piece was
 the dummy source's live sampler.
+**Dedicated dummy key set (ratified JC-064).** The choice between reusing P1's sampler and a
+dedicated one was left to the Developer here; it was built as a **dedicated** `_sample_device_dummy`
+on its own input-map actions (`tm_dummy_*`, placeholder WASD + U/I/O), *not* P1's key set. This is
+the correct reading and is folded in: sharing keys would drive P1 *and* the dummy on the same press
+(P1's passthrough source samples every tick regardless of dummy mode), so recording a dummy stance
+would simultaneously walk P1 — an unrequested side effect with no clean suppression. A dedicated key
+set makes that moot (P1's passthrough untouched; the dummy's `RECORDING` sees only its own keys) and
+even lets a session hold a P1 direction while recording a dummy stance. Keys stay placeholder; still
+exactly one `InputSource` per player (Tenet 2).
 **Status.** Settled. Reflected in `training-mode.md` ("Human control surface" + criterion 13);
-built by TKT-P1.1R2-01.
+built by TKT-P1.1R2-01 (dedicated dummy sampler, JC-064).
 
 ### AD-039 · Airborne-action model: per-direction prejump lead-ins + air-normal jump-state cancels — settled (2026-07-09, character-A movement reconciliation)
 **Decision.** Two data-only wirings (no engine or format change) complete character A's air game;

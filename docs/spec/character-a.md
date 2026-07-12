@@ -166,14 +166,22 @@ and initial position/velocity come from the cast and the `spawn` keyframe.
 The 30-frame recovery is the risk — a jumped fireball up close is a full punish.
 
 ### Shoryuken (DP) — `623L/M/H` (the juiced reversal/anti-air)
-| Strength | Startup | Invuln | Active | Recovery (+land) | Dmg | On block | On hit |
+| Strength | Startup | Invuln | Active | Recovery (base + tail) | Dmg | On block | On hit |
 |---|---|---|---|---|---|---|---|
 | `623L` | 3 | strike 1–5 | 8 | 28 + 12 | 100 | ≈ −34 | launch → hard KD |
 | `623M` | 4 | strike 1–6 | 8 | 30 + 12 | 130 | ≈ −36 | launch → hard KD |
 | `623H` | 5 | **strike+throw 1–8** | 10 (2 hits) | 33 + 14 | 160 | ≈ −40 | 2-hit launch → hard KD |
 
+**A's DP is a GROUNDED, committed reversal (ruled at re-gate 3, 2026-07-11) — it does not leave the
+ground.** The "Recovery (base + tail)" column is a two-part **recovery *duration*** (a base recovery
+plus a longer committed tail), authored as plain frames — **not** an airborne arc or a "landing" from
+a rise. The DP has no vertical trajectory; it stays grounded and simply commits for its full recovery.
+This is intentional simplification (the brief's grounded shoto), and it is **uncoupled from the
+AD-036 airborne-landing mechanism (P2)** — no rise, so no landing to defer. The long recovery *tail*
+is the risk, not a landing animation.
+
 The dedicated reversal is `623H` (longest invuln, most damage, most recovery).
-Massively minus on block with full landing recovery: blocking a DP = guaranteed
+Massively minus on block with its full recovery duration: blocking a DP = guaranteed
 full punish — the high-commitment "get off me." (Contrast `2H`: safe, low reward.)
 
 ### Throw — `L+H`

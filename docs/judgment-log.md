@@ -99,7 +99,7 @@
 - JC-061 · 2026-07-10 · TKT-P1.1R-04 · `test_character_a.gd::_test_no_gatlings_no_jump_cancels` updated to exempt `JUMP_N/F/B` (source) and `PREJUMP_F/B` (source) from the pre-existing gatling/jump-cancel guards, since AD-039 makes a jump state's ALWAYS-cancel into `j.L/M/H` (and each prejump's into its jump) sanctioned content, not a violation the guard was meant to catch — ratified (test-guard latitude; JC-058 class)
 - JC-062 · 2026-07-10 · TKT-P1.1R-05 · The two-tier loop-state branch implemented as two SEPARATE full `button_map` scans (`_buffered_discrete_command` / `_current_tick_loop_command`, each first-match-wins in authored order) rather than one combined scan branching per-entry on `target.loop`; a new `InputBuffer.entry_satisfied_now` (age-0-only recognizer, motion entries always false) backs tier 2 instead of reusing `entry_satisfied` with a window param of 1 — ratified (faithful realization of corrected AD-038; current-tick/motion clarification folded into AD-038)
 - JC-063 · 2026-07-10 · TKT-P1.1R-05 · AD-022 regression guard test uses direct `SimState.step` + `PlayerState` state-injection into `STATE_HITSTUN` (mirrors JC-057/JC-036), not `TraceHarness`; walk/crouch release-timing goldens re-baselined to the corrected release-tick values in `test_held_input_stances.gd` (ticket-named surgical scope — no other test file's assertions changed) — ratified (test-instrument latitude; surgical golden scope confirmed)
-- JC-064 · 2026-07-11 · TKT-P1.1R2-01 · Dummy given a DEDICATED live sampler (`_sample_device_dummy`, new `tm_dummy_up/down/left/right/button_0/1/2` actions on WASD+U/I/O) rather than reusing `_sample_device_p1`'s key set; P1's passthrough source is untouched and left mirroring the SAME device the whole time (no "hold P1 neutral" mechanism needed) — provisional
+- JC-064 · 2026-07-11 · TKT-P1.1R2-01 · Dummy given a DEDICATED live sampler (`_sample_device_dummy`, new `tm_dummy_up/down/left/right/button_0/1/2` actions on WASD+U/I/O) rather than reusing `_sample_device_p1`'s key set; P1's passthrough source is untouched and left mirroring the SAME device the whole time (no "hold P1 neutral" mechanism needed) — ratified (operability latitude under AD-040; folded into AD-040)
 
 ---
 
@@ -138,4 +138,10 @@ direction if a session ever wants that (e.g. sparring setup) — a capability th
 alternative could never offer. Cheaply reversible (an alternate Callable is a one-line swap) and
 invisible across the seam (still exactly one `InputSource` per player, Tenet 2 untouched).
 
-**Status: provisional.**
+**Status: ratified** (Architect, 2026-07-11). Operability latitude squarely under AD-040, which
+left the key-set choice explicitly open. The dedicated key set is the *correct* reading: it resolves
+the open question TKT-P1.1R2-01 named ("whether P1 also mirrors the device during dummy RECORDING,
+and if not, how P1 is held neutral") by making it moot — P1's passthrough is untouched, the dummy's
+RECORDING sees only its own keys, and the shared-key side effect (recording a dummy stance also
+walks P1) never arises. Tenet 2 intact (one `InputSource` per player, a Callable swap). Folded into
+AD-040 (dummy uses a dedicated sampler / key set).
