@@ -1287,9 +1287,9 @@ const THROW_TECH_WINDOW: int = 7
 const THROW_WHIFF_RECOVERY: int = 20
 const THROW_DAMAGE: int = 120
 const THROW_HITSTUN: int = 30   # hard-knockdown duration -- StepPhases._resolve_throw sets
-                                  # def.stun = hb.hitstun directly, so THIS is what actually
-                                  # keeps the thrown defender down; must match (or exceed)
-                                  # STATE_THROWN's authored duration below, not a placeholder.
+								  # def.stun = hb.hitstun directly, so THIS is what actually
+								  # keeps the thrown defender down; must match (or exceed)
+								  # STATE_THROWN's authored duration below, not a placeholder.
 
 
 static func _build_throw() -> Array[MoveState]:
