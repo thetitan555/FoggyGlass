@@ -51,6 +51,8 @@ func _run() -> void:
 	await _test_reset_resyncs_dummy_through_shell()
 	await _test_players_start_as_installed_character_with_resolved_boxes()
 	await _test_dummy_recording_captures_live_input_and_playback_loops_it()
+	await _test_fresh_record_on_recording_entry_replaces_not_concatenates()
+	await _test_fresh_record_resets_the_playback_cursor()
 
 
 ## Static seam check (criterion 10: "verifiable by inspection of the
@@ -256,6 +258,82 @@ func _test_dummy_recording_captures_live_input_and_playback_loops_it() -> void:
 	_eq(played, [InputFrame.NEUTRAL, InputFrame.LEFT, InputFrame.NEUTRAL,
 			InputFrame.NEUTRAL, InputFrame.LEFT, InputFrame.NEUTRAL],
 		"PLAYBACK loops the exact RECORDING-captured stream through the shell-wired dummy")
+	tm.get_parent().queue_free()
+
+
+## TKT-P1.1R3-01 (AD-041 "fresh-record on RECORDING entry", re-gate-4 E1). The
+## secondary latent bug the mode indicator alone would not fix: before this
+## ticket, RECORDING appended to whatever buffer already existed and nothing
+## rewound the playback cursor, so a SECOND record pass concatenated onto the
+## first (a re-take never actually replaced anything — "inconsistent," per the
+## re-gate-4 report). Drives two full record passes through the shell's own
+## set_dummy_mode (never RecordPlaybackSource directly) and confirms the
+## SECOND buffer REPLACES the first rather than growing it.
+func _test_fresh_record_on_recording_entry_replaces_not_concatenates() -> void:
+	var tm := await _make_shell()
+
+	# First record pass: 3 ticks, all LEFT.
+	tm.set_dummy_mode(1, RecordPlaybackSource.Mode.RECORDING)
+	Input.action_press("tm_dummy_left")
+	for _k in range(3):
+		tm.step_once()
+	Input.action_release("tm_dummy_left")
+	var first_pass: PackedInt32Array = tm.get_dummy_recorded_buffer(1)
+	_eq(first_pass.size(), 3, "first record pass captured exactly 3 ticks")
+	for v in first_pass:
+		_eq(v, InputFrame.LEFT, "first pass recorded LEFT on every tick")
+
+	# Cycle out (PLAYBACK), then back INTO RECORDING for a SECOND, SHORTER pass
+	# (2 ticks, all RIGHT) — the transition this ticket fixes.
+	tm.set_dummy_mode(1, RecordPlaybackSource.Mode.PLAYBACK)
+	tm.set_dummy_mode(1, RecordPlaybackSource.Mode.RECORDING)
+	Input.action_press("tm_dummy_right")
+	for _k in range(2):
+		tm.step_once()
+	Input.action_release("tm_dummy_right")
+
+	var second_pass: PackedInt32Array = tm.get_dummy_recorded_buffer(1)
+	_eq(second_pass.size(), 2,
+		"the SECOND record pass REPLACES the first (2 ticks, not 3+2=5 concatenated — the AD-041 fix)")
+	for v in second_pass:
+		_eq(v, InputFrame.RIGHT, "the second pass's buffer holds ONLY its own (RIGHT) frames, no leftover LEFT")
+
+	tm.get_parent().queue_free()
+
+
+## TKT-P1.1R3-01 (AD-041 "fresh-record" — the cursor half). Confirms entering
+## RECORDING also rewinds the PLAYBACK cursor: after a first recording is
+## played back partway (advancing the cursor), a SECOND record pass followed
+## by PLAYBACK must start the new script from its own beginning (index 0), not
+## resume from the stale mid-buffer cursor position of the first recording.
+func _test_fresh_record_resets_the_playback_cursor() -> void:
+	var tm := await _make_shell()
+
+	# First recording: 3 distinct frames (so a stale cursor is unmistakable).
+	tm.set_dummy_recorded_buffer(1, PackedInt32Array([InputFrame.LEFT, InputFrame.RIGHT, InputFrame.UP]))
+	tm.set_dummy_mode(1, RecordPlaybackSource.Mode.PLAYBACK)
+	# Advance the cursor partway through the first script (2 of 3 ticks) — if
+	# unreset, the SHORTER script recorded below would leave a STALE cursor
+	# pointing past its own (smaller) buffer.
+	tm.step_once()
+	tm.step_once()
+
+	# Re-enter RECORDING (fresh-record fires: buffer cleared + cursor reset)
+	# and record a new, single-frame (DOWN) script — deliberately SHORTER than
+	# the stale cursor position (2), so an unreset cursor would read the wrong
+	# index (or index out of range against the 1-element buffer).
+	tm.set_dummy_mode(1, RecordPlaybackSource.Mode.RECORDING)
+	Input.action_press("tm_dummy_down")
+	tm.step_once()
+	Input.action_release("tm_dummy_down")
+
+	tm.set_dummy_mode(1, RecordPlaybackSource.Mode.PLAYBACK)
+	tm.step_once()
+	_eq(tm.inspection_view().player(1).input_current, InputFrame.DOWN,
+		"PLAYBACK of the fresh recording starts from index 0 (DOWN) -- the cursor was reset, not left stale mid-(old-)buffer")
+	tm.step_once()
+	_eq(tm.inspection_view().player(1).input_current, InputFrame.DOWN,
+		"the single-frame script loops correctly from a properly-reset cursor")
 	tm.get_parent().queue_free()
 
 

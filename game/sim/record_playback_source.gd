@@ -192,6 +192,19 @@ func set_recorded_buffer(buffer: PackedInt32Array) -> void:
 		_buffer[i] = validate(_buffer[i])
 
 
+## Reset the PLAYBACK cursor to the start of the buffer (index 0), without
+## touching the buffer itself or the produced/answer history (TKT-P1.1R3-01,
+## AD-041 "fresh-record"). Used by the training-mode shell on RECORDING entry,
+## paired with `set_recorded_buffer(PackedInt32Array())` there, so a re-take
+## REPLACES the prior recording (fresh buffer, cursor at 0) instead of
+## concatenating onto it. A minimal, dedicated primitive rather than reusing
+## `set_playback_position` (which also restores `_produced_count`/`_answers` —
+## fields this shell-level operation must NOT disturb, since the source keeps
+## producing/answering frames every tick regardless of mode).
+func reset_playback_cursor() -> void:
+	_playback_cursor = 0
+
+
 # ---------------------------------------------------------------------------
 # Restorable playback position (AD-020; training-mode.md "Reset restores sim AND
 # playback position"). The reset harness (TKT-P1-03) snapshots/restores this

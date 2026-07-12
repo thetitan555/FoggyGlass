@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://c81rt5osa1631"]
+[gd_scene load_steps=9 format=3 uid="uid://c81rt5osa1631"]
 
 [ext_resource type="Script" path="res://scenes/training_mode.gd" id="1_shell"]
 [ext_resource type="Script" path="res://sim/tick_host.gd" id="2_tickhost"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scenes/overlays/live_state_panel.gd" id="5_livestate"]
 [ext_resource type="Script" path="res://scenes/overlays/input_history_panel.gd" id="6_inputhistory"]
 [ext_resource type="Script" path="res://scenes/controls_legend.gd" id="7_legend"]
+[ext_resource type="Script" path="res://scenes/dummy_mode_indicator.gd" id="8_dummymode"]
 
 [node name="TrainingMode" type="Node2D"]
 script = ExtResource("1_shell")
@@ -72,3 +73,17 @@ script = ExtResource("7_legend")
 layout_mode = 0
 offset_right = 386.0
 offset_bottom = 244.0
+
+[node name="DummyModeIndicator" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 750.0
+offset_top = 270.0
+offset_right = 1136.0
+offset_bottom = 300.0
+script = ExtResource("8_dummymode")
+
+[node name="Label" type="Label" parent="DummyModeIndicator"]
+layout_mode = 0
+offset_right = 386.0
+offset_bottom = 24.0

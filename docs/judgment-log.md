@@ -100,7 +100,8 @@
 - JC-062 · 2026-07-10 · TKT-P1.1R-05 · The two-tier loop-state branch implemented as two SEPARATE full `button_map` scans (`_buffered_discrete_command` / `_current_tick_loop_command`, each first-match-wins in authored order) rather than one combined scan branching per-entry on `target.loop`; a new `InputBuffer.entry_satisfied_now` (age-0-only recognizer, motion entries always false) backs tier 2 instead of reusing `entry_satisfied` with a window param of 1 — ratified (faithful realization of corrected AD-038; current-tick/motion clarification folded into AD-038)
 - JC-063 · 2026-07-10 · TKT-P1.1R-05 · AD-022 regression guard test uses direct `SimState.step` + `PlayerState` state-injection into `STATE_HITSTUN` (mirrors JC-057/JC-036), not `TraceHarness`; walk/crouch release-timing goldens re-baselined to the corrected release-tick values in `test_held_input_stances.gd` (ticket-named surgical scope — no other test file's assertions changed) — ratified (test-instrument latitude; surgical golden scope confirmed)
 - JC-064 · 2026-07-11 · TKT-P1.1R2-01 · Dummy given a DEDICATED live sampler (`_sample_device_dummy`, new `tm_dummy_up/down/left/right/button_0/1/2` actions on WASD+U/I/O) rather than reusing `_sample_device_p1`'s key set; P1's passthrough source is untouched and left mirroring the SAME device the whole time (no "hold P1 neutral" mechanism needed) — ratified (operability latitude under AD-040; folded into AD-040)
-
+- JC-065 · 2026-07-11 · TKT-P1.1R3-01 · Dummy-mode indicator built as `scenes/dummy_mode_indicator.gd` (sibling to `ControlsLegend`, outside `scenes/overlays/`), one Label + a static `build_indicator_text`, refreshed every `_process` frame rather than on `TrainingMode.ticked` — provisional
+- JC-066 · 2026-07-11 · TKT-P1.1R3-01 · Fresh-record implemented as a new `RecordPlaybackSource.reset_playback_cursor()` primitive, invoked from `TrainingMode.set_dummy_mode` guarded on the PASSTHROUGH/PLAYBACK -> RECORDING transition (not `_cycle_dummy_mode`, so a direct `set_dummy_mode` call also gets fresh-record) — provisional
 ---
 
 ## Provisional (awaiting ratification)
@@ -109,4 +110,61 @@
 > overturns them; then the status flips and the Strategist sweeps the body to the
 > archive. New entries append to this section.
 
-*(none — all recorded calls are ratified/closed; their bodies are in `judgment-log-archive.md`.)*
+### JC-065 · 2026-07-11 · TKT-P1.1R3-01 · Dummy-mode indicator placement + refresh mechanism — provisional
+**Decision.** Built the AD-041 mode indicator as a new file, `scenes/dummy_mode_indicator.gd`
+(`class_name DummyModeIndicator`), a plain `Control` with one `Label` child and one static,
+Node-free text builder (`build_indicator_text(mode: int) -> String`) — mirroring
+`ControlsLegend`'s exact shape (static builder, one Label, headlessly testable without a live
+node). Placed as a **sibling of `ControlsLegend`** at `scenes/`, **not** under `scenes/overlays/`
+— the overlays directory is reserved for `InspectionView`-backed readouts (training-mode.md's
+"Readout layer"), and this indicator explicitly is **not** one (AD-041: "outside the
+InspectionView seam, like ControlsLegend"), so it does not belong alongside them.
+Refreshes every engine `_process(delta)` frame (a plain per-frame poll: read
+`_source.get_dummy_mode(1)`, write the label text) rather than the `ticked`-signal-driven
+pattern every other overlay (`FrameDataPanel`/`LiveStatePanel`/`InputHistoryPanel`) uses.
+**Alternatives considered.** (a) Follow the `ticked`-signal convention exactly (refresh only on
+a sim tick) — rejected: the dummy's mode changes via the `M` key **independent of ticking**
+(`_cycle_dummy_mode` runs from `_unhandled_input`, not gated on the sim running), and a human
+can cycle modes **while paused** (no tick fires) to set up a recording before stepping — under
+the `ticked`-only convention the label would silently go stale exactly when a paused human is
+most likely to be checking it, reproducing the "no live feedback" failure mode AD-041 exists to
+close. (b) A `mode_changed` signal on the shell, emitted from `set_dummy_mode`/`_cycle_dummy_mode`
+— cleaner (event-driven, no idle polling) but a real API addition to `TrainingMode` (a new public
+signal other future callers would need to know about) for a single-consumer need; a `_process`
+poll is one Label's cost and needs no shell change at all. **Why this reading.** The per-frame
+poll is the cheapest correct fix for the "must reflect changes while paused" requirement, costs
+nothing measurable (one dictionary lookup + a string write per frame), and needs zero shell-side
+API surface — reversible to (b) later with no external-behavior change if a second consumer ever
+wants the same event. **Scope/reversibility.** Entirely internal to `DummyModeIndicator`; no
+contract, seam, or tenet surface. Log for ratification/QA awareness — the placement-outside-
+`overlays/` choice in particular sets a naming/location precedent a second non-sim-truth
+indicator would want to follow.
+
+### JC-066 · 2026-07-11 · TKT-P1.1R3-01 · Fresh-record mechanism + invocation point — provisional
+**Decision.** AD-041 offered two shapes ("using the existing `set_recorded_buffer([])` + cursor
+reset, or a small `begin_fresh_recording` shell step"). Implemented as: (1) a new, minimal
+`RecordPlaybackSource.reset_playback_cursor()` method (sets `_playback_cursor = 0` only — does
+**not** touch `_produced_count`/`_answers`, unlike the existing `set_playback_position`, which
+would also rewind those and desync the source from how many frames the driver has actually
+produced); (2) orchestration inside `TrainingMode.set_dummy_mode(player_index, mode)` itself —
+if `mode == RECORDING` and the source's **current** mode is not already `RECORDING`, call
+`set_recorded_buffer(PackedInt32Array())` + `reset_playback_cursor()` **before** `set_mode(mode)`.
+Placed in `set_dummy_mode` (not only in `_cycle_dummy_mode`, the `M`-key handler) so a **direct**
+`set_dummy_mode(i, RECORDING)` call (e.g. from a test, or a future non-keyboard driver) also gets
+fresh-record — the shell has exactly one entry point into a mode change, and fresh-record is a
+property of "entering RECORDING," not of "the cycle key specifically."
+**Alternatives considered.** (a) Reuse `set_playback_position` with a hand-built dict resetting
+only `playback_cursor` to 0 while re-supplying the CURRENT `produced_count`/`answers` — works, but
+piggybacks on a method documented for a different purpose (restoring a captured position) and
+reads less clearly at the call site than a dedicated one-line primitive. (b) Put the guard only in
+`_cycle_dummy_mode` — rejected per the "keep exactly one entry point" reasoning above; it would
+create two divergent RECORDING-entry behaviors depending on which method a caller used.
+**Why this reading.** A dedicated single-purpose method is the smallest primitive that does
+exactly what AD-041 asks (clear buffer + rewind cursor, nothing else), keeps
+`RecordPlaybackSource`'s existing primitives (`RECORDING` appends; `set_playback_position`
+restores a full position) untouched and undocumented-behavior-free, and the `set_dummy_mode`
+placement matches AD-041's own words ("orchestrated in the shell — `_cycle_dummy_mode` /
+`set_dummy_mode`"). **Scope/reversibility.** `reset_playback_cursor()` is a small, additive
+`RecordPlaybackSource` method (no existing behavior changed); the guard is a few lines in
+`set_dummy_mode`. Log for ratification.
+

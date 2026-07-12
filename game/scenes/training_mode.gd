@@ -339,8 +339,26 @@ func has_reset_point() -> bool:
 ## Record/playback dummy mode switch (TKT-P1-04) for player index 0/1. Routed
 ## through the shell's own sources so a caller never touches
 ## RecordPlaybackSource directly from outside this node.
+##
+## FRESH-RECORD ON RECORDING ENTRY (TKT-P1.1R3-01, AD-041, re-gate-4 E1). The
+## latent bug the mode indicator alone would not fix: RecordPlaybackSource's
+## RECORDING APPENDS to whatever buffer already exists (its documented
+## primitive, unchanged here), and nothing previously cleared it between
+## takes — so a re-record concatenated onto the prior one (and the stale
+## playback cursor was never rewound), reported as "inconsistent." Entering
+## RECORDING from a DIFFERENT mode (PASSTHROUGH/PLAYBACK -> RECORDING) now
+## discards the prior buffer and rewinds the cursor FIRST, so each record pass
+## REPLACES the last. Coordinated HERE (the shell), not in
+## RecordPlaybackSource — its RECORDING-appends primitive stays exactly what
+## it was (this is a shell-level workflow rule, not a class-behavior change).
+## Does NOT fire while already RECORDING (only on the transition INTO it), so
+## an in-progress recording is never cleared mid-take.
 func set_dummy_mode(player_index: int, mode: int) -> void:
-	_source_for(player_index).set_mode(mode)
+	var source: RecordPlaybackSource = _source_for(player_index)
+	if mode == RecordPlaybackSource.Mode.RECORDING and source.get_mode() != RecordPlaybackSource.Mode.RECORDING:
+		source.set_recorded_buffer(PackedInt32Array())
+		source.reset_playback_cursor()
+	source.set_mode(mode)
 
 
 func get_dummy_mode(player_index: int) -> int:
