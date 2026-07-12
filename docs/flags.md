@@ -106,3 +106,13 @@ diagnose clean-jump-bug vs the aerial/AD-036 deferral precisely, do NOT re-close
 Plus the frame-step auto-pause change to implement. Full detail in the work-order's "Re-gate 4 findings".
 Routed to the Architect for diagnosis + a coherent batched ticket set. Dummy-control has now failed the
 human gate twice while passing headless once — the fix must add in-app observability, not just re-wire blind.
+
+UPDATE (Strategist, 2026-07-11 — R3 batch complete, QA-passed): diagnosis found E1's live wiring was
+correct — root causes were **no on-screen mode indicator** (AD-041) + a **fresh-record buffer-clear** bug;
+E2 was a **genuine held-jump bug** (drops the arc's last fall frame), fixed by the user-approved **AD-042
+landing snap** (also resolves the aerial float / old D3). Built as one batch: TKT-P1.1R3-01 (mode indicator
++ fresh-record), -02 (landing snap), -03 (frame-step auto-pause) — `b0f1241`/`c42d184`/`278d958`; JC-065/066/067
+ratified + folded (`535557b`); QA objective audit **PASS** (`audits/audit-p1.1-r3-delta.md`, landing-snap
+determinism verified, held-jump no-drift confirmed, 32/32 independently green, no flags). **Only the 5th human
+re-gate remains** — and it is load-bearing: the mode indicator, the live record→playback round-trip, and
+pixel-flush landing are inherently live-only (why E1 slipped twice). Flag closes when the user closes P1.1.
