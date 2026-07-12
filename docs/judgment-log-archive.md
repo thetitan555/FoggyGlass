@@ -2922,3 +2922,40 @@ player mid-move in a stun category, and the guard needs "recovering from a real 
 release-timing assertions moved; combat/advantage/determinism and every *held*-direction
 movement test untouched and green) is exactly the ticket's scope bar — recorded here as
 evidence for QA's audit; no spec change. Both reads are AD-011.
+
+### JC-064 · 2026-07-11 · TKT-P1.1R2-01 · Dummy live sampler: dedicated key set, not P1's reused
+
+**Decision.** AD-040 left the choice open ("reuse `_sample_device_p1`'s shape, or a dedicated
+`_sample_device_dummy` if the Developer wants the dummy on a distinct key set — Developer
+latitude"). Built a dedicated `_sample_device_dummy()` sampling seven NEW input-map actions
+(`tm_dummy_up/down/left/right/button_0/1/2`, placeholder keys W/S/A/D/U/I/O — `project.godot`),
+structurally identical to `_sample_device_p1` (same `InputFrame` OR-composition, same three-button
+convention), injected into `_source_p2`'s `RecordPlaybackSource` constructor exactly as
+`_sample_device_p1` is injected into `_source_p1`.
+
+**Alternative passed over.** Reuse `_sample_device_p1` itself (or its exact key set) as the
+dummy's sampler too — the same physical keys drive whichever source is in RECORDING. Rejected:
+AD-040's stated workflow is "cycle the dummy to RECORDING → input the desired sequence → cycle
+to PLAYBACK → the dummy loops it **while the human resumes driving P1**." Read literally, P1 and
+the dummy are being driven at *different times* by the same person, but nothing in AD-040 requires
+them to share keys, and sharing keys creates a real hazard the ticket itself named as an open
+question ("whether P1 also mirrors the device during dummy RECORDING, and if not, how P1 is held
+neutral"): P1's source is a separate `RecordPlaybackSource` in its own mode (typically
+PASSTHROUGH) that samples `_sample_device_p1` on *every* tick regardless of what the dummy is
+doing — so reusing the same keys means recording a dummy sequence would **simultaneously** walk P1
+around on the same keypresses, an unrequested and confusing side effect with no clean way to
+suppress it (freezing P1 mid-session is a control the shell doesn't have and this ticket doesn't
+add). A dedicated key set sidesteps the question entirely: P1's passthrough is untouched and
+keeps mirroring the device the whole time (exactly as it does today), the dummy's RECORDING only
+ever sees its own keys, and a human can record a dummy stance while continuing to hold a P1
+direction if a session ever wants that (e.g. sparring setup) — a capability the shared-key
+alternative could never offer. Cheaply reversible (an alternate Callable is a one-line swap) and
+invisible across the seam (still exactly one `InputSource` per player, Tenet 2 untouched).
+
+**Status: ratified** (Architect, 2026-07-11). Operability latitude squarely under AD-040, which
+left the key-set choice explicitly open. The dedicated key set is the *correct* reading: it resolves
+the open question TKT-P1.1R2-01 named ("whether P1 also mirrors the device during dummy RECORDING,
+and if not, how P1 is held neutral") by making it moot — P1's passthrough is untouched, the dummy's
+RECORDING sees only its own keys, and the shared-key side effect (recording a dummy stance also
+walks P1) never arises. Tenet 2 intact (one `InputSource` per player, a Callable swap). Folded into
+AD-040 (dummy uses a dedicated sampler / key set).
