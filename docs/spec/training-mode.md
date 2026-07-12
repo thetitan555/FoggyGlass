@@ -32,6 +32,11 @@ read-only inspection surface. All lean directly on Tenets 1 & 2.
 - `step_once()` — while paused, advance **exactly one** sim tick. Frame-steps
   *through* hitstop (one tick per call), since hitstop is in-state, not a loop
   pause (AD-010).
+- **Frame-step auto-pause (decided at re-gate 4, user wants it).** The bound
+  frame-step control (`N`) first calls `set_paused(true)`, then `step_once()` —
+  so a human can step from a running sim in one key without pressing pause first.
+  (This supersedes the provisional non-auto-pause binding flagged from JC-045.)
+  The `step_once()` *method* is unchanged; the auto-pause is in the **binding**.
 
 **Situation save / restore (reset).**
 - `snapshot() -> StateBlob` / `restore(StateBlob)` — full serializable state
@@ -200,6 +205,16 @@ beyond legibility.
     (e.g. hold down-back), cycle to `PLAYBACK`, and the dummy loops that sequence —
     so the dummy can be made to hold crouch-block (and any recorded stance/action)
     for the human to practice against. Verified at the human-inspection gate.
+- **Dummy-mode indicator + fresh-record (AD-041, re-gate-4 E1).** The dummy's
+  current mode (PASSTHROUGH / RECORDING / PLAYBACK) is shown **on screen, live**,
+  with a distinct recording tell — because a human cycling `M` blind through three
+  modes can't tell whether recording is armed (the charter's observability standard;
+  the re-gate-4 "can't get it to consistently work"). The indicator reads mode via
+  the shell (`get_dummy_mode`), **outside** the `InspectionView` seam (mode is not
+  sim state — same placement as `ControlsLegend`; criterion 10 does not apply).
+  Additionally, **entering `RECORDING` starts a fresh recording** (discards the
+  prior buffer + resets the cursor) so a re-take replaces rather than concatenates.
+  Both are **live-only confirmable** (a rendered indicator is not headless-checkable).
 14. **Framed on screen (P1.1).** With both players started as the installed
     character in idle, the geometry overlay's boxes are fully visible within the
     viewport and unoccluded by the panels (AD-035); the readout panels stay

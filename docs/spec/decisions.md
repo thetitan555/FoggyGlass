@@ -50,6 +50,8 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-038** Held-input looping-state exit: an actionable character in a looping state re-derives its state from input each tick, falling back to idle when no command matches (walk/crouch return to idle on release); stance selection reads CURRENT-tick input (not the command buffer) so release exits promptly, while discrete commands keep AD-022 buffer leniency — settled (2026-07-10 exit-lag correction)
 - **AD-039** Airborne-action model: directional/diagonal jumps via per-direction prejump lead-ins; air normals reached by jump-state cancels — data-only, no engine change — settled
 - **AD-040** Dummy-control operability model: a human drives the training dummy by *recording then playing back* — the dummy source carries an injected live device sampler, so `RECORDING` captures the human's device and `PLAYBACK` loops it; this is how a human makes the dummy hold a stance (e.g. crouch-block). No new `InputSource` type, no dummy AI (Tenet 2 intact); the missing piece was the dummy source's live sampler, not the `M` mode-cycle binding — settled (2026-07-11, re-gate-3 D1)
+- **AD-041** Dummy-mode observability + fresh-record: the dummy's current mode (PASSTHROUGH/RECORDING/PLAYBACK) must be **visible on screen live** (charter clarity — mode state is observable), with a recording tell; and *entering* `RECORDING` starts a **fresh** recording (discards the prior buffer, resets the cursor) so re-records replace rather than concatenate. The indicator reads mode via the shell (outside the `InspectionView` seam, like the legend) — settled (2026-07-11, re-gate-4 E1)
+- **AD-042** Minimal ground-contact landing: on entry to a `GROUNDED`-category state, snap `pos_y` to `ground_y` — the *landing-semantics half* of AD-036, pulled into P1.1 because a clean, natural input (held/repeated jumps) wedges the character off-floor without it. The full runtime `pos_y ≥ ground_y` clamp + variable-height air-move semantics stay deferred to P2 (AD-036); the net-zero authoring invariant + per-direction assertion still guard arcs, so the snap does not mask a mis-authored arc — settled (2026-07-11, re-gate-4 E2)
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -1430,6 +1432,98 @@ behind a motion. (2) A `button_map` entry whose **target state cannot be resolve
 **discrete** tier (the pre-correction behavior). Built via a two-tier scan
 (`_buffered_discrete_command` / `_current_tick_loop_command`) over `button_map` and a current-tick
 `InputBuffer.entry_satisfied_now` recognizer.
+
+### AD-041 · Dummy-mode observability + fresh-record on RECORDING entry — settled (2026-07-11, re-gate-4 E1)
+**Context.** Re-gate 4 (E1): the AD-040 record→playback dummy passed QA headless (through the shell
+methods) but **still failed live** — "can't get recording to consistently work … when I cycle to
+PLAYBACK I still only control P1." Architect diagnosis against the live code:
+- **The live record *wiring* is correct — not the bug.** `TrainingMode._physics_process` calls
+  `_source_p2.produce_next()` every running tick; in `RECORDING` that samples `_sample_device_dummy`
+  and appends to the buffer; `PLAYBACK` feeds it back. (Evidence it runs live: P1 works, driven by
+  the adjacent `_source_p1.produce_next()` on the same loop line.) The dummy keys and the record→
+  playback workflow are already in the `ControlsLegend` (JC-064 dedicated key set + hint).
+- **Root cause = observability.** There is **no on-screen indicator of the dummy's current mode.**
+  A human cycles `M` through PASSTHROUGH→RECORDING→PLAYBACK **blind** — no feedback on which of the
+  three modes is active or whether recording is armed. "Only control P1 in PLAYBACK" is what you see
+  when the buffer holds neutral (recorded while not actually in RECORDING, or before holding the
+  dummy keys) — indistinguishable, to the human, from a broken feature. Cycling a 3-state control
+  with zero feedback is the "inconsistent" report. This is a **charter clarity violation** (mode
+  state must be observable), and it is inherently **live-only** (headless can't confirm a rendered
+  indicator — the exact reason this passed QA and failed the gate twice).
+- **Secondary latent bug: re-record concatenates.** `RecordPlaybackSource` `RECORDING` *appends* to
+  the existing buffer and `set_mode` never clears it, so a second record pass concatenates onto the
+  first (and the stale playback cursor is not reset) — so even once a human gets recording armed, a
+  re-take produces a longer, wrong loop. Compounds "inconsistent."
+**Decision.**
+- **Visible live dummy-mode indicator.** The training mode surfaces the dummy's current mode on
+  screen, updated live, with a distinct **recording tell** (e.g. a "● REC" state). It reads the mode
+  through the shell's `get_dummy_mode` (mode lives on the source, *outside* `SimState`), so — like
+  `ControlsLegend` — it sits **outside the `InspectionView` seam** and criterion 10's seam-grep does
+  not apply to it (same class as the legend, ratified from JC-045). Minimal: one on-screen label,
+  legibility of the instrument, not UI polish.
+- **Fresh-record on RECORDING entry.** *Entering* `RECORDING` (a transition into the mode, not each
+  tick within it) **discards the prior buffer and resets the playback cursor**, so each record pass
+  **replaces** the last rather than concatenating. The coordination lives in the **shell** (which
+  owns the training workflow and the mode-cycle) — it clears the dummy source's buffer/cursor on the
+  PASSTHROUGH/PLAYBACK→RECORDING transition — keeping `RecordPlaybackSource`'s primitive (`RECORDING`
+  appends) unchanged and Tenet 2 intact. Append-across-sessions is not a slice need.
+**Rejected.** (a) Another blind wiring pass with no indicator — would fail the 5th gate the same way
+(the process note in the work-order: dummy-control has failed the human gate twice while passing
+headless; the fix must invest in in-app observability, not just wiring). (b) Putting the indicator
+behind the `InspectionView` seam — the mode is not sim state; forcing it through the seam would be
+wrong (a second source of truth for a non-sim value). (c) Making `RECORDING` clear the buffer *every
+tick* — that would erase the recording in progress; the clear is on *entry* only.
+**Status.** Settled. Reflected in `training-mode.md` ("Human control surface"); built by TKT-P1.1R3-01.
+
+### AD-042 · Minimal ground-contact landing: snap `pos_y` to `ground_y` on grounded-state entry — settled (2026-07-11, re-gate-4 E2)
+**Context.** Re-gate 4 (E2): jumps "still wedge off the ground on landing," recurring despite the
+re-gate-3 headless conclusion that clean N/F/B jumps land flush (`py=0`). Architect re-reproduced via
+the trace harness across wider scenarios and found a **genuine clean-jump off-floor bug the isolated
+net-zero test misses**, distinct from the deferred AD-036 aerial float:
+- **Repro (harness, `8*100` — hold UP continuously, the natural "jump repeatedly" input):** the
+  character drifts **+6 units upward per jump and never recovers** — JUMP_N begins at `py=-6` (not 0),
+  re-enters PREJUMP at `-6`, next jump at `-12`, then `-18`… After three jumps it floats 18 units off
+  the floor. A *single* jump with a release gap (`8*3 5*80`) and a re-pressed jump with a gap
+  (`8*3 5*46 8*3 5*46`) both land flush (`py=0`) — so the isolated test (which releases UP after 3
+  ticks) never sees it.
+- **Root cause:** when the jump direction is **held**, the jump reaches its `duration` frame and
+  transitions **straight back into a grounded state** (idle re-derive → prejump, AD-038) with **no
+  settled idle tick** — dropping the arc's **final fall frame** (`+6`). Each held/back-to-back jump
+  therefore nets `-6` (upward) instead of `0`. The arc is correctly authored (nets zero over a full
+  45-frame play); vertical correctness rests **entirely** on the arc playing to completion, and a
+  held re-jump breaks that — the exact fragility AD-036 named, now hit by a natural input, so it is
+  **P1.1-blocking**, not a P2 nicety.
+**Decision.** On **entry to any `GROUNDED`-category state**, if `pos_y != ground_y`, **snap
+`pos_y = ground_y`.** This is the **landing-semantics half** of AD-036 (ground-contact landing:
+`AIRBORNE → GROUNDED` reconciles height to the floor), scoped minimally and pulled into P1.1. It makes
+every landing flush regardless of frame-accounting (held jumps, re-jumps, and — as a correct side
+effect — an air normal ending mid-arc, i.e. re-gate-3 **D3**, which this therefore also resolves).
+- **Not a bare position clamp.** AD-036 rejected a bare `pos_y ≥ ground_y` clamp *because* it would
+  mask a mis-authored arc. This snap is paired with the **net-zero authoring invariant** and the
+  **per-direction net-zero harness assertion** (TKT-P1.1R2-02), which catch a mis-authored arc at
+  author time — so the snap corrects the *engine transition-frame-loss* (not a content bug) without
+  hiding authoring errors. A single clean jump already lands flush; the snap only ever fires to
+  correct sub-frame transition drift.
+- **What stays deferred to P2 (AD-036).** The full **runtime `pos_y ≥ ground_y` clamp** (defense in
+  depth every tick) and **variable-height air-move / knockdown-into-ground** landing semantics are
+  P2's air-movement unit. AD-042 is the minimal fixed-arc landing P1.1 needs; AD-036 stays open for
+  the rest.
+**Placement.** A grounded-state *entry* hook in the state machine (`step_phases.gd` phase 2), reading
+the target state's `MoveState.category`. Character-agnostic (no character-A branch). Determinism-safe
+(pure function of state; the snap is deterministic). Deliberate golden movement (held-jump positions
+change) — JC-017 style.
+**Rejected.** (a) A pure engine fix that preserves the dropped final frame (re-order motion vs.
+transition so frame 45's fall applies before the re-jump) — broader blast radius on the fixed
+phase order (AD-009) than a narrow grounded-entry snap, and it would fix held jumps but not the D3
+air-normal float. (b) A data-only re-author of the arc — cannot fix a transition-frame *loss* (the
+authored arc is already net-zero; the frame is dropped by the state transition, not the data). (c)
+Leaving it to P2 — a natural input (hold to jump) wedges the character off-floor, blocking the P1.1
+gate; it cannot wait.
+**Scope note (routed to Strategist).** This pulls AD-036's *landing half* forward from P2 into P1.1
+and, as a side effect, resolves the re-gate-3 D3 deferral. That is a roadmap/scope call — raised in
+`flags.md` (owner: Strategist). This AD records the technical shape and recommendation; if the
+Strategist would rather keep E2 narrower or re-defer, that redirects the ticket.
+**Status.** Settled (pending the Strategist's scope confirmation on the AD-036 pull-forward).
 
 ### AD-040 · Dummy-control operability model: record-then-playback puppeting via an injected live device sampler on the dummy source — settled (2026-07-11, re-gate-3 D1)
 **Context.** Re-gate 3 (D1): a human could not control/direct the training dummy; the `M` key
