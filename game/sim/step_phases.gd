@@ -1163,18 +1163,21 @@ static func _advance_and_despawn_projectiles(next: SimState, existing_count: int
 ##
 ## GROUNDED-ENTRY LANDING SNAP (TKT-P1.1R3-02, AD-042, re-gate-4 E2). On entry to any
 ## CATEGORY_GROUNDED state, reconcile pos_y to the stage floor if it isn't already
-## there. This is the landing-semantics half of AD-036, pulled into P1.1: a held/
-## repeated jump transitions straight from the jump's `duration` frame back into a
-## grounded state (idle re-derive -> prejump, AD-038) with no settled idle tick,
-## silently dropping the arc's final fall frame (a genuine +6-unit-per-jump upward
-## drift, confirmed via the trace harness). The snap corrects that ENGINE transition-
-## frame loss, not the arc data (already net-zero) — it is paired with the net-zero
-## authoring invariant + TKT-P1.1R2-02's per-direction assertions, which still catch a
-## mis-authored arc, so this does not mask one (AD-042 "not a bare clamp"). As an
-## intended side effect, an air normal ending mid-arc also snaps to floor on its own
-## once-through-ended -> idle transition, resolving the re-gate-3 D3 aerial float.
-## Character-agnostic (reads the TARGET state's category + the stage's ground_y; no
-## character-A branch). Deterministic — a pure function of state.
+## there. This is the landing-semantics half of AD-036, pulled into P1.1: a HELD jump
+## direction exits its arc ONE TICK EARLY, at the is_actionable(>= duration) vs.
+## move-ended (> duration) boundary (JC-011/JC-038) — the state becomes actionable ON
+## its `duration` frame, one tick before the move is considered ended, so the still-
+## held direction's buffered command re-derives a grounded transition (-> prejump,
+## AD-038) there and the arc's final fall tick never applies, silently dropping it (a
+## genuine +6-unit-per-jump upward drift, confirmed via trace-harness replay). The
+## snap corrects that ENGINE transition-frame loss, not the arc data (already
+## net-zero) — it is paired with the net-zero authoring invariant + TKT-P1.1R2-02's
+## per-direction assertions, which still catch a mis-authored arc, so this does not
+## mask one (AD-042 "not a bare clamp"). As an intended side effect, an air normal
+## ending mid-arc also snaps to floor on its own once-through-ended -> idle
+## transition, resolving the re-gate-3 D3 aerial float. Character-agnostic (reads the
+## TARGET state's category + the stage's ground_y; no character-A branch).
+## Deterministic — a pure function of state.
 static func _enter_state(next: SimState, p: PlayerState, character: Character, state_id: int) -> void:
 	p.state_id = state_id
 	p.frame_in_state = 1
