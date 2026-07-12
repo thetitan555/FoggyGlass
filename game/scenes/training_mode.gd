@@ -263,6 +263,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("tm_pause"):
 		set_paused(not is_paused())
 	elif event.is_action_pressed("tm_step"):
+		# TKT-P1.1R3-03 (training-mode.md "Frame-step auto-pause," decided at
+		# re-gate 4; supersedes the provisional JC-045 non-auto-pause binding).
+		# Auto-pause lives HERE, in the binding — set_paused(true) THEN
+		# step_once() — so a human can step from a RUNNING sim in one key
+		# press without pressing pause first. step_once() itself is unchanged
+		# (other callers, e.g. a test driving a session already paused, are
+		# unaffected).
+		set_paused(true)
 		step_once()
 	elif event.is_action_pressed("tm_capture_reset"):
 		capture_reset()

@@ -50,6 +50,7 @@ func _true(cond: bool, msg: String) -> void:
 func _run() -> void:
 	await _test_pause_action_toggles_through_shell()
 	await _test_step_action_advances_one_tick_through_shell()
+	await _test_step_action_auto_pauses_from_a_running_sim()
 	await _test_reset_actions_through_shell()
 	await _test_dummy_mode_cycle_action_through_shell()
 	_test_device_sampler_encodes_attack_buttons()
@@ -87,6 +88,21 @@ func _test_step_action_advances_one_tick_through_shell() -> void:
 	var t0: int = tm.inspection_view().tick()
 	tm._unhandled_input(_press("tm_step"))
 	_eq(tm.inspection_view().tick(), t0 + 1, "tm_step action advances exactly one tick through step_once()")
+	tm.get_parent().queue_free()
+
+
+## TKT-P1.1R3-03 (training-mode.md "Frame-step auto-pause," decided at re-gate
+## 4; supersedes the provisional JC-045 non-auto-pause binding). From a
+## RUNNING (not-yet-paused) shell, the bound tm_step action must BOTH pause
+## the sim AND advance exactly one tick — a human can step straight out of a
+## running sim in one press, without pressing pause first.
+func _test_step_action_auto_pauses_from_a_running_sim() -> void:
+	var tm := await _make_shell()
+	_true(not tm.is_paused(), "a fresh shell is RUNNING (not paused) before the step action")
+	var t0: int = tm.inspection_view().tick()
+	tm._unhandled_input(_press("tm_step"))
+	_true(tm.is_paused(), "tm_step action AUTO-PAUSES a running sim (TKT-P1.1R3-03)")
+	_eq(tm.inspection_view().tick(), t0 + 1, "tm_step action still advances exactly one tick while auto-pausing")
 	tm.get_parent().queue_free()
 
 
