@@ -1295,3 +1295,41 @@ is his): reconcile `spec/character-a.md`'s prose so "`28 + 12(land)`" / "full la
 re-gate: **Q2** confirmed intended (2-hit H DP), and **AD-036 aerial-landing (D3) confirmed deferred to
 P2** by the user — P1.1 closes without the clamp; the aerial-float is an agreed, stated limitation, not
 a 4th-re-gate blocker.
+
+### [resolved] 2026-07-08 · raised-by: Architect (P1.1 ratification pass) · owner: Strategist · re: frame-step auto-pause — feel/design call for the human re-gate (NON-BLOCKING)
+Problem: ratifying JC-045, one control-surface sub-call is a UX/feel decision I judged not mine
+to lock: the frame-step key (`tm_step`/N) is an **unconditional passthrough** — it calls
+`step_once()` regardless of pause state and does **not** auto-pause first (mirrors the existing
+`step_once()` method, which also does not check pause). Frame-step's *meaning* is "while paused"
+(training-mode.md criterion 1); a human is expected to press pause (P) first, then step. The
+alternative — have the step control also `set_paused(true)` as a convenience — is more forgiving
+but is the binding *inventing* composite behavior beyond "call the corresponding control method."
+This is operability *feel* the user may want to weigh when they operate the mode at the P1.1
+re-gate, so I am routing it rather than ratifying it unilaterally (per your steer). The current
+non-auto-pause binding stands provisionally and does not block the gate. If the user wants
+auto-pause, it is a small follow-up ticket (a design call, then a one-line change), not a defect.
+---
+Resolution (Strategist, 2026-07-11 — user's 4th re-gate call): **user wants frame-step to auto-pause.**
+Ruled: `N` (frame-step) should `set_paused(true)` before `step_once()`, so one press both pauses and
+advances a single frame (the forgiving/expected behavior). Design decision now made; implementation is
+a small Developer change, folded into the re-gate-4 fix batch (see the reconciliation flag). Closed as
+decided-and-ticketed.
+
+### [resolved] 2026-07-08 · raised-by: Architect (P1.1 ratification pass) · owner: Strategist · re: jump apex-hang feel — confirm at the human re-gate (NON-BLOCKING)
+Problem: ratifying JC-047, I ratified the *correctness* invariant (an authored jump arc must net
+to exactly zero vertical displacement so the character lands flush — folded into AD-036 /
+move-format.md) but am routing the specific *feel* of the chosen fix to you. The fix spends the
+odd frame of the 45-frame arc as a **one-frame, zero-velocity apex hang** (22 rise / 1 hang / 22
+fall), preserving both tuned rise/fall speeds. This subtly changes the jump trajectory (a brief
+flat moment at the peak; the back half shifts by up to 6 units vs. the pre-fix path). It is within
+the already-ratified triangular-arc latitude (JC-A-01) and is the minimal fix that keeps both
+tuned speeds, but jump *feel* is the user's — worth a look when they operate the mode at the P1.1
+re-gate (does the apex hang read acceptably; is the triangular-with-hang arc the desired jump feel,
+vs. a future parabolic re-bake). NON-BLOCKING: the arc is fixed and lands flush; P1.1 does not wait
+on this. Any feel change later is a data-only re-author within the same mechanism, not a defect.
+---
+Resolution (Strategist, 2026-07-11 — user's 4th re-gate call): **accepted as-is for P1.1; future re-bake
+deferred.** User: the apex-hang "will need future tweaking that can be set aside for now." The 1-frame
+zero-velocity apex hang stands for P1.1 (correctness intact — arc nets zero, lands flush); a future
+jump-feel re-bake (e.g. parabolic) is a deferred, data-only re-author within the same mechanism,
+non-blocking, not owed by P1.1. Closed as accepted-with-deferred-polish.

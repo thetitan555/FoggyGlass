@@ -219,6 +219,38 @@ work; fireball and DP function, DP causes state 125 (hitstun-launch) on hit.
   grounded? Intended vs. bug.
 - **Q2 · H DP has two hitboxes.** User: "fine if intended." Architect: confirm against the DP spec.
 
+## Re-gate 4 findings (2026-07-11) — dummy-control + jump-landing still fail live
+
+The R2 batch (dummy control AD-040, jump flush guard) was built and **QA-passed headless**, but the
+4th human re-gate found two items still failing *in the live app* — the recurring "green headless,
+broken in the hands" gap (`pipeline-analysis-completeness-gap.md`). **Passed:** frame-step auto-pause
+decided (user wants it), apex-hang accepted (future re-bake deferred), controls-legend legible. **Still
+blocking:**
+
+- **E1 · Dummy still uncontrollable live.** User: "can't get recording to consistently work … when I
+  cycle to playback I still only control P1." The record→playback round-trip passed QA *through the
+  shell method*, but the live per-frame path fails for the human. **Two suspects the Architect must
+  check:** (a) a live-frame **record-wiring gap** the shell test didn't exercise (does cycling `M`
+  actually enter RECORDING, and is the dummy sampler's live input fed into the record buffer every
+  frame?); (b) — likely co-equal — **no on-screen indicator of the dummy's current mode**
+  (PASSTHROUGH/RECORDING/PLAYBACK). The charter's clarity standard says mode state must be *observable*;
+  without it the user can't tell whether recording is even armed, which alone explains "can't get it to
+  work consistently." Fixing the wiring without the indicator will likely fail the *next* gate too.
+- **E2 · Jumps still wedge off the ground on landing.** Recurs despite the headless "clean jumps land
+  flush" (py=0) conclusion. **Do NOT re-close as "probably the aerial case."** Architect: reproduce
+  precisely via the trace harness across more scenarios (clean jump land; jump interrupted various ways;
+  directional jumps; repeated jumps) and determine whether there is a genuine **clean-jump-lands-off-floor
+  bug** the isolated net-zero test misses (→ P1.1 fix) versus the **aerial-interrupted AD-036 float**
+  (→ agreed P2 deferral, per the re-gate-3 ruling). The recurrence means the isolated headless assertion
+  is not covering the case the human hits — widen it.
+- **Frame-step auto-pause (decided):** implement `N` to `set_paused(true)` then `step_once()` — a small
+  Developer change; fold into this batch.
+
+Process note: dummy-control has now failed the human gate **twice** while passing headless once. If the
+live GUI input/record path genuinely can't be headless-exercised, the human gate is load-bearing here and
+the fix must invest in **in-app observability** (the mode indicator) so the human *can* verify — not just
+another blind wiring pass. Routed to the Architect for diagnosis + a coherent batched ticket set.
+
 ## Acceptance — P1.1 is done when
 
 Every checklist item above passes at the human re-gate: A walks and stops both ways, crouches
