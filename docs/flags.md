@@ -11,23 +11,6 @@
 
 ---
 
-### [open] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Strategist · re: character A crouching-normal attack heights — confirm design intent (NON-BLOCKING)
-Problem: the first visual look at character A's boxes (via the now-working geometry overlay)
-surfaced a content-design QUESTION, not a defect: 2L and 2M attack at HEAD-LEVEL while their
-hurtbox shrinks (crouch), whereas 2H attacks near the bottom; 5L/5M/5H render lower on the
-character (5H advances forward, correct). Crouching light/medium normals hitting at head height is
-unusual for a grounded shoto and may or may not be intended authored move data. This is a
-design-intent call (character A identity → brief → the user's design taste), **NOT a P1.1
-operability item, and does NOT block the P1.1 gate.** Resolve WITH THE USER on return: confirm the
-crouching-normal attack heights are intended, or route a content adjustment to the Architect (spec)
-/ Developer (move data). Recorded now so the observation isn't lost while the gate closes.
-NOTE (2026-07-09): the 2nd re-gate found the geometry overlay draws boxes **Y-inverted** — likely
-the single root cause of this "crouching normals look head-high" observation. This question should
-be re-evaluated AFTER the Y-inversion fix lands (see the character-A movement reconciliation
-work-order below); the apparent head-high attack may simply be the inversion. Keep open until then.
----
-Resolution (owner fills): …
-
 ### [open] 2026-07-08 · raised-by: Architect (P1.1 ratification pass) · owner: Strategist · re: frame-step auto-pause — feel/design call for the human re-gate (NON-BLOCKING)
 Problem: ratifying JC-045, one control-surface sub-call is a UX/feel decision I judged not mine
 to lock: the frame-step key (`tm_step`/N) is an **unconditional passthrough** — it calls
@@ -106,3 +89,14 @@ fans out to the Developer. Ruled:
 Tickets: `docs/tickets/p1.1-reconciliation.md` (01 trace-harness → 02 geometry-Y-fix → 03 held-input-
 stances → 04 airborne-actions; per-ticket dispatch). Next: Developer executes; Architect ratifies the
 new JCs; QA audits (goldens move deliberately, JC-017 style); then the user re-gate drives the checklist.
+
+UPDATE (Strategist, 2026-07-11 — 3rd human re-gate): **PARTIAL PASS, stays [open].** Batch 1
+(TKT-P1.1R-01..05) delivered, QA-passed (`audits/audit-p1.1-reconciliation.md`), pushed to origin.
+Re-gate verified: walk snappy-to-frame, crouch stance, boxes right-side-up (crouching-normal-height
+flag now closed), capture/reset, fireball/DP function. **A second reconciliation batch remains** —
+full findings in the work-order's "Re-gate 3 findings" section: D1 dummy-uncontrollable /
+crouch-block unverifiable (operability, P1.1); D2 jumps sometimes land off-floor (suspect F/B arc
+net-zero, P1.1 arc-fix); D3 aerials float (AD-036 gap — deferred to P2 per roadmap, stated); Q1 DP
+doesn't rise + Q2 H-DP two hitboxes (spec-intent checks). Dispatched to the Architect for diagnosis
++ a **coherent batched** ticket set (user's explicit steer: batch this iteration to measure vs.
+per-ticket). Fix-ownership fans out from there; a 4th re-gate closes P1.1.

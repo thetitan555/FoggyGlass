@@ -1242,3 +1242,26 @@ a small Developer follow-up ticket** (change the loop-state exit read from buffe
 input; re-baseline the walk/crouch release-timing goldens) — the Strategist dispatches it before the
 re-gate; independent of TKT-P1.1R-04. Ratified JC-058/JC-059 confirmed the held-direction integration
 tests still hold under this correction (a continuously-held direction re-selects its stance identically).
+
+### [resolved] 2026-07-08 · raised-by: Strategist (from user's P1.1 human-inspection gate) · owner: Strategist · re: character A crouching-normal attack heights — confirm design intent (NON-BLOCKING)
+Problem: the first visual look at character A's boxes (via the now-working geometry overlay)
+surfaced a content-design QUESTION, not a defect: 2L and 2M attack at HEAD-LEVEL while their
+hurtbox shrinks (crouch), whereas 2H attacks near the bottom; 5L/5M/5H render lower on the
+character (5H advances forward, correct). Crouching light/medium normals hitting at head height is
+unusual for a grounded shoto and may or may not be intended authored move data. This is a
+design-intent call (character A identity → brief → the user's design taste), **NOT a P1.1
+operability item, and does NOT block the P1.1 gate.** Resolve WITH THE USER on return: confirm the
+crouching-normal attack heights are intended, or route a content adjustment to the Architect (spec)
+/ Developer (move data). Recorded now so the observation isn't lost while the gate closes.
+NOTE (2026-07-09): the 2nd re-gate found the geometry overlay draws boxes **Y-inverted** — likely
+the single root cause of this "crouching normals look head-high" observation. This question should
+be re-evaluated AFTER the Y-inversion fix lands (see the character-A movement reconciliation
+work-order below); the apparent head-high attack may simply be the inversion. Keep open until then.
+---
+Resolution (Strategist, 2026-07-11 — user's 3rd re-gate confirms): **RESOLVED as the Y-inversion,
+no content defect.** With AD-037's box reflection landed, the user visually confirmed at the re-gate
+that boxes now render right-side-up — pushboxes flush with the bottom of the hurtbox, standing
+normals a little above halfway up, and **crouching normals very close to the bottom** (not
+head-high). The gate-1 "2L/2M attack at head level" observation was the inverted Y axis exactly as
+the 2026-07-09 note predicted; there is no head-high crouching-normal content issue to adjust. No
+routing to Architect/Developer needed. Closed.

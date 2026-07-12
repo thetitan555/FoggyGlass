@@ -183,10 +183,47 @@ Mirror the pipeline's own flow; do not let one role invent another's artifact.
    analysis doc's proposal: a brief-derived gate checklist is exactly this). QA cannot mark
    P1.1 done while the gate is open; only the user closes it.
 
+## Re-gate 3 findings (2026-07-11) — partial pass; a second reconciliation batch remains
+
+The user drove the checklist against the built + AD-038-corrected character A. **Confirmed good
+(close/no action):** walk is *snappy to the frame* (AD-038 correction verified); crouch stance
+enters; **all boxes render right-side-up** (pushbox flush with the hurtbox bottom, standing normals
+a little above halfway, crouching normals near the bottom) — AD-037 verified, and this **closes the
+crouching-normal-height flag** (it was the Y-inversion all along); capture + reset-to-captured both
+work; fireball and DP function, DP causes state 125 (hitstun-launch) on hit.
+
+**Remaining defects (P1.1-blocking — reconciliation stays open):**
+- **D1 · Dummy uncontrollable → crouch-block unverifiable.** The user could not control/direct the
+  dummy; the `M` key (dummy mode-switch, JC-045) appeared inert — input still only drove P1. So
+  crouch-block (and any dummy-dependent check) can't be exercised. Operability defect — squarely
+  P1.1's remit (the instrument must be operable). Diagnose: is `M` mis-bound / not wired, or is the
+  dummy-control *model* not what a human expects (no "block" mode, no P2 takeover)? Architect reads
+  the training-mode control surface + `training-mode.md` intent.
+- **D2 · Jumps sometimes land off the floor.** Neutral was fixed net-zero (JC-047), but this recurs
+  "sometimes" — suspect the **directional/diagonal jump arcs (JUMP_F/JUMP_B, TKT-P1.1R-04) were
+  never given JC-047's net-zero verification.** Likely a P1.1-scope *arc-data* bug (a clean jump
+  should land flush from a net-zero arc — no landing clamp needed), NOT the AD-036 gap. Architect to
+  confirm arc-vs-clamp by reading/tracing the F/B arc sums.
+- **D3 · Aerials freeze the air trajectory on the spot (character floats).** This is the **known
+  AD-036 gap** — no ground-contact landing; an air normal ends → idle at whatever height the arc
+  left it (the work-order's TKT-04 note called this out as "an AD-036 roadmap question, not this
+  ticket"). AD-036 (clamp + landing semantics, designed together) is **already roadmapped as P2's
+  opening unit.** Strategist scope call: hold D3 to P2 as planned (recommended — pulling a bare
+  clamp into P1.1 risks the "mask a mis-authored arc" anti-legibility the roadmap warns of, and
+  the full clamp+semantics unit is P2's), fixing only the *clean-jump* land-flush (D2) here. The
+  aerial float becomes an acknowledged, roadmapped limitation, stated not silent.
+
+**Design-intent questions (check against spec/brief; intended → confirm, unintended → fix):**
+- **Q1 · DP doesn't rise in the air.** A shoryuken-class DP traditionally rises; character A is a
+  *grounded, simplified* shoto. Architect: does `spec/character-a.md` author the DP as rising or
+  grounded? Intended vs. bug.
+- **Q2 · H DP has two hitboxes.** User: "fine if intended." Architect: confirm against the DP spec.
+
 ## Acceptance — P1.1 is done when
 
 Every checklist item above passes at the human re-gate: A walks and stops both ways, crouches
-(stance + block), jumps in all directions and lands flush, its normals are reachable, and all
+(stance + block), jumps in all directions and **clean jumps land flush** (aerial-interrupted
+landing is the AD-036/P2 clamp, deferred — see Re-gate 3, D3), its normals are reachable, and all
 boxes render right-side-up. Then the two deferred feel calls (frame-step auto-pause; jump
 apex-hang) are confirmed or ticketed. Only then does P1.1 — and, finally, P1's character A —
 count as actually done.
