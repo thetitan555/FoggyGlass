@@ -100,9 +100,9 @@
 - JC-062 · 2026-07-10 · TKT-P1.1R-05 · The two-tier loop-state branch implemented as two SEPARATE full `button_map` scans (`_buffered_discrete_command` / `_current_tick_loop_command`, each first-match-wins in authored order) rather than one combined scan branching per-entry on `target.loop`; a new `InputBuffer.entry_satisfied_now` (age-0-only recognizer, motion entries always false) backs tier 2 instead of reusing `entry_satisfied` with a window param of 1 — ratified (faithful realization of corrected AD-038; current-tick/motion clarification folded into AD-038)
 - JC-063 · 2026-07-10 · TKT-P1.1R-05 · AD-022 regression guard test uses direct `SimState.step` + `PlayerState` state-injection into `STATE_HITSTUN` (mirrors JC-057/JC-036), not `TraceHarness`; walk/crouch release-timing goldens re-baselined to the corrected release-tick values in `test_held_input_stances.gd` (ticket-named surgical scope — no other test file's assertions changed) — ratified (test-instrument latitude; surgical golden scope confirmed)
 - JC-064 · 2026-07-11 · TKT-P1.1R2-01 · Dummy given a DEDICATED live sampler (`_sample_device_dummy`, new `tm_dummy_up/down/left/right/button_0/1/2` actions on WASD+U/I/O) rather than reusing `_sample_device_p1`'s key set; P1's passthrough source is untouched and left mirroring the SAME device the whole time (no "hold P1 neutral" mechanism needed) — ratified (operability latitude under AD-040; folded into AD-040)
-- JC-065 · 2026-07-11 · TKT-P1.1R3-01 · Dummy-mode indicator built as `scenes/dummy_mode_indicator.gd` (sibling to `ControlsLegend`, outside `scenes/overlays/`), one Label + a static `build_indicator_text`, refreshed every `_process` frame rather than on `TrainingMode.ticked` — provisional
-- JC-066 · 2026-07-11 · TKT-P1.1R3-01 · Fresh-record implemented as a new `RecordPlaybackSource.reset_playback_cursor()` primitive, invoked from `TrainingMode.set_dummy_mode` guarded on the PASSTHROUGH/PLAYBACK -> RECORDING transition (not `_cycle_dummy_mode`, so a direct `set_dummy_mode` call also gets fresh-record) — provisional
-- JC-067 · 2026-07-11 · TKT-P1.1R3-02 · AD-042's grounded-entry snap placed INSIDE the shared `_enter_state` helper (widened to take `next: SimState` for `stage.ground_y`) rather than as a separate post-transition pass in `phase2_state_machine` — provisional
+- JC-065 · 2026-07-11 · TKT-P1.1R3-01 · Dummy-mode indicator built as `scenes/dummy_mode_indicator.gd` (sibling to `ControlsLegend`, outside `scenes/overlays/`), one Label + a static `build_indicator_text`, refreshed every `_process` frame rather than on `TrainingMode.ticked` — ratified (folded into AD-041)
+- JC-066 · 2026-07-11 · TKT-P1.1R3-01 · Fresh-record implemented as a new `RecordPlaybackSource.reset_playback_cursor()` primitive, invoked from `TrainingMode.set_dummy_mode` guarded on the PASSTHROUGH/PLAYBACK -> RECORDING transition (not `_cycle_dummy_mode`, so a direct `set_dummy_mode` call also gets fresh-record) — ratified (folded into AD-041)
+- JC-067 · 2026-07-11 · TKT-P1.1R3-02 · AD-042's grounded-entry snap placed INSIDE the shared `_enter_state` helper (widened to take `next: SimState` for `stage.ground_y`) rather than as a separate post-transition pass in `phase2_state_machine` — ratified (folded into AD-042: hook point pinned to the shared `_enter_state` helper, all transitions)
 
 ---
 
@@ -112,7 +112,7 @@
 > overturns them; then the status flips and the Strategist sweeps the body to the
 > archive. New entries append to this section.
 
-### JC-065 · 2026-07-11 · TKT-P1.1R3-01 · Dummy-mode indicator placement + refresh mechanism — provisional
+### JC-065 · 2026-07-11 · TKT-P1.1R3-01 · Dummy-mode indicator placement + refresh mechanism — ratified
 **Decision.** Built the AD-041 mode indicator as a new file, `scenes/dummy_mode_indicator.gd`
 (`class_name DummyModeIndicator`), a plain `Control` with one `Label` child and one static,
 Node-free text builder (`build_indicator_text(mode: int) -> String`) — mirroring
@@ -142,7 +142,7 @@ contract, seam, or tenet surface. Log for ratification/QA awareness — the plac
 `overlays/` choice in particular sets a naming/location precedent a second non-sim-truth
 indicator would want to follow.
 
-### JC-066 · 2026-07-11 · TKT-P1.1R3-01 · Fresh-record mechanism + invocation point — provisional
+### JC-066 · 2026-07-11 · TKT-P1.1R3-01 · Fresh-record mechanism + invocation point — ratified
 **Decision.** AD-041 offered two shapes ("using the existing `set_recorded_buffer([])` + cursor
 reset, or a small `begin_fresh_recording` shell step"). Implemented as: (1) a new, minimal
 `RecordPlaybackSource.reset_playback_cursor()` method (sets `_playback_cursor = 0` only — does
@@ -170,7 +170,7 @@ placement matches AD-041's own words ("orchestrated in the shell — `_cycle_dum
 `RecordPlaybackSource` method (no existing behavior changed); the guard is a few lines in
 `set_dummy_mode`. Log for ratification.
 
-### JC-067 · 2026-07-11 · TKT-P1.1R3-02 · AD-042 grounded-entry snap hook point — provisional
+### JC-067 · 2026-07-11 · TKT-P1.1R3-02 · AD-042 grounded-entry snap hook point — ratified
 **Decision.** Placed the ground-contact landing snap **inside the shared `_enter_state` helper**
 in `step_phases.gd` (widened its signature from `_enter_state(p, character, state_id)` to
 `_enter_state(next: SimState, p, character, state_id)` so it can read `next.stage.ground_y`),

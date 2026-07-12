@@ -1473,6 +1473,23 @@ headless; the fix must invest in in-app observability, not just wiring). (b) Put
 behind the `InspectionView` seam — the mode is not sim state; forcing it through the seam would be
 wrong (a second source of truth for a non-sim value). (c) Making `RECORDING` clear the buffer *every
 tick* — that would erase the recording in progress; the clear is on *entry* only.
+**Realization (JC-065, JC-066 — ratified 2026-07-12).** Built by TKT-P1.1R3-01 as:
+- *Indicator* — a new `scenes/dummy_mode_indicator.gd` (`DummyModeIndicator`), a `Control`+`Label`
+  sibling of `ControlsLegend` at `scenes/` (**not** under `scenes/overlays/`, which is reserved for
+  `InspectionView`-backed readouts — this indicator is deliberately outside that seam, per this AD),
+  with a static, node-free `build_indicator_text(mode)` and a "* REC" recording tell. It **polls the
+  mode every `_process` frame** (reading `TrainingMode.get_dummy_mode(1)`), *not* on the `ticked`
+  signal the sim-truth overlays use — because the mode changes via the `M` key **while the sim is
+  paused** (no tick fires), and a tick-gated label would go stale exactly when a paused human is
+  arming a recording. *Precedent:* a second non-sim-truth indicator follows this same
+  outside-`overlays/`, poll-on-`_process` shape.
+- *Fresh-record* — a dedicated minimal primitive `RecordPlaybackSource.reset_playback_cursor()`
+  (rewinds `_playback_cursor` to 0 only; leaves `_produced_count`/`_answers` untouched, unlike
+  `set_playback_position`), orchestrated in the shell's single mode-change entry point
+  `set_dummy_mode(i, mode)` — guarded on the PASSTHROUGH/PLAYBACK→RECORDING transition (fires on
+  *entry* to RECORDING, never mid-take), so a direct `set_dummy_mode` call (test or future driver)
+  also gets fresh-record, not just the `M`-cycle path.
+
 **Status.** Settled. Reflected in `training-mode.md` ("Human control surface"); built by TKT-P1.1R3-01.
 
 ### AD-042 · Minimal ground-contact landing: snap `pos_y` to `ground_y` on grounded-state entry — settled (2026-07-11, re-gate-4 E2)
@@ -1486,13 +1503,19 @@ net-zero test misses**, distinct from the deferred AD-036 aerial float:
   the floor. A *single* jump with a release gap (`8*3 5*80`) and a re-pressed jump with a gap
   (`8*3 5*46 8*3 5*46`) both land flush (`py=0`) — so the isolated test (which releases UP after 3
   ticks) never sees it.
-- **Root cause:** when the jump direction is **held**, the jump reaches its `duration` frame and
-  transitions **straight back into a grounded state** (idle re-derive → prejump, AD-038) with **no
-  settled idle tick** — dropping the arc's **final fall frame** (`+6`). Each held/back-to-back jump
-  therefore nets `-6` (upward) instead of `0`. The arc is correctly authored (nets zero over a full
-  45-frame play); vertical correctness rests **entirely** on the arc playing to completion, and a
-  held re-jump breaks that — the exact fragility AD-036 named, now hit by a natural input, so it is
-  **P1.1-blocking**, not a P2 nicety.
+- **Root cause (confirmed via harness replay, 2026-07-12).** When the jump direction is **held**,
+  the jump exits its arc **one tick early**, at the `is_actionable(≥ duration)` vs. move-ended
+  (`> duration`) boundary (JC-011/JC-038): the state becomes actionable *on* its `duration` frame,
+  one tick before the move is considered ended, so the held input re-derives a grounded transition
+  (→ prejump, AD-038) and the arc's **final fall tick never applies** — dropping `+6`. Each
+  held/back-to-back jump therefore nets `-6` (upward) instead of `0`. (This is the same **+6 net
+  effect** this AD's original rationale predicted — "idle re-derive drops the frame" — but the
+  precise mechanism is the one-tick-early actionable/ended boundary, not a missing settled idle
+  tick.) The arc is correctly authored (nets zero when played to completion — a full jump **cycle
+  is 46 ticks**, per the replay's `5*46` flush-landing gap, because the entry frame applies no
+  motion, JC-014); vertical correctness rests **entirely** on the arc playing to completion, and a
+  held re-jump that exits one tick early breaks that — the exact fragility AD-036 named, now hit by
+  a natural input, so it is **P1.1-blocking**, not a P2 nicety.
 **Decision.** On **entry to any `GROUNDED`-category state**, if `pos_y != ground_y`, **snap
 `pos_y = ground_y`.** This is the **landing-semantics half** of AD-036 (ground-contact landing:
 `AIRBORNE → GROUNDED` reconciles height to the floor), scoped minimally and pulled into P1.1. It makes
@@ -1508,10 +1531,20 @@ effect — an air normal ending mid-arc, i.e. re-gate-3 **D3**, which this there
   depth every tick) and **variable-height air-move / knockdown-into-ground** landing semantics are
   P2's air-movement unit. AD-042 is the minimal fixed-arc landing P1.1 needs; AD-036 stays open for
   the rest.
-**Placement.** A grounded-state *entry* hook in the state machine (`step_phases.gd` phase 2), reading
-the target state's `MoveState.category`. Character-agnostic (no character-A branch). Determinism-safe
-(pure function of state; the snap is deterministic). Deliberate golden movement (held-jump positions
-change) — JC-017 style.
+**Placement.** A grounded-state *entry* hook in the state machine, reading the target state's
+`MoveState.category`. Character-agnostic (no character-A branch). Determinism-safe (pure function of
+state; the snap is deterministic). Deliberate golden movement (held-jump positions change) — JC-017
+style.
+**Realization (JC-067 — ratified 2026-07-12).** Built by TKT-P1.1R3-02 **inside the shared
+`_enter_state` helper** in `step_phases.gd` (its signature widened to take `next: SimState` so it can
+read `next.stage.ground_y`), *not* as a separate post-transition pass over `phase2_state_machine`'s
+own call sites. `_enter_state` is the one unconditional "a state transition just happened" hook every
+transition already funnels through, so the snap now runs on **every** grounded-state entry across all
+**10** call sites in the file (idle/walk/crouch/normals/specials/throws/reactions), not just the
+jump-related ones — a strictly more generic realization of this AD's "on entry to *any* GROUNDED
+state" than the literal "phase 2" wording above, and the one that correctly catches a future grounded
+transition from an unexpected source (e.g. a P2 knockdown-recovery state). An `AIRBORNE` entry (e.g. a
+jump re-entering another jump variant) correctly does **not** snap.
 **Rejected.** (a) A pure engine fix that preserves the dropped final frame (re-order motion vs.
 transition so frame 45's fall applies before the re-jump) — broader blast radius on the fixed
 phase order (AD-009) than a narrow grounded-entry snap, and it would fix held jumps but not the D3
