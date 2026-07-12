@@ -54,6 +54,7 @@ func _run() -> void:
 	await _test_dummy_mode_cycle_action_through_shell()
 	_test_device_sampler_encodes_attack_buttons()
 	_test_device_sampler_encodes_left_and_right()
+	_test_dummy_sampler_encodes_attack_buttons_on_its_own_key_set()
 	_test_input_map_actions_are_registered()
 
 
@@ -177,13 +178,63 @@ func _test_device_sampler_encodes_left_and_right() -> void:
 	tm.free()
 
 
+## TKT-P1.1R2-01 (AD-040 dummy-control operability). Mirrors
+## _test_device_sampler_encodes_attack_buttons exactly, but against
+## `_sample_device_dummy` and its OWN distinct tm_dummy_* key set — confirming
+## the dummy's live sampler (the missing piece D1 diagnosed) actually encodes
+## input, on keys that don't collide with P1's.
+func _test_dummy_sampler_encodes_attack_buttons_on_its_own_key_set() -> void:
+	var tm := TrainingMode.new()
+	_eq(tm._sample_device_dummy(), InputFrame.NEUTRAL, "no dummy input pressed -> NEUTRAL")
+
+	Input.action_press("tm_dummy_button_0")
+	_eq(tm._sample_device_dummy(), InputFrame.BUTTON_0, "tm_dummy_button_0 encodes BUTTON_0")
+	Input.action_release("tm_dummy_button_0")
+
+	Input.action_press("tm_dummy_button_1")
+	_eq(tm._sample_device_dummy(), InputFrame.BUTTON_1, "tm_dummy_button_1 encodes BUTTON_1")
+	Input.action_release("tm_dummy_button_1")
+
+	Input.action_press("tm_dummy_button_2")
+	_eq(tm._sample_device_dummy(), InputFrame.BUTTON_2, "tm_dummy_button_2 encodes BUTTON_2")
+	Input.action_release("tm_dummy_button_2")
+
+	Input.action_press("tm_dummy_left")
+	_eq(tm._sample_device_dummy(), InputFrame.LEFT, "tm_dummy_left encodes LEFT")
+	Input.action_release("tm_dummy_left")
+
+	Input.action_press("tm_dummy_right")
+	_eq(tm._sample_device_dummy(), InputFrame.RIGHT, "tm_dummy_right encodes RIGHT")
+	Input.action_release("tm_dummy_right")
+
+	Input.action_press("tm_dummy_up")
+	_eq(tm._sample_device_dummy(), InputFrame.UP, "tm_dummy_up encodes UP")
+	Input.action_release("tm_dummy_up")
+
+	Input.action_press("tm_dummy_down")
+	_eq(tm._sample_device_dummy(), InputFrame.DOWN, "tm_dummy_down encodes DOWN")
+	Input.action_release("tm_dummy_down")
+
+	# Pressing P1's keys must NOT show up on the dummy's sampler (distinct key
+	# sets, the judgment-log latitude call) — the two samplers are independent.
+	Input.action_press("ui_left")
+	Input.action_press("tm_button_0")
+	_eq(tm._sample_device_dummy(), InputFrame.NEUTRAL,
+		"P1's keys (ui_left/tm_button_0) do not leak into the dummy's sampler")
+	Input.action_release("ui_left")
+	Input.action_release("tm_button_0")
+	tm.free()
+
+
 ## Sanity that the placeholder key bindings this ticket adds actually exist in
 ## project.godot's input map (distinct from the _press()-driven tests above,
 ## which don't need InputMap registration to pass) — guards against a typo'd
 ## action name silently doing nothing for a real key press.
 func _test_input_map_actions_are_registered() -> void:
 	for action in ["tm_pause", "tm_step", "tm_capture_reset", "tm_do_reset",
-			"tm_dummy_mode_cycle", "tm_button_0", "tm_button_1", "tm_button_2"]:
+			"tm_dummy_mode_cycle", "tm_button_0", "tm_button_1", "tm_button_2",
+			"tm_dummy_up", "tm_dummy_down", "tm_dummy_left", "tm_dummy_right",
+			"tm_dummy_button_0", "tm_dummy_button_1", "tm_dummy_button_2"]:
 		_true(InputMap.has_action(action), "%s is registered in project.godot's input map" % action)
 
 

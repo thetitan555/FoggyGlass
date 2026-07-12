@@ -99,6 +99,7 @@
 - JC-061 · 2026-07-10 · TKT-P1.1R-04 · `test_character_a.gd::_test_no_gatlings_no_jump_cancels` updated to exempt `JUMP_N/F/B` (source) and `PREJUMP_F/B` (source) from the pre-existing gatling/jump-cancel guards, since AD-039 makes a jump state's ALWAYS-cancel into `j.L/M/H` (and each prejump's into its jump) sanctioned content, not a violation the guard was meant to catch — ratified (test-guard latitude; JC-058 class)
 - JC-062 · 2026-07-10 · TKT-P1.1R-05 · The two-tier loop-state branch implemented as two SEPARATE full `button_map` scans (`_buffered_discrete_command` / `_current_tick_loop_command`, each first-match-wins in authored order) rather than one combined scan branching per-entry on `target.loop`; a new `InputBuffer.entry_satisfied_now` (age-0-only recognizer, motion entries always false) backs tier 2 instead of reusing `entry_satisfied` with a window param of 1 — ratified (faithful realization of corrected AD-038; current-tick/motion clarification folded into AD-038)
 - JC-063 · 2026-07-10 · TKT-P1.1R-05 · AD-022 regression guard test uses direct `SimState.step` + `PlayerState` state-injection into `STATE_HITSTUN` (mirrors JC-057/JC-036), not `TraceHarness`; walk/crouch release-timing goldens re-baselined to the corrected release-tick values in `test_held_input_stances.gd` (ticket-named surgical scope — no other test file's assertions changed) — ratified (test-instrument latitude; surgical golden scope confirmed)
+- JC-064 · 2026-07-11 · TKT-P1.1R2-01 · Dummy given a DEDICATED live sampler (`_sample_device_dummy`, new `tm_dummy_up/down/left/right/button_0/1/2` actions on WASD+U/I/O) rather than reusing `_sample_device_p1`'s key set; P1's passthrough source is untouched and left mirroring the SAME device the whole time (no "hold P1 neutral" mechanism needed) — provisional
 
 ---
 
@@ -108,4 +109,33 @@
 > overturns them; then the status flips and the Strategist sweeps the body to the
 > archive. New entries append to this section.
 
-*(none — all recorded calls are ratified/closed; their bodies are in `judgment-log-archive.md`.)*
+### JC-064 · 2026-07-11 · TKT-P1.1R2-01 · Dummy live sampler: dedicated key set, not P1's reused
+
+**Decision.** AD-040 left the choice open ("reuse `_sample_device_p1`'s shape, or a dedicated
+`_sample_device_dummy` if the Developer wants the dummy on a distinct key set — Developer
+latitude"). Built a dedicated `_sample_device_dummy()` sampling seven NEW input-map actions
+(`tm_dummy_up/down/left/right/button_0/1/2`, placeholder keys W/S/A/D/U/I/O — `project.godot`),
+structurally identical to `_sample_device_p1` (same `InputFrame` OR-composition, same three-button
+convention), injected into `_source_p2`'s `RecordPlaybackSource` constructor exactly as
+`_sample_device_p1` is injected into `_source_p1`.
+
+**Alternative passed over.** Reuse `_sample_device_p1` itself (or its exact key set) as the
+dummy's sampler too — the same physical keys drive whichever source is in RECORDING. Rejected:
+AD-040's stated workflow is "cycle the dummy to RECORDING → input the desired sequence → cycle
+to PLAYBACK → the dummy loops it **while the human resumes driving P1**." Read literally, P1 and
+the dummy are being driven at *different times* by the same person, but nothing in AD-040 requires
+them to share keys, and sharing keys creates a real hazard the ticket itself named as an open
+question ("whether P1 also mirrors the device during dummy RECORDING, and if not, how P1 is held
+neutral"): P1's source is a separate `RecordPlaybackSource` in its own mode (typically
+PASSTHROUGH) that samples `_sample_device_p1` on *every* tick regardless of what the dummy is
+doing — so reusing the same keys means recording a dummy sequence would **simultaneously** walk P1
+around on the same keypresses, an unrequested and confusing side effect with no clean way to
+suppress it (freezing P1 mid-session is a control the shell doesn't have and this ticket doesn't
+add). A dedicated key set sidesteps the question entirely: P1's passthrough is untouched and
+keeps mirroring the device the whole time (exactly as it does today), the dummy's RECORDING only
+ever sees its own keys, and a human can record a dummy stance while continuing to hold a P1
+direction if a session ever wants that (e.g. sparring setup) — a capability the shared-key
+alternative could never offer. Cheaply reversible (an alternate Callable is a one-line swap) and
+invisible across the seam (still exactly one `InputSource` per player, Tenet 2 untouched).
+
+**Status: provisional.**

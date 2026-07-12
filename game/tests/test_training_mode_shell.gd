@@ -50,6 +50,7 @@ func _run() -> void:
 	await _test_dummy_mode_through_shell()
 	await _test_reset_resyncs_dummy_through_shell()
 	await _test_players_start_as_installed_character_with_resolved_boxes()
+	await _test_dummy_recording_captures_live_input_and_playback_loops_it()
 
 
 ## Static seam check (criterion 10: "verifiable by inspection of the
@@ -208,6 +209,53 @@ func _test_players_start_as_installed_character_with_resolved_boxes() -> void:
 				has_hurt = true
 				break
 		_true(has_hurt, "player %d's resolved boxes include its idle hurtbox" % i)
+	tm.get_parent().queue_free()
+
+
+## TKT-P1.1R2-01 (AD-040 dummy-control operability — the D1 fix, regression at
+## the OPERABILITY layer, not just the RecordPlaybackSource class already
+## covered by test_record_playback.gd). Before this ticket, `_source_p2` was
+## constructed with NO live sampler, so RECORDING silently answered NEUTRAL and
+## cycling the dummy's mode (`M`) was inert-in-effect (the D1 defect). This
+## drives the actual shell-wired dummy source through `Input.action_press` on
+## its own tm_dummy_* keys (never touching RecordPlaybackSource directly —
+## the seam rule), confirms RECORDING captures the non-neutral input into the
+## recorded buffer, and that PLAYBACK then loops exactly that captured stream.
+## Full human operability (a person pressing a real key) is confirmed at the
+## human-inspection gate; this is the headless-checkable half — the sampler
+## injection + record/playback round-trip actually works end to end.
+func _test_dummy_recording_captures_live_input_and_playback_loops_it() -> void:
+	var tm := await _make_shell()
+
+	tm.set_dummy_mode(1, RecordPlaybackSource.Mode.RECORDING)
+	_eq(tm.get_dummy_mode(1), RecordPlaybackSource.Mode.RECORDING,
+		"dummy set to RECORDING through the shell")
+
+	# Tick 1: neutral (nothing pressed yet).
+	tm.step_once()
+	# Tick 2: hold dummy-left (its own distinct key, never P1's).
+	Input.action_press("tm_dummy_left")
+	tm.step_once()
+	Input.action_release("tm_dummy_left")
+	# Tick 3: neutral again.
+	tm.step_once()
+
+	var recorded: PackedInt32Array = tm.get_dummy_recorded_buffer(1)
+	_eq(recorded.size(), 3, "RECORDING captured exactly the 3 ticks stepped")
+	_eq(recorded[0], InputFrame.NEUTRAL, "tick 1 recorded NEUTRAL (nothing pressed)")
+	_eq(recorded[1], InputFrame.LEFT, "tick 2 recorded LEFT — the dummy's live sampler captured the held key")
+	_eq(recorded[2], InputFrame.NEUTRAL, "tick 3 recorded NEUTRAL again after release")
+
+	# Cycle to PLAYBACK and confirm it loops the captured stream (not NEUTRAL —
+	# the pre-fix behavior, since there was never a live sampler to record from).
+	tm.set_dummy_mode(1, RecordPlaybackSource.Mode.PLAYBACK)
+	var played: Array = []
+	for _k in range(6):   # two full loops of the 3-frame recording
+		tm.step_once()
+		played.append(tm.inspection_view().player(1).input_current)
+	_eq(played, [InputFrame.NEUTRAL, InputFrame.LEFT, InputFrame.NEUTRAL,
+			InputFrame.NEUTRAL, InputFrame.LEFT, InputFrame.NEUTRAL],
+		"PLAYBACK loops the exact RECORDING-captured stream through the shell-wired dummy")
 	tm.get_parent().queue_free()
 
 
