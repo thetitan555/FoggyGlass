@@ -96,6 +96,17 @@ new scope.
   (placeholder, like tuning numbers); the contract is "each control operation is
   reachable from a bound control, and the controls are discoverable." The default
   input map lives in `project.godot`.
+- **Driving the dummy (operability — AD-040, re-gate-3 D1).** The mode-cycle
+  control switches the dummy's mode, but a human can only make the dummy *do*
+  something if the dummy source can sample a live device. So the dummy
+  `RecordPlaybackSource` **carries an injected live device sampler** (the same
+  device-sampler shape P1 uses): the human drives the dummy by **recording, then
+  playing back** — cycle to `RECORDING`, input the sequence (e.g. hold down-back
+  to crouch-block), cycle to `PLAYBACK`, the dummy loops it while the human
+  resumes P1. Still exactly one `InputSource` (Tenet 2) — no dummy AI, no second
+  human-takeover model. (P1's `flags.md` re-gate-3 finding was that the dummy was
+  constructed with *no* sampler, so cycling `M` was inert-in-effect; AD-040 fixes
+  the model, not the binding.)
 
 ## Geometry framing (P1.1)
 
@@ -184,6 +195,11 @@ beyond legibility.
     device source samples directions **and** the three attack buttons so a human can
     perform character A's moves. The bound controls are surfaced on screen. Verified
     at the human-inspection gate (operability is not headless-confirmable).
+    **Dummy is human-drivable (AD-040).** With the dummy source carrying a live
+    device sampler, a human can cycle the dummy to `RECORDING`, input a sequence
+    (e.g. hold down-back), cycle to `PLAYBACK`, and the dummy loops that sequence —
+    so the dummy can be made to hold crouch-block (and any recorded stance/action)
+    for the human to practice against. Verified at the human-inspection gate.
 14. **Framed on screen (P1.1).** With both players started as the installed
     character in idle, the geometry overlay's boxes are fully visible within the
     viewport and unoccluded by the panels (AD-035); the readout panels stay

@@ -49,6 +49,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-037** Vertical convention: up is −Y everywhere (world + character-local, one shared axis); feet-origin at `pos_y = ground_y`; the box-authoring Y-inversion is a DATA bug (reflect across the feet line), the render is correct — settled
 - **AD-038** Held-input looping-state exit: an actionable character in a looping state re-derives its state from input each tick, falling back to idle when no command matches (walk/crouch return to idle on release); stance selection reads CURRENT-tick input (not the command buffer) so release exits promptly, while discrete commands keep AD-022 buffer leniency — settled (2026-07-10 exit-lag correction)
 - **AD-039** Airborne-action model: directional/diagonal jumps via per-direction prejump lead-ins; air normals reached by jump-state cancels — data-only, no engine change — settled
+- **AD-040** Dummy-control operability model: a human drives the training dummy by *recording then playing back* — the dummy source carries an injected live device sampler, so `RECORDING` captures the human's device and `PLAYBACK` loops it; this is how a human makes the dummy hold a stance (e.g. crouch-block). No new `InputSource` type, no dummy AI (Tenet 2 intact); the missing piece was the dummy source's live sampler, not the `M` mode-cycle binding — settled (2026-07-11, re-gate-3 D1)
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -1429,6 +1430,45 @@ behind a motion. (2) A `button_map` entry whose **target state cannot be resolve
 **discrete** tier (the pre-correction behavior). Built via a two-tier scan
 (`_buffered_discrete_command` / `_current_tick_loop_command`) over `button_map` and a current-tick
 `InputBuffer.entry_satisfied_now` recognizer.
+
+### AD-040 · Dummy-control operability model: record-then-playback puppeting via an injected live device sampler on the dummy source — settled (2026-07-11, re-gate-3 D1)
+**Context.** Re-gate 3 (D1): a human could not control/direct the training dummy; the `M` key
+(`tm_dummy_mode_cycle`, keycode 77) "appeared inert" and all input still only drove P1, so
+crouch-block (and any dummy-dependent check) could not be exercised. **Root cause (diagnosed in
+code, not the binding):** `M` *is* bound and *does* cycle the dummy's mode — but `TrainingMode`
+constructs the dummy source as `RecordPlaybackSource.new()` with **no live sampler** (default empty
+`Callable`). Per `record_playback_source.gd`, an absent sampler makes `_sample_live()` return
+`NEUTRAL`, so **both** `PASSTHROUGH` and `RECORDING` emit neutral for the dummy — cycling the mode
+changes nothing observable. There was **no path for a human to inject inputs into the dummy at all**,
+so the dummy could never perform an action (e.g. hold a block). The operability *model* — "how does a
+human make the dummy do something" — was never nailed down in `training-mode.md`; the control layer
+specified the record/playback *mechanism* but not the human-facing driving path. This is a **spec
+gap**, resolved here, not a Developer binding bug and not a re-design.
+**Decision.** The dummy is driven the standard training-mode way: **record, then play back.**
+- The dummy `InputSource` (P2's `RecordPlaybackSource`) **carries an injected live device sampler**
+  (the same device-sampling `Callable` shape P1 already uses — `TrainingMode._sample_device_p1`, or
+  an equivalent dummy sampler). So in `RECORDING` the dummy captures the **human's device frames**
+  into its buffer; in `PLAYBACK` it loops them; in `PASSTHROUGH` it mirrors the device live.
+- The human workflow (the `M` cycle already provides the mode switch): cycle the dummy to
+  `RECORDING` → input the desired sequence (e.g. hold down-back to crouch-block) → cycle to
+  `PLAYBACK` → the dummy loops it while the human resumes driving P1 (P1's own passthrough source is
+  untouched throughout).
+- **Facing note (operability, not a contract):** to make the dummy *block*, the human holds the
+  absolute direction that is "back" for the dummy (away from its opponent). Block is resolved
+  facing-relative in the buffer, so holding the correct absolute key makes the dummy block; this is
+  a human-gate nuance, not a new engine rule.
+**Tenet 2 intact.** The dummy stays exactly one `InputSource` — a `RecordPlaybackSource` fed by an
+injected `Callable`, the class's own documented "no compile-time device dependency" pattern. **No
+dummy AI, no second `InputSource` type, no P2-is-special branch.** The mechanism is the same replay
+seam the trace harness and the eventual P3 tutorial use.
+**Rejected.** (a) A dedicated "hold this input" / stance-freeze dummy *behavior* mode — that is
+dummy behavior config, adjacent to the AI the spec explicitly excludes, and unneeded: record→playback
+already expresses "hold a stance." (b) A second live human takeover of P2 via a second key set — a
+different model than the specced record/playback dummy, and heavier than the operability need (verify
+crouch-block) warrants. (c) Re-binding or "fixing" `M` — `M` was never broken; the missing piece was
+the dummy source's live sampler.
+**Status.** Settled. Reflected in `training-mode.md` ("Human control surface" + criterion 13);
+built by TKT-P1.1R2-01.
 
 ### AD-039 · Airborne-action model: per-direction prejump lead-ins + air-normal jump-state cancels — settled (2026-07-09, character-A movement reconciliation)
 **Decision.** Two data-only wirings (no engine or format change) complete character A's air game;
