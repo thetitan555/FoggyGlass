@@ -249,19 +249,32 @@ trade differently:
   in **one session**. It amortizes the fixed read and never grows context far
   enough for within-session cost to bite. Collapse these handoffs wherever the
   ownership model allows.
-- **Heavy build work** (implementing tickets) defaults to **per-ticket dispatch**:
-  the orchestrator hands each ticket to a fresh Developer subagent with a small,
-  bounded context. Here the old "batch big to amortize reads" logic *loses* — a
-  large build batch pays escalating within-session cost as context grows, and a
-  mid-batch death (three happened in P1) loses the most work at peak expense.
-  Per-ticket dispatch caps both: bounded context per ticket, and a death costs one
-  ticket, not a milestone. It is also the runaway guard — a subagent scoped to one
-  ticket physically can't run to a 300k-token context. **This is the P2 default,
-  replacing the prior batch-big mandate**, which was reasoned from first principles
-  and never measured (see the resolution in `flags-archive.md`, 2026-07-08).
-  Measure P2's total spend against P1's as free, uncontrolled evidence; batching
-  earns its way back only where a phase shows genuinely high spec-read overlap
-  between adjacent tickets *and* the batch still ends on a real checkpoint.
+- **Heavy build work** (implementing tickets): **prefer a coherent same-subsystem
+  batch with per-unit commits; fall back to per-ticket dispatch for novel,
+  independent, or large tickets.** This is a **measured revision** of the prior
+  strict per-ticket default (P1.1, 2026-07-11): batching 2–3 same-subsystem tickets
+  into one Developer session ran **~2× cheaper per ticket** than per-ticket dispatch
+  (per-ticket averaged ~198k tokens/ticket; batched R2/R3 ran ~68k/~94k per ticket),
+  because the cold-start read (binding docs + spec + code orientation, ~100–150k
+  fixed) is paid **once per session** instead of once per ticket. The confound is
+  noted (the batched tickets were on already-understood code), but the amortization
+  is real. **The safety conditions that make batching sound** — without them, revert
+  to per-ticket:
+  - **Same-subsystem, high spec-read overlap.** The tickets share the reads (R3: all
+    in the training-mode shell + character-A state machine). Independent tickets that
+    read disjoint context don't amortize — dispatch them per-ticket.
+  - **Commit each ticket as its own unit *within* the session** (the load-bearing
+    rule). This keeps granular, reviewable history AND caps a mid-batch death to the
+    single uncommitted ticket — neutralizing the old batch-big failure mode (three P1
+    mid-batch deaths). It is *not* the old "one big commit at the end" batch.
+  - **Ends on one real checkpoint**, and **watch the context ceiling** — R3's batch
+    hit ~281k, the largest single session of P1.1; bigger batches climb toward the
+    zone where within-session cost grows and a death costs more. A batch big enough to
+    risk the runaway guard is too big; split it.
+  Per-ticket dispatch remains the right tool for a novel/independent/large ticket, or
+  where the user needs a checkpoint between tickets to steer. (History: the strict
+  per-ticket default itself replaced an unmeasured "batch-big" mandate; see
+  `flags-archive.md`, 2026-07-08. This revision is the measured middle, from P1.1.)
 
 **The batching tradeoff, named.** A bigger batch amortizes reading but costs two
 things: fewer checkpoints for the user to catch a wrong turn, and more lost work
