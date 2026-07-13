@@ -306,11 +306,17 @@ does *not* have to re-read is a line saved in perpetuity.
 touch several cold-start sessions — build, ratify, audit — each re-reading
 overlapping artifacts. Where two passes read the same artifact for compatible
 purposes, look for a way to collapse them *without* breaking one-owner-per-artifact
-or the upstream-correction rule. (The judgment-call review path is the first
-candidate — considered and **deferred**, not adopted on P0 evidence: P0 is
-foundational/contract-dense, so its impl:contract ratio is not the steady-state
-signal. Adoption gate: measure the [impl]:[contract] ratio on a *completed
-non-foundational (P1) feature* first. See flags-archive.md, 2026-07-02.)
+or the upstream-correction rule. **The judgment-call ratification pass was the
+first candidate — resolved 2026-07-13: ride it, don't merge it.** The P1/P1.1
+measurement came back ~2:1 latitude:contract — about a third of calls touch a
+contract (folded into the spec/an AD, or overturned), and that third is where drift
+dies and where ratifying *means the Architect editing the spec*, which no other
+role can do. So ratification stays the **Architect's own pass** (contract scrutiny
+stays with the spec-owner), but by default it **rides in an Architect session
+that's already open** — never a cold start spun up solely to ratify. That captures
+the amortization the consolidation was chasing while keeping the ownership boundary
+clean. (History: deferred on P0 evidence because P0 is foundational/contract-dense,
+not the steady-state signal — flags-archive.md, 2026-07-02.)
 
 **The dispatch sequence is an Architect deliverable, not Developer discretion.**
 How a phase's tickets *order* into build sessions — dependency order, which seam
