@@ -141,20 +141,16 @@ the same replay-a-shareable-input-string mechanism is a player pasting a setup t
 practice against, and is **P3's scripted-input source arriving early**. Not a full
 TAS framework now. Details in the work-order's "Companion capability" section.
 
-**DONE (2026-07-11) — P1.1 and, with it, P1 are complete.** The reconciliation ran
-three fix batches across five human re-gates (full arc in `flags-archive.md`, the
-reconciliation flag; work-order `briefs/character-a-movement-reconciliation.md`).
-Delivered: the trace harness (Tenet-2 scripted-input replay, extension-ready for P3);
-geometry Y-fix (AD-037); held-input stances + walk/crouch release (AD-038); airborne
-actions (AD-039); dummy-control record→playback puppeting with an on-screen mode
-indicator (AD-040/041); ground-contact **landing snap** (AD-042 — the landing half of
-AD-036, pulled forward). Character A is playable and correct against its brief; the
-training mode is operable and legible; all judgment calls ratified; QA objective audits
-green; the user's 5th re-gate cleared it. **One item deferred to P2** (below): an air
-normal currently stops the jump arc and snaps to the floor — the honest edge of the
-minimal landing snap; carrying fall momentum through an air normal and easing the
-descent is the full air-move semantics, folded into P2's AD-036 unit. The grounded
-**dash** stays deferred to the P2 brief (open question below).
+**DONE (2026-07-11) — P1.1 and, with it, P1 are complete.** Full arc in
+`flags-archive.md` (reconciliation flag) and
+`briefs/character-a-movement-reconciliation.md`; delivered work is folded into
+AD-037–042 (trace harness, geometry Y-fix, held-input stances, airborne actions,
+dummy-control puppeting, landing snap). Character A is playable and correct against
+its brief; the training mode is operable and legible; all judgment calls ratified;
+QA audits green; the user's 5th re-gate cleared it. **Two items deferred to P2:**
+(1) an air normal stops the jump arc and snaps to the floor — full fall-momentum
+air-move semantics fold into P2's AD-036 unit; (2) the grounded **dash** (open
+question below).
 
 ## P2 — Second character + playable 1v1 match
 

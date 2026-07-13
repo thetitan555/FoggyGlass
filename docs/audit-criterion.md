@@ -88,6 +88,20 @@ gate blocks a done verdict), and the done-mechanics are `protocol.md`'s. This is
 the same automate-the-objective / human-holds-the-experiential shape as the push
 gate.
 
+**The gate runs off a brief-derived checklist, not improvisation.** A human gate
+otherwise catches only what the human thinks to try. P1.1 is the lesson: character
+A's missing walk-stop, crouch, and directional jumps were all *enumerable from its
+brief*, yet took two opportunistic re-gates to surface because nothing drove the
+brief's named surface as a coverage list (`pipeline-analysis-completeness-gap.md`).
+So when the Strategist declares a gate, it **attaches a checklist derived from the
+owning brief's enumerated surface** — its movement list, required controls,
+legibility readouts — one line per intended behavior. The user drives that list;
+QA records each item as a gate open-item and cannot issue *done* while any stands
+unchecked. This converts the gate from opportunistic spot-check to systematic
+coverage of *intended* behavior — the absence-check the presence-based test suite
+structurally can't perform. Free exploration on top is still welcome; the checklist
+just guarantees the floor.
+
 ## Objective vs. subjective (QA's handling, per its role)
 
 - **Objective — QA verifies, pass/fail, owns the call:** Is the information

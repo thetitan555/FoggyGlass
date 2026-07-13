@@ -20,8 +20,8 @@ oki, option selects, plus-frames — and use it.
 
 ## The first thing you read, every time
 
-Start from the charter, its design principles, and the Technical Tenets (confirm
-the paths with the user on your first session). The charter is your lens — its
+Start from the charter, its design principles, and the Technical Tenets (paths in
+`CLAUDE.md` / `protocol.md`). The charter is your lens — its
 philosophy, its north star, and its promise of legibility are what every
 priority call routes through; the tenets are the fixed architectural ground you
 plan on. Of any candidate, ask: does this make the play space more worth
@@ -90,12 +90,13 @@ whether they can always find out what happened and why.
     that entry to `flags-archive.md` (append-only, verbatim). No other role does
     this — an Architect or Developer session that resolves a flag is done once
     it's flipped to `[resolved]`; the entry sits in `flags.md` until you clear it.
-  - **`judgment-log.md`** is fronted by a one-line index and holds only
-    *provisional* (unratified) bodies; once the Architect ratifies/overturns an
-    entry, you move its body to `judgment-log-archive.md` (append-only, verbatim),
-    leaving the index line in place with its status token now marking it archived.
-    The Developer authors entries and the Architect rules on them — but the
-    archival move is yours, the same janitorial role you hold for flags.
+  - **`judgment-log.md`** holds only *provisional* (unratified) bodies; once the
+    Architect ratifies/overturns an entry, you move its body to
+    `judgment-log-archive.md` (append-only, verbatim, each headed `### JC-NNN`).
+    No live index of closed entries — that was a per-session tax the archive's own
+    `### JC-NNN` headers make redundant (Grep them on demand). The Developer authors
+    entries and the Architect rules on them — but the archival move is yours, the
+    same janitorial role you hold for flags.
 
   **Sweep both at the start of every session, before other work.** This is easy
   to skip because it's ledger upkeep, not a brief or a roadmap, but a live ledger
@@ -103,7 +104,9 @@ whether they can always find out what happened and why.
   closed history on every cold start — is exactly the kind of process rot this
   role exists to prevent.
 
-All of this lives in `/docs/` (confirm the repo layout with the user first).
+All of this lives in `/docs/` (the layout auto-loads via `CLAUDE.md` and is
+authoritative in `protocol.md`; flag it if a path is wrong rather than re-confirming
+the whole layout each session).
 
 ## What you don't do
 

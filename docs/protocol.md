@@ -51,19 +51,15 @@ is the structural fix for the P1 QA delegation-runaway; see `flags-archive.md`,
 2026-07-08).
 
 **Git's role, and who runs it:** git runs **natively on the user's Windows
-machine** and is for history and off-machine backup — *not* the inter-role
-transport (the shared working tree is). A role may run `git status`, stage, and
-`git commit` directly when a unit of work reaches a checkpoint. **`push` stays
-the user's manual gate:** roles commit freely to local history, but pushing to
-`origin` is the user's call (run or approve it yourself) — a human checkpoint on
-the one irreversible step, and nowhere it isn't needed. The `commit.bat` /
-`COMMIT_MSG.txt` batch-commit apparatus (a workaround for sandbox git corruption)
-is **retired** — roles commit with native git, and no one writes `COMMIT_MSG.txt`.
-`push.bat` survives, **rewritten** as the user's thin manual push-gate: it pushes
-the natively-committed history and only prompts for a message if the tree is
-unexpectedly dirty. Running it is the user's push step — but run it against a
-**clean tree**, because its `git add -A` would otherwise sweep any uncommitted
-WIP (e.g. a subagent mid-write) into one catch-all commit.
+machine** for history and off-machine backup — *not* the inter-role transport (the
+shared working tree is). A role may run `git status`, stage, and `git commit`
+directly when a unit of work reaches a checkpoint. **`push` stays the user's manual
+gate:** roles commit freely to local history; pushing to `origin` is the user's
+call — a human checkpoint on the one irreversible step. `push.bat` is that thin
+gate; run it against a **clean tree**, since its `git add -A` would otherwise sweep
+uncommitted WIP (e.g. a subagent mid-write) into one catch-all commit. (The old
+`commit.bat` / `COMMIT_MSG.txt` batch-commit apparatus — a sandbox-git-corruption
+workaround — is retired; see `flags-archive.md`, 2026-07-08.)
 
 Design consequence: if it isn't **saved to the shared working tree**, it didn't
 happen. No role may rely on something another role "knows" — only on what's on
@@ -301,9 +297,10 @@ are rubber-stamp passes and re-reads of unchanged artifacts.
 highest-leverage lever, because shaving a role's mandatory read pays off in every
 future session that role ever runs. Reinforce what's already here: tickets and
 briefs name the exact spec sections a role must read (not "read the spec");
-`flags.md` holds open flags only; `decisions.md` and `judgment-log.md` are
-fronted by their indexes; rationale lives once and is cited, never restated. Every line a role does *not*
-have to re-read is a line saved in perpetuity.
+`flags.md` holds open flags only; `decisions.md` is index-fronted and
+`judgment-log.md` carries only provisional bodies (closed history is greppable in
+its archive); rationale lives once and is cited, never restated. Every line a role
+does *not* have to re-read is a line saved in perpetuity.
 
 **Consolidate ownership passes where the model allows.** A single feature can
 touch several cold-start sessions — build, ratify, audit — each re-reading
@@ -345,18 +342,16 @@ Architect's.
   `push.bat` remains as the user's thin manual push-gate — see the Git's-role note
   above for its one caveat.)
 - **Commit often; one logical change per commit.** Prefer **frequent, small
-  commits** — checkpoint each logical unit as it lands rather than batching many
-  changes into one commit. Commits are local and cheap (`push` is the only gate),
-  so err toward *more* checkpoints, not fewer: they shrink how much is lost if a
-  session dies mid-flight and give the user clean, reviewable history to catch a
-  wrong turn early. The message references the brief, ticket, or flag it serves
-  (e.g. `brief: debug-training-mode`). This is orthogonal to session batching in
-  the token-economy section — that minimizes cold-start *reads*; committing often
-  *within* a session costs nothing extra. **Hard rule:** commit the first working
-  logical unit before starting the next — never carry two uncommitted units at
-  once. In P1, three sessions died with uncommitted work because the commit
-  consistently came too late under large batches; per-ticket dispatch already caps
-  a mid-flight loss at one ticket, and this rule caps it at a fraction of one.
+  commits** — checkpoint each logical unit as it lands. Commits are local and cheap
+  (`push` is the only gate), so err toward *more* checkpoints: they shrink what's
+  lost if a session dies mid-flight and give the user clean, reviewable history. The
+  message references the brief, ticket, or flag it serves (e.g. `brief:
+  debug-training-mode`). Orthogonal to session batching in the token-economy section
+  — that minimizes cold-start *reads*; committing often *within* a session costs
+  nothing extra. **Hard rule:** commit the first working logical unit before
+  starting the next — never carry two uncommitted units at once (three P1 sessions
+  died with uncommitted work when the commit came too late under large batches;
+  `flags-archive.md`).
 - **Direction lives upstream.** A steer given in chat — by the user or anyone —
   is provisional until the *owning* artifact records it. If a role receives or
   infers direction that belongs to an upstream artifact (priorities, scope, a
@@ -374,25 +369,25 @@ Architect's.
   executing role reads *that set*, not the whole `/docs` tree. Ledgers are kept
   cheap on purpose so no role ever cold-reads a project's whole history:
   `flags.md` holds open flags only (resolved ones in `flags-archive.md`);
-  `decisions.md` is fronted by a one-line index; and **`judgment-log.md` is
-  fronted by an index and holds only _provisional_ bodies — closed entries live
-  verbatim in `judgment-log-archive.md`**, pulled by JC-id on demand. Never read
-  an archive whole; scan the index, pull what the task needs. The judgment-log
-  index carries one line per entry in log order:
-  `JC-0NN · <ticket/flag> · <gist> — <status>`. Upkeep follows the log's own
-  shared-write split: the **Developer** adds the index line and the provisional
-  body when appending; the **Architect** flips that line's status token (and the
-  body's) on ratifying/overturning — same write, never a trailing chore; the
-  **Strategist** sweeps closed bodies into the archive (below).
+  `decisions.md` is fronted by a one-line index; and **`judgment-log.md` holds
+  only _provisional_ bodies — closed entries live verbatim in
+  `judgment-log-archive.md`**, each headed `### JC-NNN`, pulled by id or keyword
+  with Grep on demand (`grep "^### JC" …` reconstructs the full log-order list).
+  Never read an archive whole. Upkeep follows the log's own shared-write split: the
+  **Developer** appends a provisional body when making a call (next id = highest
+  `### JC-NNN` in the archive, +1); the **Architect** flips its status on
+  ratifying/overturning; the **Strategist** sweeps closed bodies into the archive
+  (below).
 - **Batch light work per session; dispatch builds per ticket.** Roles are
   memory-less; each session re-pays its fixed reading cost before any work. Group
   *light* same-role work — several flags for one owner, a spec revision plus its
   ticket updates, ratifications — into one session where practical. *Heavy build
   work* defaults to per-ticket dispatch — see "Token economy" for the regime
   split and why.
-- **Confirm paths on first run.** Each role confirms this layout with the user at
-  the start of its first session; if a path here is wrong, that's a flag to the
-  Strategist.
+- **If the layout is wrong, flag it.** This table is the authority and auto-loads
+  via `CLAUDE.md`; a role that finds a path here wrong flags it to the Strategist.
+  (No standing "confirm the layout" ritual on every first run — that was a
+  chat-substrate leftover; the table is loaded, not re-confirmed.)
 - **This protocol is revisable, not sacred.** It exists before real work so
   nothing is built into a vacuum, but reality outranks it. When it stops serving
   the work, flag it to the Strategist and it gets fixed.
