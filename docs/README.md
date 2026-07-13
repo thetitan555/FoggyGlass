@@ -27,8 +27,6 @@ instructions (or, for the Consultant, a chat/Project outside Cowork):
   implementation and records every judgment call.
 - **roles/qa.md** — verifies, controls drift, audits; raises problems, never
   fixes them; hard-verifies the objective, surfaces the subjective.
-- **roles/consultant.md** — out-of-pipeline chat advisor for your ideation and
-  tradeoff questions; no authority to write to or decide anything.
 
 ## What's *not* here yet (the roles create these at runtime)
 

@@ -102,8 +102,8 @@ the Architect appends rulings.
        Strategist  Architect Developer   QA
 ```
 
-1. **Idea.** Anyone may have one (user, Strategist, a flag from downstream, the
-   Consultant via the user). It lands with the Strategist, who evaluates it
+1. **Idea.** Anyone may have one (user, Strategist, or a flag from downstream).
+   It lands with the Strategist, who evaluates it
    against the charter — does it make the play space more worth exploring while
    keeping the game legible? — and decides whether it becomes a brief.
 2. **Brief** *(Strategist).* States intent and constraints — the problem it
@@ -181,14 +181,6 @@ the entry to `/docs/flags-archive.md`** — the permanent record — so the live
 ledger stays small and cheap to read. **Batch where possible:** flags for the
 same owner should be raised and resolved together in one session; every separate
 session re-pays that role's full reading cost.
-
-**Consultant-originated flags.** The Consultant is outside the pipeline. At the
-user's request and with the user's confirmation, it may *draft* a flag as a
-paste-ready block for the user to append here — **raise-only, never resolve** —
-by design, so the user's deliberate carry-in holds even though the Consultant
-runs outside this repo's substrate. Such entries are tagged `raised-by: Consultant (via user)`
-and carry a stale-context caveat, since the Consultant works only from what the
-user pasted into its chat; the owner sanity-checks against live state first.
 
 ## Cadence
 
