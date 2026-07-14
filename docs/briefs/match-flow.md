@@ -80,10 +80,8 @@ Conventional best-of, so nothing here is a surprise to a veteran:
   is a balance call that belongs where damage is set). Default target: combos and
   reads matter — a couple of good touches decide a round, not thirty pokes.
 - **Ties:** double-KO and equal-health timeout **award the round to both players**
-  (conventional). *The one genuinely arbitrary call:* if that pushes both to the
-  match-win threshold at once, default is a single **sudden-death final round**.
-  Confirm, or say if you'd rather a tie round simply **replay with no score** (no
-  draws) — cleaner, slightly less conventional.
+  (conventional). If that pushes both to the match-win threshold at once, resolve
+  with a single **sudden-death final round** (user-confirmed 2026-07-14).
 
 These are direction, not spec; the Architect owns the numbers and may flag any back
 if they fight the characters.
@@ -128,9 +126,8 @@ usual.
 
 ## Open questions (route as noted)
 
-- **Tie-at-match-point rule** (mine — sudden-death vs no-score replay) — I've
-  defaulted to sudden-death; say which you want. The only rule here without an
-  obvious conventional answer.
+- **Tie-at-match-point rule** — *resolved 2026-07-14:* sudden-death final round
+  (user-confirmed).
 - **Exact health/timer values and the round/match state machine shape**
   (Architect) — yours to spec and tune. The brief fixes the loop and the tenet
   bar, not the numbers.

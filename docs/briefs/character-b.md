@@ -173,8 +173,7 @@ the opponent won't know," it's out.
   B is not a footsies character; this is a serviceable button, not A's cr.MK.
 - **5H — the whiff punisher.** Lightning-fast startup to punish whiffs, balanced by
   **severe recovery on its own whiff** (whiffing 5H is punishable — the risk that
-  pays for the startup). *[Reading "incredible recovery if it itself whiffs" as
-  punishably-long recovery; confirm if you meant it recovers fast.]*
+  pays for the startup; user-confirmed 2026-07-14).
 - **6H — command overhead.** The dedicated high in B's mixup. Must **look like an
   overhead** (clarity principle — the animation teaches the high before the HUD).
 - **2H — antiair launcher, jump-cancellable on block.** Slower-startup antiair that
