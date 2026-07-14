@@ -83,8 +83,9 @@ project tree — **`/game`** at repo root (the Architect's call, recorded in
 | Spec + acceptance criteria | `/docs/spec/*.md` | **Architect** | Developer, QA |
 | Architecture decisions | `/docs/spec/decisions.md` | **Architect** | all |
 | Tickets | `/docs/tickets/*.md` | **Architect** | Developer, QA |
-| Game code + dev tests | `/game` (engine project tree) | **Developer** | all |
-| Judgment-call log (index + provisional bodies) | `/docs/judgment-log.md` | **Developer** writes; **Architect** ratifies | QA, Architect |
+| Game production code | `/game` (non-test) | **Developer** | all |
+| Game tests + harnesses | `/game/**/tests`, `test_*.gd`, `*_test.gd` | **Developer** + **QA** | all |
+| Judgment-call log (provisional bodies only) | `/docs/judgment-log.md` | **Developer** writes; **Architect** ratifies | QA, Architect |
 | Judgment-call archive (closed, verbatim) | `/docs/judgment-log-archive.md` | **Strategist** moves entries in | on demand |
 | Audit + drift reports | `/docs/audits/*.md` | **QA** | routed to owner |
 | Flag ledger (open) | `/docs/flags.md` | **any role** appends; **owner** resolves | all |
@@ -200,10 +201,10 @@ session re-pays that role's full reading cost.
   entry the owner has flipped to `[resolved]` and relayed back into
   `flags-archive.md`; (2) move each `judgment-log.md` entry the Architect has
   ratified/overturned out of the "Provisional" section into
-  `judgment-log-archive.md` (verbatim; its index line stays, status token now
-  marking it archived). One janitorial owner for both ledgers keeps the live
-  reads flat. This is the only place the duty is enforced structurally rather
-  than left to memory — see `.claude/agents/strategist.md`.
+  `judgment-log-archive.md` (verbatim, keeping its `### JC-NNN` header). One
+  janitorial owner for both ledgers keeps the live reads flat. This is the only
+  place the duty is enforced structurally rather than left to memory — see
+  `.claude/agents/strategist.md`.
 - **Per feature.** QA audits each feature against its acceptance criteria, the
   tenets (determinism + serialization especially), and the audit criterion before
   it is "done." This gates the loop — nothing is done un-audited. A feature that

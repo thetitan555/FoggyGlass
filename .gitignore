@@ -1,3 +1,2 @@
-# Checkpoint request: a role writes its proposed commit message here; commit.bat
-# / push.bat read it and delete it. Transient, never tracked.
-COMMIT_MSG.txt
+# Godot editor cache — regenerated on open, never committed.
+.godot/

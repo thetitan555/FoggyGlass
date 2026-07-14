@@ -1,55 +1,57 @@
-# Project Docs — Fighting Game (Godot)
+# Project Docs — FoggyGlass
 
-This folder is the **document substrate** for a multi-role build pipeline. The
-roles run as separate Cowork projects that don't share memory, so they don't
-collaborate in a room — they coordinate through these artifacts and through you.
-Design the documents well and the pipeline works; let them drift and it doesn't.
+This folder is the **artifact substrate** for a four-role build pipeline. The
+roles run as memory-less sessions that coordinate through these files, not
+through anyone's head: if it isn't saved here, it didn't happen. Design the
+documents well and the pipeline works; let them drift and it doesn't.
+
+## The roles
+
+They run as **native Claude Code subagents** defined in `.claude/agents/`
+(`architect.md`, `developer.md`, `qa.md`) plus the **Strategist**, who is the
+top-level session you talk to (loaded via the `Strategist` output style, backed
+by `.claude/agents/strategist.md`). The Strategist dispatches the other three as
+subagents and relays between them; only the Strategist orchestrates.
+
+- **Strategist** — direction, priority, roadmap, briefs, the audit criterion,
+  the protocol, and the health of the process.
+- **Architect** — spec, architecture decisions, the move/frame-data format,
+  tickets; ratifies the Developer's judgment calls.
+- **Developer** — builds from the spec; bounded implementation latitude; records
+  every judgment call.
+- **QA** — verifies, controls drift, audits; raises problems, never fixes them.
 
 ## What's here
 
-**Foundational documents** — read first by every role, owned by the user:
+**Foundational documents** — read first by every role, **owned by the user**:
 
-- **charter.md** — the vision. Philosophy, north star (comprehension, not
-  difficulty), and what veterans get. The standard everything is judged against.
-- **principles.md** — the design principles. *How* the charter's belief shows up
-  in the build: clarity-as-craft, depth-vs-clarity, no-knowledge-checks.
+- **charter.md** — the vision: comprehension-not-difficulty, and what veterans
+  get. The standard everything is judged against.
+- **principles.md** — how the charter shows up in the build: clarity-as-craft,
+  depth-vs-clarity, no-knowledge-checks.
 - **technical-tenets.md** — the inviolable architectural givens: deterministic
   simulation, the single input-source abstraction, build-for-extension.
 
-**Role prompts** (`roles/`) — paste each into the corresponding Cowork role's
-instructions (or, for the Consultant, a chat/Project outside Cowork):
+**Coordination artifacts** — who owns and writes each is the authoritative table
+in **protocol.md** ("Where things live"). In brief: the Strategist owns this
+protocol, the roadmap, briefs, and the audit criterion; the Architect owns the
+spec (`spec/`), architecture decisions, and tickets; the Developer owns the game
+code (`/game`); QA owns the audits (`audits/`). The flag ledger (`flags.md`) and
+judgment-call log (`judgment-log.md`) are the shared-write surfaces, kept small
+by archiving closed entries.
 
-- **roles/strategist.md** — pairs with you; owns direction, priority, the
-  coordination protocol, the audit criterion, and the health of the process.
-- **roles/architect.md** — owns the spec, architecture decisions, the
-  move/frame-data format, ticketing, and ratifying the developer's judgment calls.
-- **roles/developer.md** — builds from the spec; has bounded latitude over
-  implementation and records every judgment call.
-- **roles/qa.md** — verifies, controls drift, audits; raises problems, never
-  fixes them; hard-verifies the objective, surfaces the subjective.
+## Structural enforcement
 
-## What's *not* here yet (the roles create these at runtime)
+Three of the protocol's rules are enforced by PreToolUse hooks
+(`.claude/hooks/`, documented in `.claude/hooks/README.md`), so a role *cannot*
+violate them: **one-owner-per-artifact** (you can't edit what you don't own),
+the **push gate** (`git push` is the user's manual step), and **Tenet 1
+determinism** on writes into `game/sim/**`. A hook-block is the protocol working
+— raise a flag, don't route around it.
 
-These are referenced by the role prompts but don't exist until the roles produce
-them. Most will land in this folder:
+## Reading discipline
 
-- **The coordination protocol** — the Strategist's first deliverable. Defines
-  what artifacts exist, where they live, who reads/writes each, the flow
-  (idea → brief → spec → code → audit), the **audit cadence**, and the home of
-  the **judgment-call log**. It also carries the **upstream-correction rule**:
-  any role may *raise* a problem with anything upstream (up to the charter), but
-  only the upstream owner *resolves* it; downstream never patches around or
-  redefines upstream work.
-- **Briefs and the roadmap** — Strategist.
-- **The spec, acceptance criteria, architecture decisions, tickets** — Architect.
-- **Game code, tests, the judgment-call log** — Developer.
-- **Audit reports and drift reports** — QA.
-
-## How to start
-
-1. Drop this folder into your repo.
-2. Create the Cowork roles and paste each `roles/*.md` into the matching role.
-3. Point every role at this `/docs` folder; confirm paths on first run.
-4. The Strategist goes first: it reads the foundational docs, **sets up and
-   clones the GitHub repo**, then produces the coordination protocol, the
-   roadmap, and the first brief. Everything else follows from there.
+Roles are memory-less, so cold-start reading is the dominant cost. Read the
+tenets and the exact spec sections your ticket/brief names — not the whole tree.
+Ledgers hold only live entries (closed ones live in their `*-archive.md`,
+greppable on demand). See protocol.md → "Token economy."
