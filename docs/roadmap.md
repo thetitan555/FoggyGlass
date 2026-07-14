@@ -211,21 +211,18 @@ not just runnable but defensible — and the architecture is proven extensible.*
 ## Open questions (resolve before the phase that needs them)
 
 - **Character A archetype** — *resolved:* a grounded, simplified shoto, briefed
-  in `/docs/briefs/character-a.md`. **Character B archetype** — open, deferred to
-  the P2 brief; it will be chosen to *contrast* A (the split is what tests the
-  format and matchup legibility). Exact movesets are the Architect's to spec.
-  *Current leaning (the user's, recorded here so it stops living only in chat):*
-  a strings/air-mobility contrast — gatlings and jump cancels — which is why A's
-  kit deliberately carries neither and its numbers are juiced to stand up to such
-  a B. A **leaning, not a commitment**; the P2 brief decides, and no spec should
-  treat B's identity as settled before then.
-- **Character A grounded dash** — *resolved 2026-07-09: deferred to P2.* The
-  brief's discretionary forward/back dash (`66`/`44`) is authored as correct move
-  data but **unreachable** — it needs a new double-tap recognizer (real engine
-  mechanism, not wiring), which is out of P1.1's additive close-the-gap scope. Not
-  cut: the **P2 brief decides** whether A gets the dash, folded into P2's
-  movement/ground-contact hardening unit where engine-movement work already lives.
-  Until then the dash states remain authored-but-unreachable (harmless).
+  in `/docs/briefs/character-a.md`. **Character B archetype** — *resolved
+  2026-07-14:* a strings-and-air-mobility pressure character (gatling normals, air
+  mobility, mixups, an arcing setplay projectile, no invincible reversal), briefed
+  in `/docs/briefs/character-b.md`. Chosen to contrast A along every axis so the move
+  format proves general and the matchup is legibly asymmetric. Exact moveset is the
+  Architect's to spec.
+- **Character A grounded dash** — *resolved 2026-07-14: folded into P2 (yes).* The
+  double-tap recognizer is built for character B's movement regardless, so wiring
+  A's already-authored-but-unreachable dash states (`66`/`44`) to it completes A's
+  intended kit at near-marginal cost. Recorded in `/docs/briefs/character-b.md`
+  ("Scope notes"); the Architect confirms the actual cost and flags back if it's
+  materially more than wiring existing states to the shared recognizer.
 - **Match rules** — rounds, timer, health values: a P2-brief detail, defaulted
   to a conventional best-of for now unless you want otherwise.
 - **What the training mode must expose, exactly** — the P1 brief pins this; it's
