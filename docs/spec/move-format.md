@@ -53,7 +53,8 @@ button). Both are expressed in data with existing mechanisms — no format chang
 | `id` | Stable identifier. |
 | `states` | The set of `MoveState`s this character has. |
 | `button_map` | Maps generic `BUTTON_n` (+ direction/motion) → `state_id`. The only place buttons gain meaning. |
-| `physics` | Walk/dash/jump/gravity constants, as baked fixed-point integers (AD-014). |
+| `cancel_groups` | Optional (AD-044). Named sets of `state_id`s a `CancelRule.target` may reference (character B's gatling strength/stance ladder). Authored data; empty for characters with no group targets. |
+| `physics` | Walk/dash/jump/**gravity** constants, as baked fixed-point integers (AD-014). `gravity` is the per-tick `velocity.y` acceleration applied to an **airborne** character (AD-043); jumps set a takeoff velocity and land by the runtime clamp — no hand-balanced net-zero arc (supersedes the old invariant). |
 
 ### `MoveState`
 | Field | Meaning |
@@ -88,6 +89,7 @@ content, resolved through `ProjectileRegistry` — *not* serialized state (AD-02
 | `hitbox` | A `HitBox` (geometry + hit data) carried by the projectile. |
 | `lifetime` | Frames it persists before despawning; consumed on hit/block. Measured from the tick *after* spawn (AD-030 / JC-034 — see below). |
 | `max_per_owner` | Live cap (1 for the slice fireball). |
+| `gravity` | Optional (AD-047). Baked-FP vertical acceleration applied to the runtime entity's `velocity.y` each tick (phase 3) → a **parabolic arc**. `0` (default) = straight-line (character A's fireball). Character B's high-angle setplay projectile authors different initial `velocity` + `gravity` per strength for **different parabolas**; a projectile whose `pos_y >= ground_y` **despawns** (ground contact). The "falls-in-front" oki must stay a *readable mixup* (AD-047), never an unblockable. |
 
 The runtime entity additionally carries, set at spawn time (not authored on the shell):
 `owner` (casting player index, from `SimState` — for cap, facing, combo attribution),
@@ -110,7 +112,7 @@ travelling frame F+1; author a `lifetime` and reach with that one-tick offset in
 ### `CancelRule` (one entry in `MoveState.cancels` — AD-015)
 | Field | Meaning |
 |---|---|
-| `target` | Destination `state_id`, or a tag/group naming a set of states. |
+| `target` | Destination `state_id`, **or a cancel-group name** (a set of `state_id`s the `Character` declares). Group-target **resolution is built as of P2 (AD-044)** — the AD-015 group path JC-023 deferred: a buffered command whose destination state is a *member* of the target group satisfies the cancel (subject to `condition`/`window`/`requires_tag`, through the one recognizer). Character B's gatling ladder is authored as group targets. |
 | `condition` | `on_hit` \| `on_block` \| `on_contact` \| `on_whiff` \| `always`. |
 | `window` | Frame range within the move the cancel is allowed; default first-active→end. |
 | `input` | Required command (button/motion) to take the cancel. **`0` = none** — no input gate at all: the cancel is satisfied on input unconditionally (still subject to `condition`/`window`/`requires_tag`). Used for an `always`, window-gated transition that carries a state into the next with no button/motion (e.g. a prejump into the neutral jump arc). Mirrors the `ButtonMapEntry` sentinel convention (`motion 0 = none`, `button_index -1 = no button`). A nonzero `input` is resolved through the one recognizer via the `button_map` entry targeting the same state (raw-button fallback) — JC-023/AD-015. |
@@ -120,6 +122,16 @@ Move classes are expressed, not special-cased: **gatling/chain** = `on_contact`
 to another normal within a `window`; **special-cancel** = `requires_tag` granted
 by the hit; **whiff-cancel** = `on_whiff`. Rehit/multi-hit is *not* a cancel —
 see `HitBox.rehit_interval` and AD-016.
+
+**Gatling strength-ladder (character B; AD-044 — the format-generality test, passed).** B's chain
+model — "cancel into a **higher strength**, OR into the **same-strength normal of the other stance**;
+**lights self-chain**" — is expressed with **no format extension**, as `on_contact` cancels to
+**cancel groups**. Each chainable normal is tagged `strength` (L<M<H) and `stance` (stand/crouch); a
+cancel `source → target` is legal iff `target.strength > source.strength`, **or**
+`target.strength == source.strength && target.stance != source.stance`, **or** both are lights
+(`strength == L`, including exact self-repeat). So `5L 2L 2L 5M 2M 2H 5H` is legal, `5M 5M` and `5M 5L`
+are not (AD-044 owns the precise rule and the resolved brief ambiguity on equal-strength stance
+toggling). The groups are authored data; the ladder is not engine-special-cased.
 
 **Authoring rule — don't end an ALWAYS-cancel window at `duration` (JC-038).** A
 once-through move is *actionable on its `frame_in_state == duration` frame*, and
@@ -148,6 +160,7 @@ the one recognizer.
 | `button_index` | The primary generic button (`BUTTON_0…7`), or **`-1` = no button** (a pure-direction / motion-only command). |
 | `chord_button_index` | Optional **second** required button (AD-032); `-1` = none. When set, the command requires `button_index` **and** `chord_button_index` both held on the **same** frame within the command buffer — a two-button *chord* (e.g. throw `L+H`). |
 | `required_direction` | Optional direction gate (raw direction bits; the sim resolves forward/back by facing before matching). For a pure-direction command (`button_index == -1`, no `motion`) this is the *whole* command (e.g. jump = `UP`). |
+| `double_tap` | Optional (AD-046). When set, the command is a **double-tap** of `required_direction`: the direction pressed → released → pressed within the slice-wide double-tap window (a sim-side feel constant, AD-022 family). Recognized by the one recognizer over `input_history` (pure function of history, Tenet 2). Routes to a dash state — character B's ground dash, and character A's `66`/`44` (wiring A's existing `STATE_DASH_F/B`). |
 | `target_state_id` | Destination `state_id`. |
 
 **Two command shapes this contract must express (AD-032):**
@@ -203,6 +216,7 @@ per-keyframe unless a move overrides it.
 |---|---|
 | `box` | The AABB. |
 | `hit_kind` | The contact category (AD-031): `STRIKE` \| `THROW` \| `PROJECTILE`. Determines which of a defender's `invuln_*` flags gates it (a `STRIKE` is whiffed by `invuln_strike`; a `THROW` by `invuln_throw`; a `PROJECTILE` by `invuln_strike` — a projectile is a strike delivered at range). The **canonical** category field; the legacy `throwbox` flag is exactly `hit_kind == THROW` (see below). Default `STRIKE`. |
+| `guard_height` | Block-height requirement (AD-045): `HIGH` (overhead — must be **stood** to block), `LOW` (must be **crouched** to block), `MID` (blockable either stance). Default `MID` (existing A/test moves unaffected). A back-hold in the **wrong stance** is an *invalid block* and resolves as a **hit** — the mechanism that makes B's high/low a real, readable mixup. The attack's `guard_height` must match its animation (charter: the overhead *looks* like an overhead); the outcome is observable via `HitEvent.guard_height`/`block_valid`. |
 | `damage` | Base damage. |
 | `hitstun`, `blockstun` | Frames of stun inflicted on hit / on block. |
 | `hitstop` | Freeze frames applied to both parties on contact (AD-010). |
@@ -238,17 +252,21 @@ way, so two characters can't disagree about what "startup" or "advantage" means.
 
 ## Movement authoring invariants
 
-- **A vertical arc must net to exactly zero displacement (JC-047, AD-036).** Vertical
-  position is pure keyframe integration (AD-014) with **no runtime landing clamp**
-  (AD-036); a jump's per-frame `motion_vel_y` over the state's `duration` must sum to
-  exactly zero so the character returns to its start height and lands flush. An arc that
-  does not net zero drifts the character permanently up or down every rep (the JC-047 bug:
-  22 rise / 23 fall at equal magnitude ⇒ +6 units of sink per jump). When a frame count
-  does not split evenly across rise/fall, spend the odd frame(s) as **zero-velocity
-  apex-hang frame(s)** rather than unbalancing the tuned rise/fall speeds. This will bite
-  character-B jump authoring in P2 otherwise; a runtime `pos_y ≥ ground_y` clamp (with
-  ground-contact landing) is the deferred defense-in-depth (AD-036), not yet built — until
-  it is, this invariant is the *only* thing keeping a character on the floor.
+- **Airborne movement is velocity + gravity, landed by the runtime clamp (AD-043 — supersedes
+  the net-zero-arc invariant).** An airborne character integrates `position += velocity` with
+  `velocity.y += physics.gravity` each tick; `velocity` **persists across airborne state
+  transitions**. A jump authors a **takeoff velocity** (an impulse `motion` set on frame 1), and
+  gravity + the **continuous `pos_y ≥ ground_y` clamp fused with landing** bring it down and land it
+  flush — **no hand-balanced net-zero arc is authored or required** (the JC-047/AD-036 net-zero
+  invariant is retired). Author air moves this way: a state that **sets** velocity on a frame does
+  so (double jump re-sets up-velocity; air dash sets horizontal + zeros vertical; a divekick sets
+  its dive velocity after the hang); a state that authors **no** velocity-set (an air normal)
+  **inherits the ongoing fall** — which is exactly the fix for "an air normal stops the jump arc."
+  Grounded horizontal movement (walk, dash) stays authored displacement/velocity, `pos_y` pinned at
+  `ground_y`, no gravity.
+- **Knockdown lands into the ground (AD-043).** A launched (airborne HITSTUN) character that reaches
+  the ground enters a grounded **knockdown** reaction (non-actionable, fixed wakeup `duration`) — the
+  oki timer B's hard-knockdown enders drive setplay off of — rather than snapping to idle.
 
 ## Acceptance criteria (QA-checkable)
 
@@ -275,3 +293,22 @@ way, so two characters can't disagree about what "startup" or "advantage" means.
    target on its cadence and not between intervals.
 9. **Fixed-point data.** All geometry/physics values consumed by the runtime are
    integers (baked fixed-point, AD-014); no float reaches `step`.
+10. **Cancel groups + strength ladder (AD-044).** A `CancelRule` whose `target` names a
+    cancel group is satisfied by any buffered command whose destination state is a member.
+    Character B's chainable normals produce exactly the legal ladder — `5L 2L 2L 5M 2M 2H 5H`
+    resolves through, `5M 5M` and `5M 5L` are rejected — authored purely as data groups, no
+    engine special-casing (the format-generality test passing).
+11. **Guard height (AD-045).** A `HitBox` with `guard_height = HIGH` is blocked only from a
+    standing block and hits a crouching back-hold; `LOW` is blocked only crouching and hits a
+    standing back-hold; `MID` is blocked either. The connecting attack's `guard_height` and the
+    block validity are readable through `HitEvent`. Default `MID` leaves existing moves unchanged.
+12. **Double-tap dash (AD-046).** A double-tap of a `required_direction` within the double-tap
+    window routes to the dash state; a single tap or a too-slow second tap does not. Character A's
+    `66`/`44` reach `STATE_DASH_F/B` through this with no A engine change.
+13. **Airborne physics (AD-043).** A jump authored as a takeoff-velocity impulse rises, decelerates
+    under `gravity`, and lands flush via the continuous clamp with **no net-zero authored arc**; an
+    air normal cancelled from a jump **carries the fall** (does not stop the arc); a launched
+    character lands into a knockdown reaction. Velocity persists across airborne state transitions.
+    All integer/FP.
+14. **Arc projectile (AD-047).** A `ProjectileData` with `gravity != 0` follows a parabola and
+    despawns on ground contact; `gravity = 0` stays straight (A's fireball unchanged).

@@ -77,7 +77,8 @@ Per-player state (`players[i]`):
 
 | Field | Notes |
 |---|---|
-| `position`, `velocity` | Fixed-point integers (AD-005, AD-014) — never floats. |
+| `position`, `velocity` | Fixed-point integers (AD-005, AD-014) — never floats. `velocity` carries **airborne** motion: while airborne it accumulates `+= gravity` each tick and integrates into `position`, persisting across airborne state transitions (AD-043); grounded states pin `pos_y` at `ground_y`. |
+| `air_action_used` | Bool (AD-046). True once this player has spent its **one air action** (air dash **or** double jump) since takeoff; reset to false on landing (the AD-043 grounded-landing transition). Gates the second air action off. Serialized (0/1), cloned, hashed in fixed field order (AD-023). |
 | `character_id` | Which `Character` this player is (`move-format.md` → `Character.id`); the sim and inspection surface resolve this player's move data / boxes / frame data against it. Plain int. Sim-side authored-data resolution goes through `MoveRegistry` (AD-024); `character_id` is the key. |
 | `facing` | Which way the character faces; the raw→forward/back conversion uses this. |
 | `health` | Current health. |
@@ -97,6 +98,14 @@ Per-player state (`players[i]`):
 **Derived, not stored (AD-001 / AD-005).** Active hitbox/hurtbox geometry is
 *computed each tick* from move data + `(state_id, frame_in_state, facing,
 position)` — not persisted. State stays minimal and single-sourced.
+
+**Match state wraps `SimState` (AD-048, P2).** Health, round wins, the round timer,
+match phase, and the round-end reason are **not** in `SimState` — they live in a
+`MatchState` that *contains* the `SimState` and is advanced by a pure
+`match_step(match_state, in_p1, in_p2)` above `step` (whose signature is unchanged).
+`SimState.players[i].health` is the exception: it is per-player combat truth (damage
+mutates it, KO reads it) and stays here. The match wrapper serializes/hashes with the
+same discipline as `SimState`; see `match-flow.md`.
 
 **The SimState table is extensible-as-systems-land, not presumed-complete.**
 This table enumerates the fields P0 batch 1 established; it is *not* frozen. As a

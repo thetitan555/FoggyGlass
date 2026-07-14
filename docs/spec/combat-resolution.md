@@ -23,8 +23,17 @@
    "run a buffered command, else stay until it ends" behavior.
 3. **Movement integration.** Apply per-state/keyframe motion and physics to
    `position`/`velocity` (fixed-point integers, AD-014); resolve pushbox
-   collisions and stage bounds. Integrate live projectiles' positions too (AD-021),
-   and process any `spawn` actions firing this tick (subject to the per-owner cap).
+   collisions and stage bounds. **Airborne physics (AD-043):** an airborne character
+   applies `velocity.y += physics.gravity` then integrates `position += velocity`, with
+   `velocity` persisting across airborne state transitions; a keyframe `motion` may *set*
+   velocity (jump takeoff, air dash, double jump, divekick dive). **After integration**, an
+   airborne character whose `pos_y >= ground_y` is clamped to `ground_y` and transitioned
+   `AIRBORNE → GROUNDED` (landing) with velocity zeroed — clamp and landing are one mechanism;
+   a **launched (airborne HITSTUN)** character lands into a **knockdown** reaction instead of
+   idle. Landing **resets `air_action_used`** to false (AD-046). Integrate live projectiles'
+   positions too — applying each projectile's own `gravity` (AD-047) before its position — and
+   process any `spawn` actions firing this tick (subject to the per-owner cap); an arc projectile
+   at `pos_y >= ground_y` despawns.
 4. **Overlap detection.** Resolve each character's active hitboxes/hurtboxes/
    throwboxes from move data (derived, not stored) and test AABB overlaps. Include
    live projectile hitboxes vs. the opponent's hurtbox (AD-021). Overlap is
@@ -68,6 +77,18 @@ blocking direction (raw input resolved to "back" relative to the attacker) in a
 blockable state. On block, the defender enters a `BLOCKSTUN` state and takes
 `blockstun`/`pushback_block`; on hit, a `HITSTUN` state and `hitstun`/
 `pushback_hit`/`launch`. Block correctness is readable (input history + state).
+
+**Directional block enforcement (AD-045).** A back-hold is only a *valid* block if the
+defender's **stance** matches the attack's `guard_height` (`move-format.md` → `HitBox`):
+`HIGH` (overhead) must be blocked **standing**, `LOW` must be blocked **crouching**, `MID`
+either. Stance = whether the defender is in a crouch-category state (the AD-038 crouch stance).
+A back-hold in the **wrong stance** is an **invalid block** and resolves as a **hit**. This is
+what makes B's high/low a real, live-readable mixup (charter "no knowledge checks"): the overhead
+must *look* like an overhead, and the result is observable — the connecting attack's `guard_height`
+and whether the block was valid are surfaced on the `HitRecord`/`HitEvent`, so the training mode
+shows *why* a hit landed (a low that beat a stand-block, an overhead that beat a crouch). Default
+`guard_height = MID` leaves every P1 move unchanged; this reverses the P1 stance-agnostic-block
+simplification (cross-ref AD-045 and its Strategist scope flag).
 
 ## Air-normal height-dependent advantage (AD-033)
 
@@ -403,3 +424,19 @@ deterministic, serializable sim.
     resolved `contact_depth` and `air_height_hitstun_delta` are readable through the
     inspection surface (`0`/`0` on a non-air-normal hit), so *why* a deep jump-in is
     more plus is observable. Deterministic and integer/fixed-point only.
+14. **Directional block (AD-045).** A `HIGH` attack is blocked only standing (hits a crouching
+    back-hold); a `LOW` only crouching (hits a standing back-hold); `MID` either. The connecting
+    attack's `guard_height` and block validity are readable through `HitEvent`; a wrong-stance
+    block deals hitstun/damage, not blockstun. Default `MID` moves are unchanged.
+15. **Airborne physics + landing (AD-043).** An airborne character accelerates under `gravity`,
+    persists velocity across airborne state transitions, and on `pos_y >= ground_y` clamps and
+    lands (velocity zeroed, `air_action_used` reset); an air normal carries the fall rather than
+    stopping the arc; a launched character lands into a knockdown reaction. Integer/FP only.
+16. **One air action (AD-046).** Exactly one air movement action (air dash **or** double jump) is
+    usable per jump; the second is suppressed while `air_action_used` is true; landing resets it.
+    A divekick does not consume the air action.
+17. **Arc projectile is readable, never unblockable (AD-047).** B's arc projectile follows a
+    parabola (`gravity != 0`) and despawns on ground contact; at the "falls-in-front" oki, no frame
+    exists where the projectile and a simultaneous B strike require mutually-incompatible defense
+    (opposite `guard_height`, or block-vs-untechable-throw) — a single defensive stance/action
+    always defends the projectile, leaving the guess to a visible high/low or strike/throw.

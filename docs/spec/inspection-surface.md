@@ -56,6 +56,7 @@ InspectionView (read-only over the current SimState):
 | `throw_tech_window` | Frames remaining in which this player (as thrown defender) may still tech the throw (AD-016/028). `0` ⇒ not in a tech window; `> 0` ⇒ the live count of tech frames left. |
 | `thrown_by` | The attacker index that threw this player, or `-1` if not currently thrown (AD-028). |
 | `invuln` | This player's **current-frame** invulnerability, as read from its covering keyframe (AD-031): `{ strike, throw }` bools. Backs "this frame is invulnerable" and — with `move_contact == whiff` on the opponent — "the hit whiffed *because of* invuln" (charter legibility). A **derived** projection of the defender's authored keyframe (like box geometry), not a serialized `SimState` field; snapshot-able (two plain bools, no float). |
+| `air_action_used` | Bool (AD-046) — whether this player has spent its one air action (air dash / double jump) this jump. Backs the air-economy readout ("your air action is spent"). Reset on landing. |
 | `input_current` | The raw `InputFrame` this player's source emitted this tick (Tenet 2). |
 | `input_history` | Last N raw `InputFrame`s (ring buffer view). |
 | `boxes` | The resolved `BoxView`s active this tick (below). |
@@ -101,6 +102,19 @@ sim owns the record; this view is read-only over it.
 | `tick` | When it resolved. |
 | `contact_depth` | Fixed-point (sim truth; snapshot-able). The attacker's depth above ground at contact (`ground_y − attacker.pos_y`, AD-033); `0` on a non-air-normal hit. Backs "this jump-in connected deep." |
 | `air_height_hitstun_delta` | The signed hitstun-frame delta the air-normal height scaling contributed at this hit (AD-033); `0` on a non-air-normal hit. Backs "…deep → +N hitstun → this much more plus" — the *why* behind a deep jump-in's advantage. Plain int (whole frames). |
+| `guard_height` | The connecting attack's block-height requirement (AD-045): `HIGH` / `LOW` / `MID`. Backs "this was an overhead / a low." Plain int enum. |
+| `block_valid` | Whether the defender's block was stance-valid for `guard_height` (AD-045). When the defender held back but in the wrong stance (`block_valid == false`, `was_block == false`), the training mode shows *why* the hit landed — the overhead beat a crouch, the low beat a stand-block. Backs the "no knowledge checks" readout of the high/low mixup. |
+
+### `MatchView` (read-only over `MatchState` — AD-048)
+The seam projection of the match layer. Read-only, plain, snapshot-able (all integer truth).
+
+| Field | Meaning |
+|---|---|
+| `health` | Per-player current health (`[h0, h1]`; also on `PlayerView.health`). |
+| `round_wins` | Per-player round wins (`[w0, w1]`) — the round pips. |
+| `round_timer` | Frames remaining in the round (the clock; frame-counted, not wall-clock — AD-048/Tenet 1). |
+| `match_phase` | `ROUND_START` / `ACTIVE` / `ROUND_END` / `MATCH_END`, plus a `sudden_death` flag. |
+| `last_round_end_reason` | `KO` / `TIMEOUT` / `DOUBLE_KO` — **serialized truth**, so *why* a round ended is legible on its face (charter), not a render inference. |
 
 ## Render projection (render-only, never snapshotted — AD-019)
 
@@ -139,6 +153,13 @@ snapshots them. The single source of truth that QA snapshots stays fixed-point.
 5. **Character-agnostic.** The surface returns correct views for the P0 test
    character with no character-specific branches; adding character A/B requires no
    change here.
+7. **Match legibility (AD-048).** `MatchView` exposes health, round wins, timer,
+   phase, and the round-end reason; a KO, a timeout, and a double-KO each yield the
+   correct `last_round_end_reason` as serialized truth (not a render inference), so
+   *why* a round/match ended is readable. All fields are integer/enum, snapshot-able.
+8. **High/low attribution (AD-045).** `HitEvent.guard_height` and `block_valid` let the
+   training mode attribute a mixup hit: an overhead that beat a crouch, a low that beat a
+   stand-block, each read as *why the hit landed* rather than an inexplicable non-block.
 6. **Render projection excluded.** Pixel (`px`) projections are render-only and do
    not appear in any golden/determinism snapshot; a golden taken with and without
    the UI active is identical.
