@@ -95,6 +95,17 @@ One owner per artifact. If you don't own it, you read it and you may *flag* it
 exception, and even there the write is structured: the Developer appends entries,
 the Architect appends rulings.
 
+**Structural enforcement (PreToolUse hooks).** Three of this document's rules are
+no longer prose-only — they're enforced by hooks in `.claude/hooks/` (details and
+caveats in `.claude/hooks/README.md`): **ownership** (this table — a role
+physically cannot write an artifact it doesn't own; Tier 1 blocks *everyone* from
+the user-owned charter/principles/tenets), the **push gate** (`git push` is denied
+for all roles — below), and **Tenet 1 determinism** (writes into `game/sim/**` that
+reach for the physics solver, `_process`, wall-clock, `delta`, or unseeded RNG).
+A hook-block is the protocol working, not an obstacle: raise a flag, don't route
+around it. The ownership hook's role→path table is the **machine-readable mirror of
+this one** — edit one, edit the other, or enforcement silently drifts from the doc.
+
 ## The flow: idea → brief → spec → code → audit
 
 ```

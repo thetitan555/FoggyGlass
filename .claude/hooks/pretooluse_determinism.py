@@ -26,7 +26,8 @@ import sys
 # ---------------------------------------------------------------------------
 SIM_GLOBS = (
     "game/sim/**",
-    "game/core/**",
+    # NOTE: game/core/** was in the shipped default but no such dir exists in
+    # this tree (verified 2026-07-14). Re-add it here if a game/core/ is created.
 )
 
 # Test code lives under the sim tree but is not the sim.
