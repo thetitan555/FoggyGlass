@@ -45,13 +45,19 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-033** Air-normal height-dependent advantage: phase-5 `AirHeightScaling` on hitstun; contact-depth read — settled
 - **AD-034** Serialization carries a top-level format-version field (`"v":1`, absent⇒1, unknown⇒fail; not hashed) — settled
 - **AD-035** Render-framing contract: sim world projects into the viewport via a render-only camera transform (extends AD-019) — settled
-- **AD-036** No runtime ground clamp yet; a `pos_y ≥ ground_y` clamp + ground-contact landing is deferred defense-in-depth; interim guard is the net-zero-arc authoring invariant — provisional (deferred)
+- **AD-036** No runtime ground clamp yet; a `pos_y ≥ ground_y` clamp + ground-contact landing is deferred defense-in-depth; interim guard is the net-zero-arc authoring invariant — **superseded by AD-043**
 - **AD-037** Vertical convention: up is −Y everywhere (world + character-local, one shared axis); feet-origin at `pos_y = ground_y`; the box-authoring Y-inversion is a DATA bug (reflect across the feet line), the render is correct — settled
 - **AD-038** Held-input looping-state exit: an actionable character in a looping state re-derives its state from input each tick, falling back to idle when no command matches (walk/crouch return to idle on release); stance selection reads CURRENT-tick input (not the command buffer) so release exits promptly, while discrete commands keep AD-022 buffer leniency — settled (2026-07-10 exit-lag correction)
 - **AD-039** Airborne-action model: directional/diagonal jumps via per-direction prejump lead-ins; air normals reached by jump-state cancels — data-only, no engine change — settled
 - **AD-040** Dummy-control operability model: a human drives the training dummy by *recording then playing back* — the dummy source carries an injected live device sampler, so `RECORDING` captures the human's device and `PLAYBACK` loops it; this is how a human makes the dummy hold a stance (e.g. crouch-block). No new `InputSource` type, no dummy AI (Tenet 2 intact); the missing piece was the dummy source's live sampler, not the `M` mode-cycle binding — settled (2026-07-11, re-gate-3 D1)
 - **AD-041** Dummy-mode observability + fresh-record: the dummy's current mode (PASSTHROUGH/RECORDING/PLAYBACK) must be **visible on screen live** (charter clarity — mode state is observable), with a recording tell; and *entering* `RECORDING` starts a **fresh** recording (discards the prior buffer, resets the cursor) so re-records replace rather than concatenate. The indicator reads mode via the shell (outside the `InspectionView` seam, like the legend) — settled (2026-07-11, re-gate-4 E1)
-- **AD-042** Minimal ground-contact landing: on entry to a `GROUNDED`-category state, snap `pos_y` to `ground_y` — the *landing-semantics half* of AD-036, pulled into P1.1 because a clean, natural input (held/repeated jumps) wedges the character off-floor without it. The full runtime `pos_y ≥ ground_y` clamp + variable-height air-move semantics stay deferred to P2 (AD-036); the net-zero authoring invariant + per-direction assertion still guard arcs, so the snap does not mask a mis-authored arc — settled (2026-07-11, re-gate-4 E2)
+- **AD-042** Minimal ground-contact landing: on entry to a `GROUNDED`-category state, snap `pos_y` to `ground_y` — the *landing-semantics half* of AD-036, pulled into P1.1 because a clean, natural input (held/repeated jumps) wedges the character off-floor without it. The full runtime `pos_y ≥ ground_y` clamp + variable-height air-move semantics stay deferred to P2 (AD-036); the net-zero authoring invariant + per-direction assertion still guard arcs, so the snap does not mask a mis-authored arc — settled (2026-07-11, re-gate-4 E2). **Subsumed by AD-043's continuous clamp** (the grounded-entry snap becomes the landing case of the runtime clamp).
+- **AD-043** Airborne physics: persistent per-player velocity + per-tick gravity, a **continuous** runtime `pos_y ≥ ground_y` clamp fused with an `AIRBORNE→GROUNDED` landing transition, and knockdown-into-ground — the AD-036 remainder; air-move states carry fall momentum (fixes "air normal stops the jump arc"); **supersedes AD-036** and retires the net-zero-arc authoring invariant (character A's jump migrates to gravity) — settled (P2)
+- **AD-044** CancelRule **group-target resolution** is built (the AD-015 `target`=group path JC-023 deferred); B's gatling ladder is expressible with **no format extension**, so the format-generality test **passes** — settled (P2)
+- **AD-045** Directional block enforcement: `HitBox.guard_height` (HIGH/LOW/MID) × defender stance gates block validity; a wrong-stance block resolves as a hit; observable via `HitEvent`. Reverses the P1 stance-agnostic-block simplification and enforces A's lows — settled (P2), cross-ref Strategist scope flag
+- **AD-046** Double-tap direction command (dash) as a `ButtonMapEntry` shape + one-air-action economy via serialized `players[i].air_action_used` (air dash / double jump; reset on landing); divekick does not spend the air action — settled (P2)
+- **AD-047** Arc-projectile gravity: `ProjectileData.gravity` gives parabolic setplay projectiles; ground-contact despawn; the "falls-in-front" oki must resolve to a readable mixup (never an unblockable) by guard-height compatibility — settled (P2)
+- **AD-048** Match layer: `MatchState` wraps `SimState` + round/match fields, advanced by a pure `match_step`; health/round-wins/timer/RNG are serialized game state on the fixed timestep (Tenet 1 per-match); `MatchView` seam read; round-end **reason** is serialized truth — settled (P2)
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -1658,3 +1664,234 @@ air normals are reached *from* the jump via a cancel, not from neutral; the canc
 add the three composite-direction `button_map` entries (diagonals before bare `UP`); add three
 air-normal `CancelRule`s to each of `JUMP_N/F/B`. No engine/format change; movement goldens gain
 the new reachable states (deliberate).
+
+### AD-043 · Airborne physics: persistent velocity + gravity + continuous ground clamp fused with landing + knockdown-into-ground — settled (P2, the AD-036 remainder; supersedes AD-036)
+**Context.** AD-036 deferred the runtime `pos_y ≥ ground_y` clamp and ground-contact landing;
+AD-042 landed only the *grounded-entry snap*. Vertical motion was **pure keyframe integration**
+under a **net-zero-arc authoring invariant** (`move-format.md`; JC-047). That model cannot express
+P2's air game: B's double jump, air dash, divekick hang/plummet, and the P1.1 re-gate finding that
+"an air normal stops the jump arc and snaps to the floor" all require **carrying fall momentum
+across state transitions** — which a per-state authored arc, reset every state entry, structurally
+cannot do. This is P2's opener (roadmap P2 pre-requisite), specced ahead of any B content.
+**Decision.** One cohesive airborne-physics mechanism, designed together (a bare clamp alone masks
+a mis-authored arc — AD-036's rejection):
+- **Persistent velocity + gravity.** An airborne character integrates `position += velocity` in
+  phase 3 and applies **`velocity.y += gravity`** each airborne tick, where `gravity` is a
+  per-character baked fixed-point `physics` constant (AD-014). `velocity` is the already-serialized
+  `players[i].velocity` (no new field). Velocity **persists across state transitions while
+  airborne** — it is not reset on entering a new airborne state.
+- **Keyframe motion in airborne states is impulse/set, not per-frame displacement.** An airborne
+  state's `motion` may **set** velocity on specific frames (takeoff sets an up-velocity; air dash
+  sets a horizontal velocity and zeros vertical; double jump re-sets an up-velocity; a divekick
+  sets a dive velocity after its hang). A state that authors **no** velocity-set inherits the
+  ongoing velocity + gravity — so an **air normal carries the fall** rather than stopping the arc
+  (the deferred fix). Grounded states are **unchanged**: horizontal movement stays authored
+  displacement/velocity, `pos_y` pinned at `ground_y`, no gravity.
+- **Continuous ground clamp fused with landing.** After phase-3 integration, an airborne character
+  whose `pos_y >= ground_y` is clamped to `pos_y = ground_y` **and** transitioned
+  `AIRBORNE → GROUNDED` (to its idle/landing state), with airborne velocity zeroed. The clamp and
+  the landing are **one mechanism** — the clamp never leaves a character nominally airborne at the
+  floor (AD-036's anti-masking requirement). AD-042's grounded-entry snap is the landing case of
+  this clamp (subsumed).
+- **Knockdown-into-ground.** An airborne character in a **launched HITSTUN** state that reaches the
+  ground transitions not to idle but to a **knockdown** reaction: a **grounded, non-actionable
+  HITSTUN-category** state with a fixed wakeup `duration`, then to actionable. No new engine
+  category — knockdown is a grounded reaction state. This is the oki timer B's launchers and hard-
+  knockdown enders (the low slide) drive setplay off of.
+**Why.** "Carrying fall momentum through an air normal and easing the descent" (roadmap) *is* a
+persistent-velocity + gravity model; it is the minimal general architecture that yields B's whole
+air toolkit as authored data (no per-move engine code) and fixes the air-normal-stops-arc bug for
+free. Fusing clamp+landing is AD-036's explicit requirement. Build-for-extension (Tenet 3): later
+air throws, wall/ground bounces, and juggles extend this one velocity model.
+**Supersedes.** AD-036 (the deferred clamp/landing is now built) and the **net-zero-arc authoring
+invariant** in `move-format.md` (jumps are gravity-driven and land by the clamp — a hand-balanced
+net-zero arc is no longer required or authored). AD-042's snap is subsumed.
+**Consequence (Developer).** Character A's jump migrates from the authored net-zero arc to the
+gravity model (takeoff impulse + `gravity` + clamp); its movement goldens re-baseline deliberately
+(JC-017 style). `players[i].velocity` gains real airborne meaning; add `gravity` to each
+character's `physics`. Phase 3 gains: airborne gravity application, and (after integration) the
+clamp+landing+knockdown branch. All integer/FP (AD-014); serialized `velocity` already hashed. The
+`air_action_used` reset on landing (AD-046) hangs off the same landing transition.
+**Rejected.** A bare `pos_y ≥ ground_y` clamp with no landing (AD-036's masked-bug rejection);
+keeping pure keyframe integration and re-authoring each air state to continue the arc (un-authorable
+— a state cannot know the arc it was cancelled from; defeats the content seam); a new
+`vel_y`/`vel_x` field (the existing `velocity` vector is exactly this).
+
+### AD-044 · CancelRule group-target resolution is built; B's gatling ladder needs no format extension — settled (P2, the format-generality determination)
+**Determination (the test P2 exists to run).** The move/`CancelRule` format **expresses** B's cancel
+model — "cancel into a higher strength, OR into the same-strength normal of the other stance; lights
+self-chain" — with **no new field and no format extension.** It is `on_contact` cancels among normals,
+exactly what `move-format.md` criterion 7 already covers. The format is **not** A-shaped. The single
+thing that *was* A-shaped: `CancelRule.target` may name "a tag/group naming a set of states" (AD-015),
+but **group-target resolution was never built** — JC-023 deferred it because character A had no gatlings
+("leave the field, don't build the unused path"). B is the character that makes it load-bearing, so P2
+**builds the deferred-but-specced capability.** This is implementing an in-contract path, *not* extending
+the format — so **there is no format-generality flag**; the format generalizing to a gatling character on
+its existing terms is the P2 test *passing*.
+**Decision.**
+- **Group targets resolve.** A `CancelRule.target` may name a **cancel group** — a set of `state_id`s
+  the `Character` declares (authored data). A buffered command whose destination state is a member of the
+  target group satisfies the cancel, subject to `condition`/`window`/`requires_tag`, resolved through the
+  one recognizer (JC-023 routing). Per-target (single `state_id`) cancels are unchanged.
+- **B's ladder rule (the precise expression I own).** Tag each of B's chainable normals with `strength`
+  (L<M<H) and `stance` (stand/crouch). A cancel `source → target` is legal iff: `target.strength >
+  source.strength`; **or** `target.strength == source.strength && target.stance != source.stance`;
+  **or** `source.strength == L && target.strength == L` (lights self-chain, including exact repeat).
+  This fits every brief example — `5L 2L 2L 5M 2M 2H 5H` legal (note `2H 5H` = crouch→stand at equal
+  strength, and `2L 2L` = light self-repeat), `5M 5M` and `5M 5L` illegal. **Ambiguity resolved:** the
+  brief phrase "the crouching normal of current strength" reads literally as stand→crouch only, but the
+  legal example's `2H → 5H` is crouch→stand at equal strength — so the rule is *opposite-stance at equal
+  strength* (either direction), which is the only reading consistent with the given examples. Expressed as
+  authored groups per source normal (or shared groups where sets coincide — both lights share one group),
+  golden-able.
+**Why.** Making the determination explicit is the deliverable P2 was dispatched to produce. Building
+group resolution (vs. combinatorial per-target authoring) keeps B's ~20–30 legal transitions legible and
+maintainable while staying strictly in-format. Owning the precise ladder rule removes the brief's phrasing
+ambiguity at the spec, not the keyboard.
+**Consequence (Developer).** Implement group-target membership resolution in `CancelEval` (a target that
+names a group is satisfied when the buffered command's destination state is in the group). Character B
+declares the strength/stance groups and authors each chainable normal's `on_contact` cancel(s) against
+them — authored content, driven by this AD's mechanism, not invented by the content session. No
+`SimState` shape change; the recognizer stays a pure function of history.
+**Rejected.** Declaring a format extension / new relational-cancel field (unnecessary — groups already in
+AD-015 express it; a predicate-cancel is more than B needs, Tenet-3 "don't build the unused path");
+bending B to per-target explicit cancels only (expressible but verbose and drift-prone as normals change);
+reading the brief's "crouching normal" literally as stand→crouch-only (contradicts the legal `2H 5H`).
+
+### AD-045 · Directional block enforcement: `HitBox.guard_height` × defender stance — settled (P2)
+**Decision.** Blocking becomes directional so B's high/low mixup is a real, *readable* decision (the
+charter's "no knowledge checks" made mechanical). A `HitBox` gains **`guard_height` ∈ {HIGH, LOW, MID}**
+(default **MID**). In phase 5's hit-vs-block resolution: a defender holding back is *attempting to block*;
+the block is **valid** iff the defender's **stance** is compatible with `guard_height` — **HIGH** (overhead)
+requires a **standing** block, **LOW** requires a **crouching** block, **MID** is blocked either way. Stance
+is derived from whether the defender is in a crouch-category state (already tracked, `move-format.md`
+crouch stance, AD-038). A back-hold with the **wrong stance** is an **invalid block** and resolves as a
+**hit** (hitstun/damage), not a block. No-back-hold is a hit as before.
+**Legibility (the charter bar this exists for).** The attack's `guard_height` must match its animation —
+the overhead *looks* like an overhead (`character-b.md` 6H, H-divekick; principles "the art teaches before
+the HUD"). The outcome is observable: `HitEvent` surfaces the connecting attack's `guard_height` and
+whether the block was valid, so the training mode shows *why* a hit landed (a low that beat a standing
+block, an overhead that beat a crouch) — the mixup is a live read of a visible high/low, never a memorized
+knowledge check.
+**Scope note — reverses a P1 slice simplification; affects A.** `character-a.md`'s reconciliation recorded
+"blocking is stance-agnostic hold-back … no high/low enforcement" as a slice simplification. This AD
+reverses it and makes A's `2L`/`2M` **enforced lows** (`guard_height = LOW`). Because it changes an
+existing character's behavior and adds a combat-resolution surface the match-flow brief's "no new combat"
+guard could be read against, it is **raised to the Strategist as a scope call** (`flags.md`) — B's briefed
+overhead/high-low mixup *requires* it, so it is specced against "enforcement added" as the recommended
+path, but the Strategist owns whether P2 accepts the scope.
+**SimState / seam.** **No new serialized field** — `guard_height` is authored on the `HitBox` (derived
+content, like invuln); stance is the defender's already-serialized state category; block validity is
+computed in phase 5 and homed on the `HitRecord`/`HitEvent` (a shape addition: `guard_height` +
+`block_valid`, both defaulting for MID/non-block, hashed per AD-023/AD-028 precedent). Default MID means
+every existing A/test move is unaffected unless authored otherwise.
+**Rejected.** Keeping stance-agnostic block and making the overhead a pure animation read with no
+mechanical mixup (guts B's briefed high/low classroom — an overhead any hold-back blocks is not a mixup);
+a separate high/low *input* rather than stance (off-genre; stance-based block is the convention and reuses
+the existing crouch stance); enforcing without observability (a knowledge check — violates the charter).
+
+### AD-046 · Double-tap direction command (dash) + one-air-action economy — settled (P2)
+**Decision.** Two coupled movement-recognition additions, both sim-side pure functions of
+`input_history` (AD-003/AD-022, Tenet 2 — replays/netcode reproduce them for free):
+- **Double-tap direction command (dash).** A `ButtonMapEntry` gains a **double-tap** recognition shape:
+  a `required_direction` tapped **twice** (press → release → press) within a slice-wide **double-tap
+  window** constant (feel value, Strategist-tunable like AD-022's windows; placeholder ~12f), recognized
+  by the one recognizer, routing to a dash state. This is the new primitive B's ground dash needs — and
+  **character A's `66`/`44` fold in at marginal cost**: wire A's already-authored-but-unreachable
+  `STATE_DASH_F`/`STATE_DASH_B` (character-a.md) to two double-tap `button_map` entries. **Confirmed: A's
+  dash is exactly "wire existing states to the shared recognizer"** (no A engine/state work) — the brief's
+  cost prediction holds, **no flag**.
+- **One air action per jump.** B gets exactly one air movement action per jump, spent on **air dash**
+  (double-tap forward/back while airborne) **or** **double jump** (`up` while airborne). Enforced by a new
+  serialized per-player field **`players[i].air_action_used`** (bool): set true when an air action is
+  consumed, **reset to false on landing** (the AD-043 grounded landing transition). An air-action command
+  is **suppressed** when `air_action_used` is already true. The **divekick (an aerial *special*) does not
+  spend the air action** — so `airdash → divekick` is the intended, briefed mixup; that interaction's
+  reactability is bounded by the `character-b.md` air/mixup legibility criteria (and AD-045), not by the
+  air-action budget.
+**Why.** The double-tap recognizer is genuinely new recognition (a same-direction re-press, distinct from
+AD-022 motion sequences and AD-032's held-direction/chord shapes), built for B and shared to A at marginal
+cost — the seam the brief names. The air-action economy is B's signature system; a single serialized bool
+is the minimal mutable truth (it must survive snapshot/restore and be hashed — an air action spent must not
+un-spend on rollback), reset on the one landing edge AD-043 already defines.
+**SimState.** `air_action_used` clears the `simulation.md` "extensible-as-systems-land" bar (mutable
+per-tick truth, snapshot/hash-critical). Added to the per-player table, serialized/cloned/hashed (bool as
+0/1, fixed field order per AD-023). Surfaced read-only on `PlayerView` (air-economy legibility). Reset is
+one line on the AD-043 landing transition.
+**Rejected.** A double-tap as an AD-022 motion token (a re-press is not a direction *sequence*; conflates
+two recognizer concepts); charging the divekick to the air action (would kill the airdash→divekick mixup
+the brief centers B's hardest legibility question on); deriving air-action state from position/velocity
+(not derivable — "have I spent my action this jump" is genuine mutable truth).
+
+### AD-047 · Arc-projectile gravity: `ProjectileData.gravity`; falls-in-front oki must be a readable mixup — settled (P2)
+**Decision.** `ProjectileData` (AD-021/AD-030) gains an optional baked-FP **`gravity`** (default `0` =
+straight-line, character A's fireball unchanged). A projectile with `gravity != 0` applies
+`velocity.y += gravity` each tick in phase 3 → a **parabolic arc**. B's high-angle setplay projectile is
+authored per strength with different initial `velocity` + `gravity` for **different parabolas**; one
+version's parabola lands near B — the **"falls in front"** oki. **Ground contact:** an arc projectile
+whose `pos_y >= ground_y` **despawns** (default; the descending hitbox is authored active through the
+oki space before it lands). Role is **air-space control + setplay, not ground zoning** (brief).
+**Hard legibility constraint (readable mixup, never an unblockable).** The "falls in front" setup must
+resolve into a mixup the defender can **see and contest** — never a two-incompatible-blocks-at-once
+unblockable. Precise rule, enforced via AD-045: at the oki setup there must exist a **single defensive
+stance/action that defends the projectile**, leaving the guess to be the high/low **or** strike/throw the
+defender reads live. Concretely — **no frame may exist where the projectile's active hitbox and a B strike
+both connect while requiring mutually-incompatible defense** (opposite `guard_height`, or strike-block vs.
+an un-techable throw on the same frame). This is a **QA-checkable acceptance criterion** (scripted-input
+trace over the oki setup; `character-b.md`), audited at the human-inspection gate.
+**Why.** An arc is a projectile whose vertical velocity accelerates — the minimal expression is one
+`gravity` field on the existing projectile entity (which already carries `velocity`); no new system. The
+unblockable ban is the charter line (principles: "no knowledge checks — never an ambiguous
+unblockable-style setup"); pinning it as a guard-height-compatibility invariant makes "readable" auditable
+rather than a vibe.
+**Consequence (Developer).** Add `gravity` to `ProjectileData` and its phase-3 integration
+(`velocity.y += gravity` before `position += velocity`); despawn on `pos_y >= ground_y`. Author B's
+projectile strengths. All FP/int (AD-014). Projectile-vs-projectile stays deferred (AD-021).
+**Rejected.** A bespoke arc/trajectory system (a `gravity` field on the existing entity suffices);
+straight-line-only projectiles + a fake "drop" via lifetime tricks (un-authorable, un-tunable parabolas);
+leaving "readable" unspecified (the exact knowledge-check risk the brief hands the Architect to resolve).
+
+### AD-048 · Match layer: `MatchState` wraps `SimState`; match state is serialized game state on the fixed timestep — settled (P2)
+**Decision.** The 1v1 match loop is a **serialized, deterministic layer above the sim** — Tenet 1 holds
+per-match, not just per-frame (match-flow brief).
+- **Shape.** `MatchState` contains the `SimState` **plus** match fields: `round_wins[2]`, `round_timer`
+  (frames remaining, counts down on the fixed tick), `match_phase` (`ROUND_START` / `ACTIVE` /
+  `ROUND_END` / `MATCH_END`, with a `sudden_death` marker), `round_index`, deterministic transition
+  counters, and a `last_round_end_reason` (`KO` / `TIMEOUT` / `DOUBLE_KO`). RNG reuses the existing
+  `SimState.rng` (the slice match needs none, but the seed is in serialized state per Tenet 1). All match
+  fields are serialized, deep-cloned, and canonically hashed (AD-023 discipline, composed with the
+  `SimState` hash); the AD-034 format-version stamp extends to the wrapper.
+- **Advanced by a pure `match_step(match_state, in_p1, in_p2) -> MatchState`.** Combat's `step` signature
+  is **untouched** (AD-024). During `ACTIVE`, `match_step` calls `step`, then decrements `round_timer`,
+  checks KO (`health <= 0`) and timeout, and resolves round-end. During `ROUND_START`/`ROUND_END`/
+  `MATCH_END` it runs deterministic transition counters (combat not advanced), and on round start
+  **resets the `SimState`** to fresh symmetric positions + full health.
+- **Health is `SimState.players[i].health`** (already serialized) — combat mutates it via damage, the
+  match layer reads it for KO; round start resets it to the tuned full value. **Health value is tuned
+  after B's damage lands** (placeholder, like DamageScaling — brief); the match *structure* builds
+  alongside B.
+- **Rules.** KO: `health <= 0` ends the round. Timeout: `round_timer == 0` → higher current health wins;
+  equal → tie. Double-KO and equal-health timeout **award the round to both** (`round_wins++` each).
+  Best-of-3: first to **2** takes the match. A tie that pushes **both** to 2 at once → a single
+  **sudden-death** final round (brief-confirmed 2026-07-14). Fixed **A-vs-B side assignment** is a wiring
+  constant (no character-select — brief).
+- **Legibility + seam.** A **`MatchView`** read-only over `MatchState` exposes health, `round_wins`,
+  `round_timer`, `match_phase`, and `last_round_end_reason` — so health bars, round pips, the clock, and
+  *why* a round/match ended are legible on their face (charter; match-flow brief). The end reason is
+  **serialized truth**, not a render inference. Experiential surface ⇒ human-inspection gate.
+- **Tenet 2.** `match_step` consumes the same two `InputFrame` streams — input-source-agnostic (two
+  humans, human vs. record/playback dummy, CPU later), no new source type.
+**Why.** Homing match state in a serialized wrapper advanced by a pure function makes the whole match
+round-trip and re-run identically through the *existing* determinism/serialization harness (extended to
+match boundaries) — the per-match proof P2 is for — without touching `step`'s pinned contract. Health in
+`SimState` keeps damage→health inside combat (per-player truth) and round/match orchestration cleanly
+above it. The serialized end-reason is what makes the emotionally-loaded moment (a timeout, a double-KO)
+legible, which the brief names as where the real care goes.
+**Consequence (Developer).** Build `MatchState` + `match_step` + `MatchView`; extend the determinism/
+serialization harness to a full match round-trip; tune health after B's damage. No `step` change; health
+field already exists.
+**Rejected.** Match state inside `SimState` / extending `step` to advance rounds (couples the round state
+machine to the per-frame combat contract and grows `step`'s pinned signature scope for no determinism
+gain); a wall-clock / `_process` timer (the classic Tenet-1 violation the brief exists to forbid); a
+render-side "who won" inference (an un-serialized, un-golden-able result — the end reason must be sim
+truth to be legible and deterministic).
