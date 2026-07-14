@@ -223,8 +223,10 @@ not just runnable but defensible — and the architecture is proven extensible.*
   intended kit at near-marginal cost. Recorded in `/docs/briefs/character-b.md`
   ("Scope notes"); the Architect confirms the actual cost and flags back if it's
   materially more than wiring existing states to the shared recognizer.
-- **Match rules** — rounds, timer, health values: a P2-brief detail, defaulted
-  to a conventional best-of for now unless you want otherwise.
+- **Match rules** — *resolved 2026-07-14:* briefed in `/docs/briefs/match-flow.md`
+  (best-of-3, ~99-tick frame-counted timer, higher-health-on-timeout, Architect
+  tunes health vs damage). One sub-question left open to the user in that brief:
+  the tie-at-match-point rule (sudden-death vs no-score replay).
 - **What the training mode must expose, exactly** — the P1 brief pins this; it's
   the operational form of the charter's legibility promise, so it's worth getting
   right there.
