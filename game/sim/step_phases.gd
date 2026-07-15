@@ -464,13 +464,26 @@ static func _apply_air_action(p: PlayerState, character: Character) -> void:
 ##   - AIRBORNE category (a jump / air normal): transition to idle, exactly like
 ##     the prior grounded-entry snap's landing case (AD-042, now subsumed).
 ##   - Any other category reaching here (a launched HITSTUN reaction — hit-set
-##     `vel_y` via `HitBox.launch`): NO state change. The character's current
-##     reaction state is already a non-actionable, fixed-`duration` HITSTUN-
-##     category state (e.g. character A's STATE_HITSTUN_LAUNCH / STATE_AIR_RESET);
-##     landing simply stops it falling further and lets that SAME authored
-##     duration/stun keep counting down to wakeup — this is AD-043's "knockdown
-##     reaction," which explicitly introduces no new engine category or
-##     destination state ("knockdown is a grounded reaction state").
+##     `vel_y` via `HitBox.launch`): transitions to the character's dedicated
+##     `knockdown_state_id` (AD-043's elaboration, ratified from JC-070's
+##     overturned "stay in the launched state" reading) — a grounded,
+##     non-actionable HITSTUN-category reaction distinct from the airborne
+##     launch state, so ground hard-KD (a direct hit_reaction) and
+##     launch-into-KD (this landing transition) converge on ONE state. When
+##     `knockdown_state_id == 0` (unset), falls back to the pre-P2 no-op: the
+##     character simply stays in its current reaction state, only now resting
+##     on the floor instead of still falling.
+##
+##     WAKEUP COUNTS FROM ENTRY, NOT FROM THE ORIGINAL HIT (the reason this
+##     transition exists — AD-043's elaboration: "independent of air-time").
+##     `p.stun` is the engine's actual wakeup countdown (phase 7 decrements it;
+##     phase 2 returns to idle at `stun == 0`) and it does NOT reset on an
+##     ordinary `_enter_state` — it was set once, at the original hit, and would
+##     otherwise keep counting through the whole airborne flight, making
+##     time-to-wakeup-from-landing vary with how long the flight was (launch
+##     height / juggle length). So THIS transition explicitly re-arms `p.stun`
+##     to the knockdown state's own authored `duration`, fixing the wakeup
+##     timer to the landing moment itself, exactly as AD-043 specifies.
 static func _land(next: SimState, p: PlayerState, character: Character, move: MoveState) -> void:
 	p.pos_y = next.stage.ground_y
 	p.vel_x = 0
@@ -478,6 +491,15 @@ static func _land(next: SimState, p: PlayerState, character: Character, move: Mo
 	p.air_action_used = false
 	if move != null and move.category == MoveState.CATEGORY_AIRBORNE:
 		_enter_state(next, p, character, character.idle_state_id)
+	elif character.knockdown_state_id != 0:
+		_enter_state(next, p, character, character.knockdown_state_id)
+		var knockdown_move: MoveState = character.get_state(character.knockdown_state_id)
+		if knockdown_move != null:
+			p.stun = knockdown_move.duration
+			p.stun_kind = PlayerView.STUN_HIT
+	# else: character.knockdown_state_id == 0 -- pre-P2 no-op fallback (no
+	# knockdown state authored; the character's current reaction state simply
+	# keeps its own duration/stun counting down as before).
 
 
 ## Fire a keyframe's `spawn` action on the EXACT tick its range is entered

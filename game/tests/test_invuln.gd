@@ -156,7 +156,7 @@ func _test_dp_still_thrown_without_throw_invuln() -> void:
 	var connected: bool = false
 	for _k in range(20):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
-		if s.players[1].state_id == CharacterA.STATE_THROWN:
+		if s.players[1].state_id == CharacterA.STATE_KNOCKDOWN:
 			connected = true
 			break
 	_true(connected, "a throw connects against 2H's strike-only invuln (no invuln_throw authored on 2H)")
@@ -174,7 +174,7 @@ func _test_dp_h_throw_invuln_beats_a_throw() -> void:
 	var connected: bool = false
 	for _k in range(10):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
-		if s.players[1].state_id == CharacterA.STATE_THROWN:
+		if s.players[1].state_id == CharacterA.STATE_KNOCKDOWN:
 			connected = true
 			break
 	_false(connected, "a throw whiffs against 623H's throw-invuln window (1-8)")

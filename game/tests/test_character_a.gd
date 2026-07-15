@@ -444,7 +444,7 @@ func _test_throw_connects_through_block() -> void:
 	var connected: bool = false
 	for _k in range(10):
 		s = SimState.step(s, InputFrame.NEUTRAL, p1_block)
-		if s.players[1].state_id == CharacterA.STATE_THROWN:
+		if s.players[1].state_id == CharacterA.STATE_KNOCKDOWN:
 			connected = true
 			break
 	_true(connected, "throw connects through block (bypasses blockstun)")
@@ -458,9 +458,9 @@ func _test_throw_tech_window() -> void:
 	s.players[0].frame_in_state = 0
 	for _k in range(10):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
-		if s.players[1].state_id == CharacterA.STATE_THROWN:
+		if s.players[1].state_id == CharacterA.STATE_KNOCKDOWN:
 			break
-	_eq(s.players[1].state_id, CharacterA.STATE_THROWN, "throw connected (pre-tech)")
+	_eq(s.players[1].state_id, CharacterA.STATE_KNOCKDOWN, "throw connected (pre-tech)")
 	_true(s.players[1].throw_tech_window > 0 and s.players[1].throw_tech_window <= CharacterA.THROW_TECH_WINDOW,
 		"tech window is open and within the authored 7-frame window")
 	# Defender techs by driving state directly into a throw-shaped command
@@ -485,9 +485,9 @@ func _test_throw_hard_knockdown() -> void:
 	s.players[0].frame_in_state = 0
 	for _k in range(10):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
-		if s.players[1].state_id == CharacterA.STATE_THROWN:
+		if s.players[1].state_id == CharacterA.STATE_KNOCKDOWN:
 			break
-	_eq(s.players[1].state_id, CharacterA.STATE_THROWN, "throw connected")
+	_eq(s.players[1].state_id, CharacterA.STATE_KNOCKDOWN, "throw connected")
 	# Hard knockdown: defender remains non-actionable for the full authored
 	# THROW_HITSTUN (30f), not a token few frames.
 	var still_down_at_20: bool = true

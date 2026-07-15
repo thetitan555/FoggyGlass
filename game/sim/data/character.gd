@@ -36,6 +36,17 @@ extends Resource
 ## (idle). Authored so the sim knows the neutral state without a hardcoded id.
 @export var idle_state_id: int = 0
 
+## The character's grounded KNOCKDOWN reaction state_id (move-format.md ->
+## Character.knockdown_state_id; AD-043, ratified from JC-070). Optional --
+## default 0 means "no knockdown state authored," in which case a launched
+## HITSTUN state's landing is a no-op (the pre-P2 fallback: the character just
+## keeps falling-then-resting in its own reaction state, no transition). When
+## set, StepPhases._land redirects a launched HITSTUN state's landing here, AND
+## a grounded hard-knockdown hit (a low slide, a throw) may set its own
+## HitBox.hit_reaction directly to this same id -- ground-KD and launch-into-KD
+## converge on ONE learnable wakeup (the whole point of this field).
+@export var knockdown_state_id: int = 0
+
 
 ## The MoveState with the given id, or null if the character has no such state.
 ## Character-agnostic lookup (no per-character branch — move-format.md criterion 4).

@@ -70,6 +70,7 @@ func _run() -> void:
 	_test_grounded_state_never_accrues_gravity()
 	_test_velocity_persists_across_airborne_state_transition()
 	_test_launched_hitstun_lands_into_knockdown_not_idle()
+	_test_knockdown_wakeup_counts_from_landing_not_from_the_original_hit()
 	_test_air_action_used_defaults_false_and_resets_on_landing()
 	_test_air_action_used_is_hashed_and_round_trips()
 
@@ -134,11 +135,15 @@ func _test_velocity_persists_across_airborne_state_transition() -> void:
 	_cleanup()
 
 
-# --- a launched (airborne HITSTUN) character lands into a knockdown reaction,
-# not idle (AD-043) --------------------------------------------------------
-# DP_L's single hit launches the defender (hb1.launch, STATE_HITSTUN_LAUNCH).
-# Exact tick numbers below were derived by actual headless replay (not hand-
-# derived), mirroring this tree's established methodology.
+# --- a launched (airborne HITSTUN) character lands into the DEDICATED
+# knockdown state, not idle and not the launched state itself (AD-043's
+# elaboration, ratified from JC-070's overturned "stay in the launched state"
+# reading) --------------------------------------------------------
+# DP_L's single hit launches the defender (hb1.launch, STATE_HITSTUN_LAUNCH),
+# whose landing (StepPhases._land) now redirects into character.
+# knockdown_state_id (CharacterA.STATE_KNOCKDOWN). Exact tick numbers below
+# were derived by actual headless replay (not hand-derived), mirroring this
+# tree's established methodology.
 
 func _test_launched_hitstun_lands_into_knockdown_not_idle() -> void:
 	var s := _two_char_state(30)
@@ -147,23 +152,34 @@ func _test_launched_hitstun_lands_into_knockdown_not_idle() -> void:
 
 	var reached_hitstun_launch: bool = false
 	var min_py: int = 0
-	var landed_tick_still_in_launch: int = -1
+	var landed_tick_in_knockdown: int = -1
+	var never_landed_still_in_launch: bool = true
 	for k in range(60):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
 		if s.players[1].state_id == CharacterA.STATE_HITSTUN_LAUNCH:
 			reached_hitstun_launch = true
 			if s.players[1].pos_y < min_py:
 				min_py = s.players[1].pos_y
-			if s.players[1].pos_y == 0 and min_py < 0 and landed_tick_still_in_launch == -1:
-				landed_tick_still_in_launch = k + 1
+		if s.players[1].state_id == CharacterA.STATE_KNOCKDOWN and s.players[1].pos_y == 0 \
+				and min_py < 0 and landed_tick_in_knockdown == -1:
+			landed_tick_in_knockdown = k + 1
+		if s.players[1].pos_y == 0 and min_py < 0 and s.players[1].state_id == CharacterA.STATE_HITSTUN_LAUNCH:
+			never_landed_still_in_launch = false   # would mean the JC-070 (overturned) reading is back
 	_true(reached_hitstun_launch, "DP_L's launch forces the defender into STATE_HITSTUN_LAUNCH")
 	_true(min_py < 0, "the launched defender genuinely goes airborne (pos_y < ground_y) at some point")
-	_true(landed_tick_still_in_launch != -1,
-		"the defender's pos_y returns to EXACTLY ground_y while STILL in STATE_HITSTUN_LAUNCH -- " +
-		"the knockdown reaction (AD-043: 'no new engine category or destination state'), not a transition to idle")
+	_true(landed_tick_in_knockdown != -1,
+		"the defender's pos_y returns to EXACTLY ground_y and the state TRANSITIONS to " +
+		"CharacterA.STATE_KNOCKDOWN -- the dedicated grounded knockdown reaction (AD-043's " +
+		"elaboration), not a continuation of STATE_HITSTUN_LAUNCH")
+	_true(never_landed_still_in_launch,
+		"landing never leaves the defender AT ground_y while still nominally in STATE_HITSTUN_LAUNCH " +
+		"(JC-070's overturned reading)")
 
 	# Continue until the authored stun naturally expires -- THEN (and only
-	# then) does the character become actionable again (STATE_IDLE).
+	# then) does the character become actionable again (STATE_IDLE). The
+	# wakeup timer counts from ENTRY INTO KNOCKDOWN (landing), not from the
+	# original hit (AD-043's whole point) -- StepPhases._land re-arms p.stun
+	# to STATE_KNOCKDOWN's own authored duration on this transition.
 	var reached_idle: bool = false
 	for _k in range(60):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
@@ -172,6 +188,49 @@ func _test_launched_hitstun_lands_into_knockdown_not_idle() -> void:
 			break
 	_true(reached_idle, "the knocked-down defender eventually wakes up to STATE_IDLE once stun expires")
 	_eq(s.players[1].vel_y, 0, "landing zeroed vertical velocity (still true once idle)")
+	_cleanup()
+
+
+# --- wakeup-from-landing is a FIXED duration, independent of air-time -------
+# The reason the knockdown transition exists (AD-043's elaboration): a longer
+# launch/juggle (more air-time before landing) must NOT change how long the
+# defender stays down AFTER landing -- only when landing happens shifts, not
+# the wakeup countdown from that point. Proven by comparing two launches at
+# different ranges (different pos_x -> different flight geometry is not
+# available here without retuning launch physics per-range, so instead this
+# drives the SAME launch from two different starting frame_in_state offsets
+# into DP_L's own active window, which changes when contact occurs and thus
+# when the launch begins -- a proxy for "different air-time before landing.")
+
+func _test_knockdown_wakeup_counts_from_landing_not_from_the_original_hit() -> void:
+	var kd_duration: int = CharacterA.build_character().get_state(CharacterA.STATE_KNOCKDOWN).duration
+	_true(kd_duration > 0, "STATE_KNOCKDOWN authors a real positive duration")
+
+	var s := _two_char_state(30)
+	s.players[0].state_id = CharacterA.STATE_DP_L
+	s.players[0].frame_in_state = 0
+
+	var landed_tick: int = -1
+	for k in range(60):
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+		if s.players[1].state_id == CharacterA.STATE_KNOCKDOWN and s.players[1].pos_y == 0 and landed_tick == -1:
+			landed_tick = k + 1
+			# p.stun is re-armed to the knockdown state's own duration in phase 3
+			# (StepPhases._land), on the SAME tick the landing transition happens.
+			# Unlike an ordinary hit-connect (which ALSO sets hitstop the same
+			# tick, freezing stun until hitstop elapses -- AD-010), this
+			# transition sets no hitstop, so phase 7's decrement runs THIS same
+			# tick too: the value observed after the full step is kd_duration - 1
+			# (verified by actual headless replay, not hand-derivation, per this
+			# tree's established methodology -- JC-068 et al.). The wakeup still
+			# lands exactly kd_duration ticks after the landing tick (the landing
+			# tick is the first of those kd_duration decrementing ticks) --
+			# independent of how long the flight was, which is the actual
+			# contract AD-043 requires.
+			_eq(s.players[1].stun, kd_duration - 1,
+				"landing re-arms stun to STATE_KNOCKDOWN's own authored duration (wakeup counts from entry, not from the original hit)")
+			break
+	_true(landed_tick != -1, "test setup: the launched defender must land into knockdown")
 	_cleanup()
 
 

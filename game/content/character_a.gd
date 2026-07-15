@@ -76,9 +76,17 @@ const STATE_JH: int = 118
 const STATE_HITSTUN: int = 120
 const STATE_BLOCKSTUN: int = 121
 const STATE_AIR_RESET: int = 122   # 2H's airborne "no follow-up" knock-away
-const STATE_THROWN: int = 123
+const STATE_KNOCKDOWN: int = 123   # shared grounded knockdown reaction (AD-043
+									  # elaboration, ratified from JC-070): the
+									  # throw's DIRECT hit_reaction, and the
+									  # landing target every launched HITSTUN
+									  # state (STATE_HITSTUN_LAUNCH/STATE_AIR_RESET)
+									  # converges on via Character.knockdown_state_id.
+									  # Was named STATE_THROWN pre-P2 (id unchanged);
+									  # renamed since it is no longer throw-specific.
 const STATE_CROUCH_BLOCKSTUN: int = 124
-const STATE_HITSTUN_LAUNCH: int = 125   # DP hit reaction -> hard knockdown
+const STATE_HITSTUN_LAUNCH: int = 125   # DP hit reaction -> hard knockdown (via
+										   # STATE_KNOCKDOWN on landing, AD-043)
 
 # --- Fireball (236 L/M/H; a Projectile, AD-021/030) --------------------------
 const STATE_FIREBALL_L: int = 130
@@ -144,6 +152,10 @@ static func build_character() -> Character:
 	var c := Character.new()
 	c.id = CHAR_ID
 	c.idle_state_id = STATE_IDLE
+	c.knockdown_state_id = STATE_KNOCKDOWN   # AD-043 elaboration (JC-070 ratified):
+											   # every launched HITSTUN state's landing
+											   # (STATE_HITSTUN_LAUNCH/STATE_AIR_RESET)
+											   # redirects here via StepPhases._land.
 
 	var phys := CharacterPhysics.new()
 	phys.walk_speed = FP.from_units(2.2)   # movement table: forward walk speed (data only; back walk is authored per-state)
@@ -1042,19 +1054,24 @@ static func _build_reactions() -> Array[MoveState]:
 	air_reset.timeline = [ar_kf]
 	out.append(air_reset)
 
-	# THROWN: forced throw reaction (defender). Duration matches THROW's
-	# authored hitstun.
-	var thrown := MoveState.new()
-	thrown.id = STATE_THROWN
-	thrown.category = MoveState.CATEGORY_HITSTUN
-	thrown.duration = 30   # hard-knockdown tail (oki setup window)
-	thrown.loop = false
-	var th_kf := Keyframe.new()
-	th_kf.frame_start = 1
-	th_kf.frame_end = thrown.duration
-	th_kf.hurtboxes = [_hurt_stand()]
-	thrown.timeline = [th_kf]
-	out.append(thrown)
+	# KNOCKDOWN: the shared grounded knockdown reaction (AD-043 elaboration,
+	# ratified from JC-070). Reached TWO ways: (1) directly, as the throw's own
+	# hit_reaction (a grounded hard-knockdown hit never goes airborne) -- its
+	# duration matches THROW's authored hitstun; (2) via StepPhases._land, which
+	# redirects ANY launched-HITSTUN state's landing here (character.
+	# knockdown_state_id) so ground-KD and launch-into-KD converge on ONE
+	# learnable wakeup, counted from entry (landing), not from the original hit.
+	var knockdown := MoveState.new()
+	knockdown.id = STATE_KNOCKDOWN
+	knockdown.category = MoveState.CATEGORY_HITSTUN
+	knockdown.duration = 30   # hard-knockdown tail (oki setup window)
+	knockdown.loop = false
+	var kd_kf := Keyframe.new()
+	kd_kf.frame_start = 1
+	kd_kf.frame_end = knockdown.duration
+	kd_kf.hurtboxes = [_hurt_stand()]
+	knockdown.timeline = [kd_kf]
+	out.append(knockdown)
 
 	# HITSTUN_LAUNCH: DP's launch -> hard-knockdown reaction (distinct from the
 	# plain HITSTUN so a launched defender's authored duration covers the
@@ -1328,7 +1345,7 @@ const THROW_DAMAGE: int = 120
 const THROW_HITSTUN: int = 30   # hard-knockdown duration -- StepPhases._resolve_throw sets
 								  # def.stun = hb.hitstun directly, so THIS is what actually
 								  # keeps the thrown defender down; must match (or exceed)
-								  # STATE_THROWN's authored duration below, not a placeholder.
+								  # STATE_KNOCKDOWN's authored duration below, not a placeholder.
 
 
 static func _build_throw() -> Array[MoveState]:
@@ -1350,8 +1367,11 @@ static func _build_throw() -> Array[MoveState]:
 	tb.tech_window = THROW_TECH_WINDOW
 	tb.pushback_hit = FP.from_units(2.0)
 	tb.hitstop = 0
-	tb.hit_reaction = STATE_THROWN
-	tb.block_reaction = STATE_THROWN   # unused (throws bypass block) but authored for schema completeness
+	tb.hit_reaction = STATE_KNOCKDOWN   # a grounded hard-knockdown hit -- direct to the
+										  # shared knockdown state (AD-043 elaboration): no
+										  # air trip, converges with launch-into-KD on one
+										  # learnable wakeup.
+	tb.block_reaction = STATE_KNOCKDOWN   # unused (throws bypass block) but authored for schema completeness
 	tb.id_group = IDG_THROW
 	tb.is_throw = true
 
