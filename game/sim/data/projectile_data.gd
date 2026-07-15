@@ -40,3 +40,12 @@ extends Resource
 ## A spawn while the owner is already at this cap is suppressed (move-format.md
 ## Keyframe.spawn: "if the cap is full the spawn is suppressed").
 @export var max_per_owner: int = 1
+
+## Optional vertical acceleration (AD-047), baked fixed-point. Applied to the
+## runtime entity's `vel_y` each tick (phase 3, BEFORE integrating position) —
+## `0` (default) is a straight-line projectile (character A's fireball,
+## unchanged); nonzero gives a PARABOLIC arc (character B's high-angle setplay
+## projectile, authored per strength with its own initial velocity + gravity for
+## a different parabola per strength). An arc projectile whose `pos_y >=
+## ground_y` DESPAWNS (ground contact) — see StepPhases.phase3_movement.
+@export var gravity: int = 0

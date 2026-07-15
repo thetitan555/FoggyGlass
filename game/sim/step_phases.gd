@@ -313,9 +313,9 @@ static func _last_active_frame_local(move: MoveState) -> int:
 # physically-airborne character, integrate velocity into position (integer add), then
 # apply the CONTINUOUS ground clamp fused with landing, then resolve stage bounds and
 # pushbox collisions. Fixed-point ints only. Projectiles integrate here too (AD-021,
-# each applying its own optional gravity, AD-047 — not this ticket), and any `spawn`
-# actions firing this tick are processed here (TKT-P1-0P), subject to the owner's
-# live cap.
+# each applying its own optional gravity, AD-047, for a parabolic arc — ground-contact
+# despawn included), and any `spawn` actions firing this tick are processed here
+# (TKT-P1-0P), subject to the owner's live cap.
 # ---------------------------------------------------------------------------
 
 static func phase3_movement(next: SimState) -> void:
@@ -393,10 +393,24 @@ static func phase3_movement(next: SimState) -> void:
 	# its owner (AD-021: "integrates each tick independently of the owner"). Order
 	# is fixed (list order) so integration is deterministic. New spawns are always
 	# APPENDED, so index < pre_spawn_count is exactly "existed before this tick."
+	#
+	# Arc gravity (AD-047): apply the projectile's OWN authored `gravity` to its
+	# vel_y BEFORE integrating position (mirrors the character airborne-physics
+	# order, AD-043) -- `gravity == 0` (the default, character A's fireball) is a
+	# no-op, so a straight-line projectile is bit-for-bit unchanged. After
+	# integrating, an arc projectile that has reached/passed the ground
+	# (`pos_y >= ground_y`) DESPAWNS: mark it consumed the same way a hit/block
+	# connect does (`lifetime_remaining = 0`) so phase 7's existing despawn
+	# filter removes it -- one despawn mechanism, no new removal path.
 	for idx in range(pre_spawn_count):
 		var pr: Projectile = next.projectiles[idx]
+		var data: ProjectileData = ProjectileRegistry.data(pr.data_id)
+		var gravity: int = data.gravity if data != null else 0
+		pr.vel_y += gravity
 		pr.pos_x += pr.vel_x
 		pr.pos_y += pr.vel_y
+		if gravity != 0 and pr.pos_y >= ground_y:
+			pr.lifetime_remaining = 0   # ground-contact despawn (AD-047)
 
 
 ## Air-action commands (AD-046, TKT-P2-02): consumes a player's ONE air action per
