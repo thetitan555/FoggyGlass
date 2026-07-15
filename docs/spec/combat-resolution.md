@@ -29,8 +29,9 @@
    velocity (jump takeoff, air dash, double jump, divekick dive). **After integration**, an
    airborne character whose `pos_y >= ground_y` is clamped to `ground_y` and transitioned
    `AIRBORNE → GROUNDED` (landing) with velocity zeroed — clamp and landing are one mechanism;
-   a **launched (airborne HITSTUN)** character lands into a **knockdown** reaction instead of
-   idle. Landing **resets `air_action_used`** to false (AD-046). Integrate live projectiles'
+   a **launched (airborne HITSTUN)** character instead transitions to the character's dedicated
+   grounded **`knockdown_state_id`** reaction (AD-043, ratified from JC-070), not idle. Landing
+   **resets `air_action_used`** to false (AD-046). Integrate live projectiles'
    positions too — applying each projectile's own `gravity` (AD-047) before its position — and
    process any `spawn` actions firing this tick (subject to the per-owner cap); an arc projectile
    at `pos_y >= ground_y` despawns.
@@ -81,7 +82,9 @@ blockable state. On block, the defender enters a `BLOCKSTUN` state and takes
 **Directional block enforcement (AD-045).** A back-hold is only a *valid* block if the
 defender's **stance** matches the attack's `guard_height` (`move-format.md` → `HitBox`):
 `HIGH` (overhead) must be blocked **standing**, `LOW` must be blocked **crouching**, `MID`
-either. Stance = whether the defender is in a crouch-category state (the AD-038 crouch stance).
+either. Stance = the defender's current state's **`MoveState.is_crouch`** flag (ratified from JC-078;
+there is no "crouch *category*" — `category` does not distinguish stand from crouch, so stance is this
+per-state authored flag resolved off `state_id`).
 A back-hold in the **wrong stance** is an **invalid block** and resolves as a **hit**. This is
 what makes B's high/low a real, live-readable mixup (charter "no knowledge checks"): the overhead
 must *look* like an overhead, and the result is observable — the connecting attack's `guard_height`

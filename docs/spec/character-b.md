@@ -200,7 +200,14 @@ Format/mechanism criteria (frame numbers are provisional; these are the invarian
   side crossup you cannot tell the side of (principles). Human-gate item.
 - **B-6 · `5H` whiff is punishable.** Whiffing `5H` leaves B in severe recovery — a real,
   readable risk that pays for the fast startup (brief). Verified: `5H` whiff recovery ≫
-  its on-block recovery.
+  its on-block recovery. **This is an *effective*-recovery comparison delivered by the
+  ladder's `on_contact`-gated cancel (ratified from JC-083), not a separately-authored whiff
+  recovery:** `5H` has one authored recovery, and its cancel into `2H` is `on_contact` — so on
+  hit/block B escapes most of the recovery by chaining, while on a clean whiff (no contact, no
+  cancel) B eats the full `duration`. This is the genre-standard "safe on block *because*
+  cancellable on contact, punishable on whiff *because* not" model; `MoveState.duration` is
+  single-valued, so no outcome-dependent authored recovery exists (or is wanted). QA checks the
+  effective-recovery gap via scripted trace (whiff vs. block), not an authored whiff tail.
 
 ## Open items routed with this spec
 

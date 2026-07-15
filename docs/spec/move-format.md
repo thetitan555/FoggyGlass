@@ -54,7 +54,9 @@ button). Both are expressed in data with existing mechanisms — no format chang
 | `states` | The set of `MoveState`s this character has. |
 | `button_map` | Maps generic `BUTTON_n` (+ direction/motion) → `state_id`. The only place buttons gain meaning. |
 | `cancel_groups` | Optional (AD-044). Named sets of `state_id`s a `CancelRule.target` may reference (character B's gatling strength/stance ladder). Authored data; empty for characters with no group targets. |
-| `physics` | Walk/dash/jump/**gravity** constants, as baked fixed-point integers (AD-014). `gravity` is the per-tick `velocity.y` acceleration applied to an **airborne** character (AD-043); jumps set a takeoff velocity and land by the runtime clamp — no hand-balanced net-zero arc (supersedes the old invariant). |
+| `physics` | Walk/dash/jump/**gravity** constants, as baked fixed-point integers (AD-014). `gravity` is the per-tick `velocity.y` acceleration applied to an **airborne** character (AD-043); jumps set a takeoff velocity and land by the runtime clamp — no hand-balanced net-zero arc (supersedes the old invariant). Also carries the air-action constants **`air_dash_speed`** and **`double_jump_velocity`** (AD-046, ratified from JC-075); both default `0` (= no such action, same 0-disables convention as `gravity`/`jump_velocity`). |
+| `idle_state_id` | The character's neutral/idle `state_id` — the fallback a released held-input stance returns to (AD-038) and the target the ordinary jump-landing clamp enters (AD-043). |
+| `knockdown_state_id` | Optional (AD-043, ratified from JC-070); the character's grounded **knockdown** reaction `state_id`. A **launched HITSTUN** state landing via the continuous clamp transitions here (when set; `0` ⇒ no transition — the pre-P2 fallback); grounded hard-knockdown hits (a low slide, a throw) reach the **same** state via `HitBox.hit_reaction`. Non-actionable, HITSTUN-category, fixed wakeup `duration` counted **from entry (landing)** so oki timing is independent of air-time. May author a downed hurtbox distinct from the airborne launch hurtbox. |
 
 ### `MoveState`
 | Field | Meaning |
@@ -65,6 +67,7 @@ button). Both are expressed in data with existing mechanisms — no format chang
 | `timeline` | Ordered list of `Keyframe` ranges. |
 | `cancels` | A list of `CancelRule` (see below) — not one opaque field (AD-015). |
 | `loop` | Whether `duration` loops (idle/walk) or plays once. |
+| `is_crouch` | Optional (AD-045, ratified from JC-078); default `false`. Marks this state as a **crouching stance** — the signal directional block enforcement reads to derive defender stance (a `LOW` is blocked only while `is_crouch`, a `HIGH` only while standing). Authored content, resolved off the defender's current `state_id` through `MoveRegistry` (no `SimState` change). Exists because engine `category` does not distinguish stand from crouch (both are `GROUNDED`). Character A authors `is_crouch = true` on its crouch + crouch-blockstun states; every other state defaults `false`. |
 
 ### `Keyframe` (a frame range within a `MoveState`)
 | Field | Meaning |
@@ -264,9 +267,13 @@ way, so two characters can't disagree about what "startup" or "advantage" means.
   **inherits the ongoing fall** — which is exactly the fix for "an air normal stops the jump arc."
   Grounded horizontal movement (walk, dash) stays authored displacement/velocity, `pos_y` pinned at
   `ground_y`, no gravity.
-- **Knockdown lands into the ground (AD-043).** A launched (airborne HITSTUN) character that reaches
-  the ground enters a grounded **knockdown** reaction (non-actionable, fixed wakeup `duration`) — the
-  oki timer B's hard-knockdown enders drive setplay off of — rather than snapping to idle.
+- **Knockdown lands into a dedicated grounded state (AD-043, ratified from JC-070).** A launched
+  (airborne HITSTUN) character that reaches the ground **transitions to the character's
+  `knockdown_state_id`** — a grounded, non-actionable knockdown reaction (fixed wakeup `duration` counted
+  **from landing**, so oki timing is independent of launch/air-time) — rather than snapping to idle or
+  continuing the airborne reaction in place. Grounded hard-knockdown hits (a low slide, a throw KD) reach
+  the **same** state via `HitBox.hit_reaction`, so both converge on one learnable wakeup. When
+  `knockdown_state_id == 0` the launched-landing keeps the pre-P2 no-transition fallback.
 
 ## Acceptance criteria (QA-checkable)
 

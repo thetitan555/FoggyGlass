@@ -19,7 +19,7 @@
 
 ## Provisional (awaiting ratification)
 
-### JC-068 · 2026-07-14 · TKT-P2-01 · Jump takeoff impulse + gravity tuning values — provisional
+### JC-068 · 2026-07-14 · TKT-P2-01 · Jump takeoff impulse + gravity tuning values — ratified
 **Decision.** `character_a.gd`: `physics.gravity = FP.from_units(1.0)`; JUMP_N/F/B's
 takeoff impulse (frame-1 keyframe `motion_vel_y`) = `FP.from_units(-22.0)`. Given the
 engine's integration order (gravity applied the SAME tick as a `motion`-set impulse,
@@ -38,7 +38,7 @@ the P2 human-inspection gate (staging note: "frame numbers... provisional tuning
 **Scope.** `character_a.gd` only (`CharacterPhysics.gravity` + JUMP_N/F/B's takeoff
 keyframe); no contract/format change. Log for ratification.
 
-### JC-069 · 2026-07-14 · TKT-P2-01 · "Physically airborne" gate for gravity + the continuous clamp — provisional
+### JC-069 · 2026-07-14 · TKT-P2-01 · "Physically airborne" gate for gravity + the continuous clamp — ratified
 **Decision.** Gravity accumulation AND the continuous ground clamp+landing (phase 3)
 gate on GENUINE physical airborne-ness — `pos_y < ground_y OR vel_y != 0`, AND the
 player's current state category is not `CATEGORY_GROUNDED` — not on engine-level
@@ -61,7 +61,7 @@ state (off the ground, or carrying nonzero vertical velocity this tick) can.
 contract surface change (the movement invariants already state the intended WHAT; this
 is the HOW). Log for ratification.
 
-### JC-070 · 2026-07-14 · TKT-P2-01 · Knockdown reaction is the SAME launched-HITSTUN state, no new destination state — provisional
+### JC-070 · 2026-07-14 · TKT-P2-01 · Knockdown reaction is the SAME launched-HITSTUN state, no new destination state — OVERTURNED
 **Decision.** On landing, a player whose airborne state's category is NOT
 `CATEGORY_AIRBORNE` (i.e. a launched HITSTUN reaction) is clamped to `ground_y` and has
 velocity zeroed, but is **not** transitioned to a different `state_id` — it simply
@@ -85,8 +85,27 @@ destination state (e.g. so a landed knockdown can swap to a lying-down hurtbox, 
 character A's current authoring does not do — `STATE_HITSTUN_LAUNCH`/`STATE_AIR_RESET`
 keep the airborne hurtbox throughout), that is a schema addition to make, not one I
 invented here. **Scope.** `step_phases.gd`'s `_land` only. Log for ratification.
+**— ARCHITECT RULING (OVERTURNED, 2026-07-15).** The "stay in the launched state, no
+destination transition" reading is overturned; the contract is a **dedicated grounded
+knockdown reaction state**. AD-043's own written text already says the launched character
+*"transitions not to idle but to a knockdown reaction: a grounded, non-actionable
+HITSTUN-category state"* — a transition to a distinct state, which this JC did not do. Two
+reasons the stay-in-state model is wrong as the contract: (1) **oki consistency** — leaving
+the character in the launched reaction makes wakeup count from the HIT, so time-to-wakeup
+*from landing* varies with air-time (launch height / juggle end height); the AD's whole
+purpose ("the oki timer B's launchers and hard-knockdown enders drive setplay off of")
+requires a wakeup fixed *from landing*, which only a state entered *on landing* gives; (2) a
+downed character keeps the airborne launch hurtbox (the JC's own flag-adjacent note), which a
+distinct grounded knockdown state fixes. **Contract (settled here, folded into AD-043 +
+move-format.md + combat-resolution.md):** add `Character.knockdown_state_id` (mirrors the
+existing `idle_state_id`); on the landing of a **launched HITSTUN** state, `_land` transitions
+to `knockdown_state_id` (when set; when `0`, fall back to today's no-op so non-authoring
+characters/tests are unaffected). Its fixed wakeup `duration` counts **from entry (landing)**.
+Grounded hard-knockdown hits (B's low slide) reach the **same** state directly via
+`hit_reaction`, so ground-KD and launch-into-KD converge on one learnable wakeup. **This is an
+engine + schema + A-authoring change (game code, Developer-owned) — dispatched separately.**
 
-### JC-071 · 2026-07-14 · TKT-P2-01 · `SimState.FORMAT_VERSION` bump 1→2 + v1-legacy tolerant-field migration — provisional
+### JC-071 · 2026-07-14 · TKT-P2-01 · `SimState.FORMAT_VERSION` bump 1→2 + v1-legacy tolerant-field migration — ratified
 **Decision.** Bumped `FORMAT_VERSION` 1→2 (AD-034's own stated rule: "a change to any
 sub-shape bumps this number instead" — `PlayerState` gained `air_action_used`), and
 implemented the migration AD-034 explicitly anticipated ("no migration branch yet —
@@ -109,7 +128,7 @@ merely a v2 dict with `"v"` edited — restores with the correct default). No su
 AD-034's contract: sub-objects still carry no independent version, per its own rule.
 Log for ratification.
 
-### JC-072 · 2026-07-14 · TKT-P2-01 · A's movement goldens re-baselined against actual headless replay, not hand-derivation — provisional (test-only, JC-017/020/021-style)
+### JC-072 · 2026-07-14 · TKT-P2-01 · A's movement goldens re-baselined against actual headless replay, not hand-derivation — ratified (test-only, JC-017/020/021-style)
 **Decision.** `test_airborne_actions.gd`'s held/repeated-jump tick numbers and
 `test_character_a.gd`'s `_test_jump_arc_integrates` were re-derived by literally
 replaying the new (gravity-model) engine headless — a throwaway `TraceHarness` probe
@@ -126,7 +145,7 @@ actionability by construction. **Scope.** Test files only
 (`test_airborne_actions.gd`, `test_character_a.gd`); no sim code beyond what
 JC-068/JC-069/JC-070 already cover. Log for ratification.
 
-### JC-073 · 2026-07-14 · TKT-P2-07 · Round length, transition-beat lengths, and the fresh-round-reset/hash-composition mechanics — provisional
+### JC-073 · 2026-07-14 · TKT-P2-07 · Round length, transition-beat lengths, and the fresh-round-reset/hash-composition mechanics — ratified
 **Decision (round length).** `MatchState.ROUND_LENGTH_TICKS = 5940` — the brief's and
 `match-flow.md`'s OWN stated default ("~99 in-game seconds = ~5940 frames at 60 Hz"),
 adopted verbatim rather than picking an independent number, since nothing in the ticket
@@ -179,8 +198,20 @@ mental model) — passed over as unnecessary churn once a single-application-at-
 point is just as correct and cheaper to reason about/hash-compare (criterion 7).
 **Scope.** `match_state.gd` only; no contract/format change beyond what AD-048 already
 specifies. Log for ratification.
+**— ARCHITECT RULING (RATIFIED, 2026-07-15).** All sub-calls ratified; the two genuine
+gap-fills are settled as contract and folded into AD-048. **Sudden-death re-tie:** the
+generic **re-fire** reading is the contract — if a sudden-death round itself re-ties with
+both at threshold, another sudden-death round fires; sudden death repeats until a non-tie
+resolves it. AD-048's "a single sudden-death final round" describes the *first* trigger, not
+a cap; re-firing is chosen over forcing an arbitrary winner because an arbitrary winner on a
+tie the players *earned* is the worse legibility outcome (charter — the result must be a
+readable consequence of play, never an opaque coin-flip). **Same-tick KO-vs-timeout:** KO /
+double-KO wins over TIMEOUT on the same tick — the health outcome that actually happened is
+the more specific, more legible `last_round_end_reason`. Round length / beats / carried
+fields (`tick`/`rng`/`stage`) / hash composition all ratified as correct readings of AD-048 +
+`simulation.md`, no contract change.
 
-### JC-074 · 2026-07-15 · TKT-P2-02 · Double-tap window value + recognition shape — provisional
+### JC-074 · 2026-07-15 · TKT-P2-02 · Double-tap window value + recognition shape — ratified
 **Decision.** `InputBuffer.DOUBLE_TAP_WINDOW = 12` — adopted verbatim from AD-046's own
 placeholder text ("~12f"), rather than picking an independent number. Recognition
 (`double_tap_recognized`) scans the window oldest→newest through a 3-state machine (await
@@ -199,7 +230,7 @@ completing once, not a press/release/press edge pattern of the SAME token.
 **Scope.** `input_buffer.gd`, `button_map_entry.gd`. No contract shape change beyond what
 `move-format.md`'s own `ButtonMapEntry.double_tap` entry already names. Log for ratification.
 
-### JC-075 · 2026-07-15 · TKT-P2-02 · Air-action mechanism shape: engine-generic, phase-3, velocity-only (no state transition) — provisional
+### JC-075 · 2026-07-15 · TKT-P2-02 · Air-action mechanism shape: engine-generic, phase-3, velocity-only (no state transition) — ratified
 **Decision.** Air dash / double jump are NOT authored via `CancelRule`/`ButtonMapEntry` at
 all (unlike the ground dash, which explicitly is one) — they are a generic engine check
 (`StepPhases._apply_air_action`) run in phase 3 for every physically-airborne player every
@@ -227,7 +258,7 @@ forward/back), recorded for completeness; no observed scenario makes the order m
 used`'s shape is unchanged from TKT-P2-01; these are new CharacterPhysics authoring fields,
 same latitude precedent as JC-068's gravity/jump_velocity addition). Log for ratification.
 
-### JC-076 · 2026-07-15 · TKT-P2-02 · Double jump requires a STRICT this-tick edge, not a buffered one — provisional
+### JC-076 · 2026-07-15 · TKT-P2-02 · Double jump requires a STRICT this-tick edge, not a buffered one — ratified
 **Decision.** `InputBuffer.direction_pressed_edge` checks ONLY "held now (age 0) AND not
 held the tick immediately before (age 1)" — no `COMMAND_BUFFER` lookback window, unlike
 every other direction/button recognizer in this file. Discovered via an actual regression
@@ -251,7 +282,7 @@ suite (`test_airborne_actions.gd` et al.) passing green again after the fix.
 **Scope.** `input_buffer.gd` (`direction_pressed_edge`) only. No contract change. Log for
 ratification.
 
-### JC-077 · 2026-07-15 · TKT-P2-02 · Air-dash speed / double-jump velocity test-only tuning values — provisional (test-only)
+### JC-077 · 2026-07-15 · TKT-P2-02 · Air-dash speed / double-jump velocity test-only tuning values — ratified (test-only)
 **Decision.** `test_dash_air_action.gd` exercises the air-action mechanism against character
 A's builder with `physics.air_dash_speed = FP.from_units(6.0)` and `physics.double_jump_
 velocity = FP.from_units(18.0)` MUTATED ONTO A TEST-LOCAL COPY of `CharacterA.build_
@@ -263,7 +294,7 @@ character tuning for whichever character actually ships an air dash / double jum
 B, TKT-P2-05/06) is that ticket's call, not this one's.
 **Scope.** Test file only. No production content change. Log for ratification.
 
-### JC-078 · 2026-07-15 · TKT-P2-03 · `MoveState.is_crouch` — the stance signal AD-045's block-height check reads — provisional
+### JC-078 · 2026-07-15 · TKT-P2-03 · `MoveState.is_crouch` — the stance signal AD-045's block-height check reads — ratified
 **Decision.** AD-045 / `combat-resolution.md` say directional-block validity reads "whether the
 defender is in a crouch-category state (already tracked, AD-038 crouch stance)" — but no engine
 signal for "is this state a crouching one" actually existed: `MoveState.category` is the small
@@ -285,8 +316,14 @@ flagging the gap so the Architect can fold it into the schema table on ratificat
 in favor of the group-table alternative); either reading satisfies AD-045 identically. Character
 A's `STATE_CROUCH` and `STATE_CROUCH_BLOCKSTUN` are authored `is_crouch = true`; every other A
 state defaults false (unaffected).
+**— ARCHITECT RULING (RATIFIED, 2026-07-15).** The per-`MoveState` `is_crouch` flag is
+adopted (over the `Character`-level group-table alternative) — a state's stance is a property
+of the state, read locally. Folded into the `move-format.md` `MoveState` schema table, and
+`combat-resolution.md` / AD-045 corrected: stance is derived from the defender's current
+`MoveState.is_crouch`, **not** a "crouch *category*" (there is no such engine category — that
+imprecision in AD-045's original wording is exactly what this JC correctly surfaced).
 
-### JC-079 · 2026-07-15 · TKT-P2-03 · `CancelGroup` packaged as its own Resource, not a `Dictionary`/inline field — provisional
+### JC-079 · 2026-07-15 · TKT-P2-03 · `CancelGroup` packaged as its own Resource, not a `Dictionary`/inline field — ratified
 **Decision.** AD-044 specifies group-target resolution's BEHAVIOR precisely (a buffered command
 whose destination is a group member satisfies the cancel) but not the group's own STORAGE shape.
 Added `game/sim/data/cancel_group.gd` (`CancelGroup`: `id: int`, `members: Array[int]`) and
@@ -302,7 +339,7 @@ Behaviorally identical either way — this is a "how," not a "what," call.
 **Scope.** Internal data shape only; `CancelRule.target`/`target_is_group` (the actual contract
 surface AD-044 touches) are unchanged.
 
-### JC-080 · 2026-07-15 · TKT-P2-04 · Ground-contact despawn scoped to `gravity != 0` (an "arc" projectile), not every projectile — provisional
+### JC-080 · 2026-07-15 · TKT-P2-04 · Ground-contact despawn scoped to `gravity != 0` (an "arc" projectile), not every projectile — ratified
 **Decision.** AD-047's text names the despawn rule specifically as "an ARC projectile whose
 `pos_y >= ground_y` despawns" — read literally, this scopes the new despawn check to a projectile
 with nonzero `gravity`, not to every live projectile regardless of authored gravity. Implemented
@@ -322,7 +359,7 @@ for projectiles in general — Tenet 3 (build for extension) favors the narrower
 meaning (0 = straight line) is unchanged either way. Test-covered (`test_arc_projectile.gd`'s
 `_test_non_arc_projectile_does_not_ground_despawn`).
 
-### JC-081 · 2026-07-15 · TKT-P2-05 · Character B's damage/hitstun/blockstun/hitstop values — provisional (tuning)
+### JC-081 · 2026-07-15 · TKT-P2-05 · Character B's damage/hitstun/blockstun/hitstop values — ratified (tuning)
 **Decision.** `character-b.md`'s Normals table gives startup/active/recovery and
 `guard_height` for every normal but no damage/hitstun/blockstun/hitstop column (unlike
 `character-a.md`, which has a separate "Damage & stun" table) — these are genuinely
@@ -345,7 +382,7 @@ picking values that reconcile against B's OWN authored frame data was the more h
 **Scope.** `character_b.gd` data only. No format/contract change. Log for ratification (numbers
 settle at the P2 human-inspection gate, same bar as `AirHeightScaling`/`DamageScaling`).
 
-### JC-082 · 2026-07-15 · TKT-P2-05 · Character B reuses character A's verified gravity/jump constants; air_dash_speed/double_jump_velocity reuse the test-verified TKT-P2-02 values — provisional
+### JC-082 · 2026-07-15 · TKT-P2-05 · Character B reuses character A's verified gravity/jump constants; air_dash_speed/double_jump_velocity reuse the test-verified TKT-P2-02 values — ratified
 **Decision.** `CharacterB.physics.gravity = FP.from_units(1.0)`, `jump_velocity =
 FP.from_units(22.0)` (identical to character A's TKT-P2-01 values) and `air_dash_speed =
 FP.from_units(6.0)`, `double_jump_velocity = FP.from_units(18.0)` (identical to the values
@@ -362,7 +399,7 @@ constants (JC-068's "verified by actual headless replay, not hand-derivation") i
 than picking a fresh, unverified pair that might net a weird half-tick landing remainder).
 **Scope.** `character_b.gd`'s `physics` block only. Log for ratification.
 
-### JC-083 · 2026-07-15 · TKT-P2-05 · 5H's whiff-punish (B-6) is an EMERGENT property of the ladder's on_contact-only cancel gate, not a separate authored mechanism — provisional (interpretation)
+### JC-083 · 2026-07-15 · TKT-P2-05 · 5H's whiff-punish (B-6) is an EMERGENT property of the ladder's on_contact-only cancel gate, not a separate authored mechanism — ratified (interpretation, confirmed satisfies B-6)
 **Decision.** `character-b.md`'s B-6 criterion ("whiffing 5H leaves severe recovery... whiff
 recovery ≫ its on-block recovery") is satisfied WITHOUT any new engine mechanism: 5H is
 authored with exactly ONE recovery value (20f, `duration` 30), and its ONLY cancel is the
@@ -387,8 +424,17 @@ the one place this ticket reads a hard legibility/acceptance criterion (B-6) aga
 rather than against an unambiguous spec instruction — the Architect may prefer the explicit
 whiff-tail alternative if B-6's intent was a literally-longer whiff recovery rather than an
 effective/emergent one.
+**— ARCHITECT RULING (RATIFIED, 2026-07-15).** Confirmed: the emergent reading **satisfies
+B-6**. B-6's spec text is literally "whiff recovery ≫ its on-block recovery" — an *effective*-
+recovery comparison, which the `on_contact`-gated ladder cancel delivers exactly (whiff = no
+contact = no cancel = full duration; block = contact = early cancel into 2H). This is the
+genre-correct model of "safe on block, punishable on whiff" (on-block safety *comes from*
+being cancellable on contact), and `MoveState.duration` is single-valued anyway, so an
+outcome-dependent authored recovery is not even expressible without a whiff-tail state — which
+is not wanted. Clarifying note folded into `character-b.md` B-6 so QA/authors know the property
+is realized via the contact-gated cancel, not separate authoring.
 
-### JC-084 · 2026-07-15 · TKT-P2-05 · Character B's back dash authored with ZERO invuln frames (character-a's contrasts with invuln 1-7) — provisional (design-adjacent)
+### JC-084 · 2026-07-15 · TKT-P2-05 · Character B's back dash authored with ZERO invuln frames (character-a's contrasts with invuln 1-7) — ratified (design-adjacent; consistent with brief identity, no Strategist flag)
 **Decision.** `character-b.md`'s Movement table: back dash is "brief low-commit... Not
 invulnerable (or minimal), so it is a read-beatable escape... no invincible reversal (defense is
 movement)." The brief's own "(or minimal)" leaves room for a SMALL invuln window, but B's
@@ -407,7 +453,7 @@ silently assumed.
 (`test_character_b.gd`'s `_test_dash_b_reachable_via_44_and_carries_no_invuln`). Log for
 ratification; easy to add an invuln window later if overturned (one field, no structural change).
 
-### JC-085 · 2026-07-15 · TKT-P2-05 · 6H (command overhead) disambiguated from 2H/5H via button_map AUTHORING ORDER, no new recognizer shape — provisional
+### JC-085 · 2026-07-15 · TKT-P2-05 · 6H (command overhead) disambiguated from 2H/5H via button_map AUTHORING ORDER, no new recognizer shape — ratified
 **Decision.** `character-b.md`'s 6H is "forward + H," and the existing recognizer's
 `_required_direction_held(RIGHT)` gate is satisfied by ANY held-forward input INCLUDING a
 down-forward (numpad 3) hold (it checks only the forward bit, not the absence of DOWN) — so a
@@ -427,7 +473,7 @@ engine change" scope, and unnecessary since ordering alone fully resolves the am
 covered (`test_character_b.gd`'s `_test_6h_is_reachable_and_not_shadowed_by_5h`). Log for
 ratification.
 
-### JC-086 · 2026-07-15 · TKT-P2-05 · Cancel-group split: one shared group for both lights, one group per higher-strength source — provisional
+### JC-086 · 2026-07-15 · TKT-P2-05 · Cancel-group split: one shared group for both lights, one group per higher-strength source — ratified
 **Decision.** Five `CancelGroup`s author B's ladder: `GROUP_ALL_NORMALS` (shared by BOTH 5L
 and 2L — their legal-destination sets are IDENTICAL per AD-044's rule, so one group correctly
 expresses both), then one group each for 5M/2M/5H/2H (`GROUP_FROM_5M`, `GROUP_FROM_2M`,

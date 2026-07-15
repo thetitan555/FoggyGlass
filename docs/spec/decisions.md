@@ -233,6 +233,80 @@ sub-item *carved out and routed to the Strategist* (flags.md) rather than locked
   loader that must reject a dict; a richer ok/error result type is a revision to make
   then, if a future migration needs structured error reporting.
 
+## P2 latitude ratifications (JC-068..086)
+
+The P2 judgment calls (airborne physics, air-action economy, block-height stance
+signal, cancel-group factoring, arc-projectile despawn, character B content, match
+layer), disposed at the pre-TKT-P2-06 ratification pass (2026-07-15). Full reasoning in
+`judgment-log.md`; this records the disposition. **All ratified except JC-070
+(overturned).** Three settled genuine contracts (JC-070's knockdown model, JC-073's two
+match gap-fills, JC-078's stance signal) are folded into the ADs / spec below.
+
+- **JC-068 / JC-081 / JC-082 / JC-077** tuning values (A's gravity+takeoff impulse; B's
+  damage/stun/hitstop; B's reused gravity/jump + air-action constants; the test-only
+  air-dash/double-jump numbers) — *latitude* (mechanism-first, same bar as JC-016/JC-039).
+  Numbers stay slice-provisional pending the P2 human-inspection gate; QA goldens
+  ordering/reconciliation, not the specific values.
+- **JC-069** the two-part "genuinely airborne" gate (`pos_y < ground_y OR vel_y != 0` AND
+  not a `GROUNDED`-category state) for gravity + the continuous clamp — *latitude*: the
+  correct HOW behind AD-043's stated launched-vs-standing-HITSTUN distinction; a
+  regression test pins that a standing reaction never accrues gravity. No contract surface.
+- **JC-070** knockdown-as-same-launched-state — **OVERTURNED**; see AD-043's elaboration
+  below. Contract is a **dedicated grounded knockdown state** (`Character.knockdown_state_id`,
+  wakeup from landing). Engine + schema + A-authoring change, dispatched to a Developer.
+- **JC-071** `FORMAT_VERSION` 1→2 + v1-tolerant migration — *latitude* into AD-034's own
+  stated bump rule (a sub-shape changed: `air_action_used` added). The bump follows AD-034
+  verbatim; a genuine v1 dict restores the field to its correct pre-air-economy default.
+- **JC-072** A's movement goldens re-baselined against actual headless replay (landing at
+  43 ticks, not the old net-zero-arc's 45) — *test-only latitude* (JC-017/020/021-style):
+  a deliberate behavior change (flight time is now a physical outcome of gravity + clamp),
+  not a hand-guessed number.
+- **JC-073** round length / transition beats / reset point / carried fields / hash
+  composition — *latitude* (correct readings of AD-048 + `simulation.md`). Its two genuine
+  gap-fills are **settled as contract** and folded into AD-048: **sudden-death re-tie =
+  re-fire** (repeats until a non-tie resolves it), and **same-tick KO > TIMEOUT**.
+- **JC-074** double-tap window `12` (AD-046's own placeholder) + the 3-state edge-scan
+  recognizer — *latitude*: value is Strategist-tunable feel; the recognizer shape is HOW.
+- **JC-075** air actions as a generic phase-3 velocity-set engine check (not
+  `CancelRule`/state transitions), gated by `air_action_used` + two new
+  `CharacterPhysics` fields (`air_dash_speed`, `double_jump_velocity`, both default 0) —
+  *latitude*: the literal reading of AD-046 ("set velocity", never "routes to a state");
+  the two physics fields carry the same 0-disables authoring precedent as `gravity`.
+- **JC-076** double-jump UP recognized as a **strict this-tick rising edge** (no
+  command-buffer lookback) — *latitude*, regression-driven: a buffered UP auto-consumes the
+  double jump during a held jump. Ratified with a one-line note added to AD-046 so the next
+  author knows the air-action UP is deliberately un-buffered (unlike AD-022 commands).
+- **JC-078** `MoveState.is_crouch` stance flag — *ratified into the contract*; see AD-045's
+  correction below and the `move-format.md`/`combat-resolution.md` folds. Adopted over the
+  `Character`-level group-table alternative (a state's stance is a local property of the
+  state). This JC correctly surfaced that AD-045's "crouch-category state" named an engine
+  category that does not exist.
+- **JC-079** `CancelGroup` packaged as a typed `Resource` (not a bare `Dictionary`) +
+  `Character.cancel_groups: Array[CancelGroup]` — *latitude*: internal storage shape;
+  keeps the `.tres` diffable/golden-able like every other authored collection.
+  `CancelRule.target`/group-resolution (the AD-044 contract surface) unchanged.
+- **JC-080** ground-contact despawn scoped to `gravity != 0` (an *arc* projectile), not
+  every projectile — *latitude*: AD-047's literal "an arc projectile" reading; Tenet 3
+  favours the narrow rule (leaves a future 0-gravity ground-level projectile open).
+- **JC-083** B-6 whiff-punish as an **emergent** property of the `on_contact`-gated ladder
+  cancel — *ratified as interpretation; confirmed satisfies B-6* (the criterion is an
+  effective-recovery comparison; the genre-correct "safe-on-block-from-cancellability"
+  model; `duration` is single-valued so a separate whiff recovery isn't expressible anyway).
+  Clarifying note folded into `character-b.md` B-6. No whiff-tail state.
+- **JC-084** B's back dash authored with **zero** invuln — *ratified* (design-adjacent):
+  consistent with the brief's identity line ("no invincible reversal — defense is
+  movement") and `character-b.md`'s own "Not invulnerable (or minimal)"; zero-invuln is the
+  reading that best matches "no invincible reversal." **No conflict with the brief ⇒ no
+  Strategist flag.** Easy to add a small window later if playtest wants it (one field).
+- **JC-085** 6H disambiguated from 2H/5H by `button_map` **authoring order**
+  (first-match-wins, AD-032): DOWN-gated crouching normals, then forward-gated 6H, then
+  direction-agnostic standing normals — *latitude*: the exact AD-032 shadowing convention,
+  extended one level; a down-forward+H yields 2H (a low never becomes an overhead), matching
+  genre. No recognizer change.
+- **JC-086** cancel-group factoring for B (one shared `GROUP_ALL_NORMALS` for both lights;
+  one group per higher-strength source) — *latitude*: the mechanical application of AD-044's
+  own "shared groups where sets coincide" rule; naming/factoring only.
+
 ---
 
 ### AD-001 · State is data; the scene tree is a view — settled
@@ -1716,6 +1790,34 @@ clamp+landing+knockdown branch. All integer/FP (AD-014); serialized `velocity` a
 keeping pure keyframe integration and re-authoring each air state to continue the arc (un-authorable
 — a state cannot know the arc it was cancelled from; defeats the content seam); a new
 `vel_y`/`vel_x` field (the existing `velocity` vector is exactly this).
+**Elaboration — knockdown is a distinct grounded state, entered on landing (2026-07-15, JC-070
+overturned).** The "Knockdown-into-ground" bullet above says the launched character *"transitions
+not to idle but to a knockdown reaction: a grounded, non-actionable HITSTUN-category state."* JC-070
+implemented this as *no transition* — the character stays in its (airborne-authored) launched-HITSTUN
+state, merely clamped to the floor. That is **overturned**; the contract is a genuine transition to a
+**dedicated grounded knockdown state**, identified by a new **`Character.knockdown_state_id`** field
+(mirrors the existing `idle_state_id` the ordinary jump-landing already targets):
+- On the continuous-clamp landing of a **launched HITSTUN** state (non-`AIRBORNE`-category airborne
+  reaction), `_land` transitions to `knockdown_state_id` when it is set; when `knockdown_state_id == 0`
+  it falls back to the current no-op (so a character/test authoring no knockdown state is unaffected).
+- The knockdown state is a grounded, non-actionable HITSTUN-category state (no new engine *category* —
+  the AD's original constraint holds) whose fixed wakeup `duration` **counts from entry (i.e. from
+  landing)**. This makes time-to-wakeup independent of air-time (launch height / juggle end height) —
+  the *reason* this mechanism exists: "the oki timer B's launchers and hard-knockdown enders drive
+  setplay off of" requires a wakeup fixed from landing, which counting the launched state's own
+  duration from the *hit* cannot give.
+- **Grounded hard-knockdown hits reach the same state directly.** A grounded hard-KD hit (B's low
+  slide, A's throw KD) sets `hit_reaction = knockdown_state_id` — no air trip — so ground-KD and
+  launch-into-KD converge on **one** learnable wakeup timing (charter: oki is a learnable read, not a
+  per-source guess). The knockdown state may author a grounded (downed) hurtbox distinct from the
+  airborne launch hurtbox (which JC-070's stay-in-state model could not).
+- **Consequence (Developer, engine + schema + A-authoring — dispatched separately).** Add
+  `knockdown_state_id` to `Character`; change `_land`'s launched-reaction branch to redirect to it;
+  author A's launched reactions (`STATE_HITSTUN_LAUNCH`/`STATE_AIR_RESET`) to land into A's knockdown
+  state, and set A's throw/`623` `hit_reaction` accordingly. Update JC-070's
+  `test_airborne_physics.gd` landing assertion (launched-land now enters `knockdown_state_id`, not the
+  same state / idle). If a future character needs multiple knockdown flavours (soft/hard), that is a
+  revision here (Tenet 3 door left open, not built now).
 
 ### AD-044 · CancelRule group-target resolution is built; B's gatling ladder needs no format extension — settled (P2, the format-generality determination)
 **Determination (the test P2 exists to run).** The move/`CancelRule` format **expresses** B's cancel
@@ -1757,6 +1859,27 @@ them — authored content, driven by this AD's mechanism, not invented by the co
 AD-015 express it; a predicate-cancel is more than B needs, Tenet-3 "don't build the unused path");
 bending B to per-target explicit cancels only (expressible but verbose and drift-prone as normals change);
 reading the brief's "crouching normal" literally as stand→crouch-only (contradicts the legal `2H 5H`).
+**Resolution — exact light self-repeat is intended; the P0 same-state guard was the defect (2026-07-15,
+flags.md).** AD-044 and `move-format.md` criterion 10 both require lights to self-chain *including exact
+repeat* (`5L→5L`, `2L→2L`; the worked example marks `2L 2L` legal). A P0 engine guard predating this AD
+(`CancelEval.find_cancel` rejects any cancel whose `target`/`group_target == p.state_id`, and
+`step_phases.gd`'s neutral branch carries an identical `target_state != p.state_id` check) blocked *all*
+literal self-re-entry, so `2L 2L` never fired. **Ruling: the self-repeat is intended — the `CancelEval`
+guard is the defect, not the contract.** Fix contract (Developer, game code — `CancelEval` is theirs):
+relax the same-state rejection to **permit a `target`/`group_target == p.state_id` cancel EXCEPT when it
+is a truly gateless self-target — `condition == ALWAYS` AND `input == 0` — which stays rejected.**
+Rationale: for any cancel gated on a real `input` and/or a `condition` (contact outcome), `_enter_state`
+already resets `frame_in_state`/`active_hit_ids`/`move_contact`/`cancel_tags`, so a re-entered same-state
+move is a *fresh instance* that must independently re-satisfy its gate — it cannot loop unconditionally;
+only the gateless-`ALWAYS` case could, and that stays guarded. This is the minimal change the Developer
+proposed on the flag, **accepted as specified.** The load-bearing path is `CancelEval` (B's ladder
+self-repeat is an `on_contact` chain-cancel, criterion 10's `2L 2L`); the `step_phases` neutral-branch
+guard is **left as-is** — it sits on the actionable/neutral re-derivation path criterion 10 does not
+exercise, and keeping it avoids an unscoped same-state neutral re-latch. So self-repeat is delivered as
+a chain-*cancel* (on contact — the intended "lights self-chain" behavior), not a neutral-frame self-link.
+The two documenting tests (`_test_ladder_self_repeat_5l_currently_blocked` /
+`…_2l_currently_blocked`) flip their expectation to *succeeds*. No re-authoring of B needed (5L/2L already
+name themselves in `GROUP_ALL_NORMALS`); no format/`SimState` change.
 
 ### AD-045 · Directional block enforcement: `HitBox.guard_height` × defender stance — settled (P2)
 **Decision.** Blocking becomes directional so B's high/low mixup is a real, *readable* decision (the
@@ -1764,8 +1887,8 @@ charter's "no knowledge checks" made mechanical). A `HitBox` gains **`guard_heig
 (default **MID**). In phase 5's hit-vs-block resolution: a defender holding back is *attempting to block*;
 the block is **valid** iff the defender's **stance** is compatible with `guard_height` — **HIGH** (overhead)
 requires a **standing** block, **LOW** requires a **crouching** block, **MID** is blocked either way. Stance
-is derived from whether the defender is in a crouch-category state (already tracked, `move-format.md`
-crouch stance, AD-038). A back-hold with the **wrong stance** is an **invalid block** and resolves as a
+is derived from the defender's current **`MoveState.is_crouch`** flag (ratified from JC-078; see the
+correction note below). A back-hold with the **wrong stance** is an **invalid block** and resolves as a
 **hit** (hitstun/damage), not a block. No-back-hold is a hit as before.
 **Legibility (the charter bar this exists for).** The attack's `guard_height` must match its animation —
 the overhead *looks* like an overhead (`character-b.md` 6H, H-divekick; principles "the art teaches before
@@ -1781,10 +1904,19 @@ guard could be read against, it is **raised to the Strategist as a scope call** 
 overhead/high-low mixup *requires* it, so it is specced against "enforcement added" as the recommended
 path, but the Strategist owns whether P2 accepts the scope.
 **SimState / seam.** **No new serialized field** — `guard_height` is authored on the `HitBox` (derived
-content, like invuln); stance is the defender's already-serialized state category; block validity is
-computed in phase 5 and homed on the `HitRecord`/`HitEvent` (a shape addition: `guard_height` +
-`block_valid`, both defaulting for MID/non-block, hashed per AD-023/AD-028 precedent). Default MID means
-every existing A/test move is unaffected unless authored otherwise.
+content, like invuln); stance is derived from the defender's already-serialized `state_id`, resolving
+through `MoveRegistry` to that state's authored **`MoveState.is_crouch`** flag (exactly as `category`/
+`pushbox` resolve — no `SimState` shape change); block validity is computed in phase 5 and homed on the
+`HitRecord`/`HitEvent` (a shape addition: `guard_height` + `block_valid`, both defaulting for
+MID/non-block, hashed per AD-023/AD-028 precedent). Default MID means every existing A/test move is
+unaffected unless authored otherwise.
+**Correction — the stance signal is `MoveState.is_crouch`, not a "crouch category" (2026-07-15, ratified
+from JC-078).** This AD's original "crouch-category state" wording named an engine *category* that does
+not exist — `MoveState.category` is the fixed set `GROUNDED/AIRBORNE/HITSTUN/BLOCKSTUN/HITSTOP`, which
+does not distinguish stand from crouch (A's `STATE_CROUCH` and `STATE_IDLE` are both `GROUNDED`). The
+stance signal is a per-`MoveState` **`is_crouch: bool`** flag (default `false`, authored content, added
+to the `move-format.md` `MoveState` schema), read off the defender's current state. Chosen over a
+`Character`-level crouch-state group table for locality (a state's stance is a property of the state).
 **Rejected.** Keeping stance-agnostic block and making the overhead a pure animation read with no
 mechanical mixup (guts B's briefed high/low classroom — an overhead any hold-back blocks is not a mixup);
 a separate high/low *input* rather than stance (off-genre; stance-based block is the convention and reuses
@@ -1805,7 +1937,11 @@ the existing crouch stance); enforcing without observability (a knowledge check 
   (double-tap forward/back while airborne) **or** **double jump** (`up` while airborne). Enforced by a new
   serialized per-player field **`players[i].air_action_used`** (bool): set true when an air action is
   consumed, **reset to false on landing** (the AD-043 grounded landing transition). An air-action command
-  is **suppressed** when `air_action_used` is already true. The **divekick (an aerial *special*) does not
+  is **suppressed** when `air_action_used` is already true. (**Recognition note, ratified from JC-076:**
+  the double-jump `up` is recognized as a **strict this-tick rising edge** — held now, not held the tick
+  before — *not* a 6-frame-buffered command like AD-022's; a buffered `up` would auto-consume the double
+  jump the instant a held-`up` jump becomes airborne. The double-tap air-dash keeps normal recognition.)
+  The **divekick (an aerial *special*) does not
   spend the air action** — so `airdash → divekick` is the intended, briefed mixup; that interaction's
   reactability is bounded by the `character-b.md` air/mixup legibility criteria (and AD-045), not by the
   air-action budget.
@@ -1895,3 +2031,18 @@ machine to the per-frame combat contract and grows `step`'s pinned signature sco
 gain); a wall-clock / `_process` timer (the classic Tenet-1 violation the brief exists to forbid); a
 render-side "who won" inference (an un-serialized, un-golden-able result — the end reason must be sim
 truth to be legible and deterministic).
+**Elaboration — two round-resolution rules the brief left open, settled (2026-07-15, ratified from
+JC-073).**
+- **Sudden-death re-tie = re-fire.** The "A tie that pushes both to 2 at once → a single sudden-death
+  final round" rule describes the *first* trigger; it does not cap the count. If a sudden-death round
+  **itself** re-ties (double-KO, or equal-health timeout) with both players still at/above the match
+  threshold, the **same** rule fires again — another sudden-death round — and repeats until a non-tie
+  resolves it. Chosen over forcing an arbitrary winner on a tie the players *earned*: an opaque
+  tie-break coin-flip is the worse legibility outcome (charter — a result must read as a consequence of
+  play). The scoring/threshold check is therefore **generic, re-applied after every round**, not
+  special-cased to the first sudden-death entry. (Double-KO/equal-timeout in a sudden-death round is
+  astronomically rare, but the rule is deterministic and defined.)
+- **Same-tick KO beats TIMEOUT.** If a KO (or double-KO) and `round_timer == 0` both become true on the
+  same tick, the round resolves as **KO / DOUBLE_KO**, never TIMEOUT — the health outcome that actually
+  happened this tick is the more specific, more legible `last_round_end_reason` ("someone got KO'd," not
+  "the clock also hit zero"). This shapes the serialized end-reason the brief cares most about.
