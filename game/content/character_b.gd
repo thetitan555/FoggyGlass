@@ -1,15 +1,40 @@
 class_name CharacterB
 extends RefCounted
 
-## Character B — the pressure/air-mobility character (character-b.md; TKT-P2-05).
-## PART 1 (this file, so far): the six chainable normals + the strength-ladder
+## Character B — the pressure/air-mobility character (character-b.md; TKT-P2-05 +
+## TKT-P2-06). PART 1 (TKT-P2-05): the six chainable normals + the strength-ladder
 ## gatling cancels (AD-044), the two dedicated command normals (5H/6H/2H), the
 ## throw (existing AD-016/029 model — no new throw rules), and ground movement
 ## (walk/dash/jump wiring over AD-043/046, already-built engine capabilities).
-## Air toolkit + specials (divekicks, low slide, arc projectile) are TKT-P2-06's
-## job and are NOT authored here. Authored PURELY as data (move-format.md
-## criterion 1 / character-b.md criterion 1) — no character-specific engine
-## code; B and A resolve frame data through the exact same code path.
+## PART 2 (this pass, TKT-P2-06): the air toolkit + specials + oki — the three
+## divekicks (aerial specials, H = the overhead), the air normals (j.L/M/H,
+## carrying the fall per AD-043), the low slide (LOW, hard knockdown ->
+## knockdown-into-ground oki), and the arc projectile (three parabolas, AD-047,
+## one falling in front for setplay). The 2H-JC -> airdash pressure wiring needs
+## NO new authoring here: B's physics already carries air_dash_speed (TKT-P2-05)
+## and the air-action economy (AD-046) is a generic engine mechanism that applies
+## to ANY physically-airborne player regardless of how they got there (2H's own
+## jump-cancel-on-block already lands B in JUMP_N/F/B, TKT-P2-05) — it "just
+## works" once B is airborne with air_dash_speed != 0; verified by test, not
+## re-authored. Authored PURELY as data (move-format.md criterion 1 /
+## character-b.md criterion 1) — no character-specific engine code; B and A
+## resolve frame data through the exact same code path.
+##
+## KNOCKDOWN-STATE CATCH-UP (AD-043's elaboration, JC-070 overturned 2026-07-15,
+## ratified AFTER TKT-P2-05 landed — see docs/judgment-log.md for the full
+## reasoning). TKT-P2-05's throw predates the ratified `Character.
+## knockdown_state_id` contract and routed its hard knockdown directly to its own
+## `STATE_THROWN` (a standalone reaction, not the shared knockdown state AD-043's
+## elaboration specifies). This pass closes that gap: `STATE_THROWN` is renamed
+## to `STATE_KNOCKDOWN` (id UNCHANGED, mirrors character_a.gd's own identical
+## rename), `Character.knockdown_state_id` is now set, the throw's hit_reaction
+## points at it directly (a grounded hard-KD hit, no air trip), the new low
+## slide's hard-knockdown hit_reaction ALSO points at it directly, and 2H's
+## launch (STATE_HITSTUN_LAUNCH) now automatically lands into it via the
+## already-built engine mechanism (StepPhases._land) the moment
+## knockdown_state_id is set — no further authoring needed for that
+## convergence. All three hard-knockdown sources (throw, slide, launch-landing)
+## now share ONE learnable wakeup duration (28 ticks), exactly AD-043's point.
 ##
 ## CONTENT SOURCE (mirrors character_a.gd's role): `tools/bake_character_b.gd`
 ## calls `build_character()` and ResourceSaver.save()s the result to
@@ -64,11 +89,40 @@ const STATE_6H: int = 316   # command overhead (NOT part of the auto-ladder)
 const STATE_HITSTUN: int = 320
 const STATE_BLOCKSTUN: int = 321
 const STATE_CROUCH_BLOCKSTUN: int = 322
-const STATE_HITSTUN_LAUNCH: int = 323   # 2H's launch -> knockdown-eligible reaction
-const STATE_THROWN: int = 324
+const STATE_HITSTUN_LAUNCH: int = 323   # 2H's launch -> lands into STATE_KNOCKDOWN (AD-043)
+const STATE_KNOCKDOWN: int = 324   # shared grounded knockdown reaction (AD-043 elaboration,
+									 # ratified from JC-070): the throw's DIRECT hit_reaction,
+									 # the low slide's DIRECT hit_reaction, and the landing
+									 # target 2H's launch (STATE_HITSTUN_LAUNCH) converges on
+									 # via Character.knockdown_state_id. Was STATE_THROWN
+									 # pre-catch-up (id unchanged; see header note) — renamed
+									 # since it is no longer throw-specific, mirroring
+									 # character_a.gd's identical rename exactly.
 
 # --- Throw (L+H) --------------------------------------------------------------
 const STATE_THROW: int = 350
+
+# --- Air toolkit + specials (TKT-P2-06) ---------------------------------------
+# Low slide (236 L/M/H -- character-b.md's own text gives three input strengths,
+# but describes exactly ONE move's behavior, no per-strength differentiation
+# unlike the divekick/projectile which explicitly enumerate three distinct
+# versions -- so all three inputs route to ONE canonical slide, logged latitude).
+const STATE_SLIDE: int = 365
+
+# Arc projectile (214 L/M/H; AD-047) -- three genuinely distinct parabolas.
+const STATE_ARC_L: int = 366
+const STATE_ARC_M: int = 367
+const STATE_ARC_H: int = 368
+
+# Divekick (aerial special, 2+attack in air; three versions, H = the overhead).
+const STATE_DIVEKICK_L: int = 370
+const STATE_DIVEKICK_M: int = 371
+const STATE_DIVEKICK_H: int = 372
+
+# Air normals (carry the fall, AD-043 -- do not stop the jump arc).
+const STATE_JL: int = 375
+const STATE_JM: int = 376
+const STATE_JH: int = 377
 
 # --- id_group allocation -------------------------------------------------------
 const IDG_5L: int = 1
@@ -79,6 +133,21 @@ const IDG_5H: int = 5
 const IDG_2H: int = 6
 const IDG_6H: int = 7
 const IDG_THROW: int = 8
+const IDG_SLIDE: int = 9
+const IDG_JL: int = 10
+const IDG_JM: int = 11
+const IDG_JH: int = 12
+const IDG_DIVEKICK_L: int = 13
+const IDG_DIVEKICK_M: int = 14
+const IDG_DIVEKICK_H: int = 15
+const IDG_ARC_L: int = 16
+const IDG_ARC_M: int = 17
+const IDG_ARC_H: int = 18
+
+# --- ProjectileData registry ids (distinct from character A's 201-203) -------
+const PROJ_ARC_L: int = 220
+const PROJ_ARC_M: int = 221
+const PROJ_ARC_H: int = 222
 
 # --- Cancel groups (AD-044's strength ladder; character-b.md "Cancel model") --
 # Tag each of 5L/2L/5M/2M/5H/2H with STRENGTH (L<M<H) and STANCE (stand/crouch).
@@ -121,6 +190,12 @@ static func build_character() -> Character:
 	var c := Character.new()
 	c.id = CHAR_ID
 	c.idle_state_id = STATE_IDLE
+	c.knockdown_state_id = STATE_KNOCKDOWN   # AD-043 elaboration (JC-070 ratified); catch-up
+											   # for B (see header note) -- every launched
+											   # HITSTUN state's landing (STATE_HITSTUN_LAUNCH)
+											   # redirects here via StepPhases._land, and the
+											   # throw/slide's DIRECT hit_reaction reaches it
+											   # with no air trip.
 
 	var phys := CharacterPhysics.new()
 	# Movement table (character-b.md, provisional): walk ~2.0f / ~1.8b px/f.
@@ -144,10 +219,25 @@ static func build_character() -> Character:
 	c.states.append_array(_build_normals())
 	c.states.append_array(_build_reactions())
 	c.states.append_array(_build_throw())
+	c.states.append_array(_build_slide())
+	c.states.append_array(_build_arc_projectiles())
+	c.states.append_array(_build_divekicks())
+	c.states.append_array(_build_air_normals())
 
 	c.cancel_groups = _build_cancel_groups()
 	c.button_map = _build_button_map()
 	return c
+
+
+## A ProjectileRegistry roster (data_id -> ProjectileData) for B's three arc-
+## projectile strengths (mirrors CharacterA.build_projectile_registry's role —
+## a caller that spawns/restores B's projectiles must ProjectileRegistry.
+## install() this).
+static func build_projectile_registry() -> Dictionary:
+	var l := _arc_projectile_data(PROJ_ARC_L, IDG_ARC_L, FP.from_units(0.5), 30, 14, 10, 6)
+	var m := _arc_projectile_data(PROJ_ARC_M, IDG_ARC_M, FP.from_units(0.4), 38, 16, 11, 7)
+	var h := _arc_projectile_data(PROJ_ARC_H, IDG_ARC_H, FP.from_units(0.3), 46, 18, 12, 8)
+	return {l.id: l, m.id: m, h.id: h}
 
 
 # =============================================================================
@@ -212,6 +302,21 @@ static func _ladder_cancel(group_id: int) -> CancelRule:
 # =============================================================================
 static func _build_button_map() -> Array[ButtonMapEntry]:
 	var map: Array[ButtonMapEntry] = []
+	# Low slide (236 + L/M/H; TKT-P2-06) and arc projectile (214 + L/M/H; AD-047)
+	# -- listed FIRST, before the throw chord/crouching normals, mirroring
+	# character_a.gd's own discipline ("motion commands before their prefix's
+	# plain-button fallbacks") so a completed 236/214 motion is never shadowed by
+	# a bare-button or DOWN+button entry recognizing a PARTIAL match against the
+	# motion's own intermediate frames. All three buttons route the slide to the
+	# SAME canonical STATE_SLIDE (character-b.md describes one move's behavior,
+	# not three distinct ones -- logged latitude, docs/judgment-log.md); the
+	# projectile routes to three genuinely distinct strengths (AD-047).
+	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_0, STATE_SLIDE))
+	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_1, STATE_SLIDE))
+	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_2, STATE_SLIDE))
+	map.append(_map_motion(InputBuffer.MOTION_214, InputFrame.BUTTON_0, STATE_ARC_L))
+	map.append(_map_motion(InputBuffer.MOTION_214, InputFrame.BUTTON_1, STATE_ARC_M))
+	map.append(_map_motion(InputBuffer.MOTION_214, InputFrame.BUTTON_2, STATE_ARC_H))
 	# Throw (L+H chord, AD-032) -- before every bare button so a simultaneous
 	# L+H resolves to the throw, not 5L/5H (a lone L or H never satisfies a chord).
 	map.append(_map_chord(InputFrame.BUTTON_0, InputFrame.BUTTON_2, STATE_THROW))
@@ -219,6 +324,17 @@ static func _build_button_map() -> Array[ButtonMapEntry]:
 	map.append(_map(1, InputFrame.DOWN, 0, STATE_2M))
 	map.append(_map(0, InputFrame.DOWN, 0, STATE_2L))
 	map.append(_map(2, InputFrame.DOWN, 0, STATE_2H))
+	# Divekick target-lookup entries (DOWN + L/M/H; TKT-P2-06). These are NEVER
+	# reachable via ordinary grounded idle-dispatch (first-match-wins already
+	# resolves the identical DOWN+button gate to 2L/2M/2H, listed above) -- they
+	# exist SOLELY so JUMP_N/F/B's own airborne CancelRules (an aerial "2+attack"
+	# command) can resolve their input via CancelEval._input_buffered's
+	# find-entry-by-target lookup, exactly the mechanism 2H's on-block
+	# jump-cancel already reuses (button_map entries as a shared recognition
+	# table, not exclusively a ground-dispatch list).
+	map.append(_map(0, InputFrame.DOWN, 0, STATE_DIVEKICK_L))
+	map.append(_map(1, InputFrame.DOWN, 0, STATE_DIVEKICK_M))
+	map.append(_map(2, InputFrame.DOWN, 0, STATE_DIVEKICK_H))
 	# Crouch stance (bare DOWN, pure-direction command, AD-032/AD-038).
 	map.append(_map(-1, InputFrame.DOWN, 0, STATE_CROUCH))
 	# Diagonal jumps (composite pure-direction command, AD-032/AD-039).
@@ -269,6 +385,18 @@ static func _map_double_tap(required_direction: int, target_state_id: int) -> Bu
 	e.required_direction = required_direction
 	e.motion = 0
 	e.double_tap = true
+	e.target_state_id = target_state_id
+	return e
+
+
+## A motion command entry (e.g. 236 + BUTTON_1; TKT-P2-06). `button_bit` is an
+## InputFrame.BUTTON_* constant; ButtonMapEntry.button_index wants the bit INDEX,
+## so this converts (mirrors character_a.gd's identical helper).
+static func _map_motion(motion: int, button_bit: int, target_state_id: int) -> ButtonMapEntry:
+	var e := ButtonMapEntry.new()
+	e.button_index = _bit_to_index(button_bit)
+	e.required_direction = 0
+	e.motion = motion
 	e.target_state_id = target_state_id
 	return e
 
@@ -413,9 +541,13 @@ static func _build_prejump(state_id: int, target: int) -> MoveState:
 
 
 ## The jump arc (gravity model, AD-043) -- reuses character A's verified
-## takeoff/gravity constants (see build_character's physics note above). No
-## air-normal cancel rules yet (TKT-P2-06 adds j.L/M/H and extends these three
-## states' `cancels`; ground-only scope here).
+## takeoff/gravity constants (see build_character's physics note above).
+## TKT-P2-06 adds the two families of airborne cancels every jump carries: the
+## divekick (an aerial special, does NOT spend the air action, AD-046) and the
+## air normals (j.L/M/H, carry the fall, AD-043). The generic air-action economy
+## itself (air dash / double jump) needs NO cancel authored here at all -- it is
+## an engine-level phase-3 check (StepPhases._apply_air_action) gated only by
+## `was_airborne` + `air_action_used`, not by anything this MoveState declares.
 static func _build_jump_arcs() -> Array[MoveState]:
 	const JUMP_DURATION: int = 50
 	const TAKEOFF_SPEED: float = 22.0
@@ -448,9 +580,61 @@ static func _build_jump_arcs() -> Array[MoveState]:
 		kf_flight.hurtboxes = [_hurt_air()]
 
 		m.timeline = [kf_takeoff, kf_flight]
-		m.cancels = []   # TKT-P2-06 adds air-normal cancels here.
+		var cancels: Array[CancelRule] = _divekick_cancels(JUMP_DURATION)
+		cancels.append_array(_air_normal_cancels(JUMP_DURATION))
+		m.cancels = cancels
 		out.append(m)
 	return out
+
+
+## The three divekick CancelRules (JUMP_N/F/B -> DIVEKICK_L/M/H; TKT-P2-06).
+## Listed BEFORE the air-normal cancels below (_build_jump_arcs appends this
+## array first) so a DOWN-held button resolves the (more specific) divekick
+## gate rather than the direction-agnostic air normal -- the same "more
+## specific gate wins by list order" convention 6H/2H already use. Each targets
+## a CONCRETE divekick state whose OWN button_map entry (DOWN + button,
+## _build_button_map) CancelEval._input_buffered resolves by target-match (the
+## same reuse 2H's on_block jump-cancel already established) -- `input` just
+## needs to be nonzero to select that path.
+static func _divekick_cancels(jump_duration: int) -> Array[CancelRule]:
+	var targets := [
+		[STATE_DIVEKICK_L, InputFrame.DOWN | InputFrame.BUTTON_0],
+		[STATE_DIVEKICK_M, InputFrame.DOWN | InputFrame.BUTTON_1],
+		[STATE_DIVEKICK_H, InputFrame.DOWN | InputFrame.BUTTON_2],
+	]
+	var rules: Array[CancelRule] = []
+	for t in targets:
+		var r := CancelRule.new()
+		r.target = t[0]
+		r.target_is_group = false
+		r.condition = CancelRule.CONDITION_ALWAYS
+		r.window_start = 1
+		r.window_end = jump_duration - 1
+		r.input = t[1]
+		rules.append(r)
+	return rules
+
+
+## Air-normal reachability (AD-039, mirrors character_a.gd's _air_normal_cancels
+## exactly): three ALWAYS CancelRules, one per button, targeting j.L/j.M/j.H. No
+## button_map entry targets a j.* state, so CancelEval._input_buffered's
+## raw-button fallback resolves it directly.
+static func _air_normal_cancels(jump_duration: int) -> Array[CancelRule]:
+	var targets := [
+		[STATE_JL, InputFrame.BUTTON_0],
+		[STATE_JM, InputFrame.BUTTON_1],
+		[STATE_JH, InputFrame.BUTTON_2],
+	]
+	var rules: Array[CancelRule] = []
+	for t in targets:
+		var r := CancelRule.new()
+		r.target = t[0]
+		r.condition = CancelRule.CONDITION_ALWAYS
+		r.window_start = 1
+		r.window_end = jump_duration - 1
+		r.input = t[1]
+		rules.append(r)
+	return rules
 
 
 # =============================================================================
@@ -845,18 +1029,30 @@ static func _build_reactions() -> Array[MoveState]:
 	launch.timeline = [hl_kf]
 	out.append(launch)
 
-	# THROWN: forced throw reaction (defender).
-	var thrown := MoveState.new()
-	thrown.id = STATE_THROWN
-	thrown.category = MoveState.CATEGORY_HITSTUN
-	thrown.duration = 28   # hard-knockdown tail (oki setup window)
-	thrown.loop = false
-	var th_kf := Keyframe.new()
-	th_kf.frame_start = 1
-	th_kf.frame_end = thrown.duration
-	th_kf.hurtboxes = [_hurt_stand()]
-	thrown.timeline = [th_kf]
-	out.append(thrown)
+	# KNOCKDOWN: the shared grounded knockdown reaction (AD-043 elaboration,
+	# ratified from JC-070; TKT-P2-06 catch-up -- see this file's header note).
+	# Reached THREE ways: (1) directly, as the throw's own hit_reaction (a
+	# grounded hard-knockdown hit never goes airborne); (2) directly, as the low
+	# slide's hit_reaction (character-b.md: "hard knockdown ... via
+	# hit_reaction"); (3) via StepPhases._land, which redirects 2H's launch
+	# (STATE_HITSTUN_LAUNCH) here the moment it lands (Character.
+	# knockdown_state_id) -- all three converge on ONE learnable wakeup, counted
+	# from entry (landing/connect), not from the original hit.
+	var knockdown := MoveState.new()
+	knockdown.id = STATE_KNOCKDOWN
+	knockdown.category = MoveState.CATEGORY_HITSTUN
+	knockdown.duration = 28   # hard-knockdown tail (oki setup window) -- matches
+							   # THROW_HITSTUN below and the slide's own hb.hitstun
+							   # (logged judgment call: same NUMBER, not just the
+							   # same MECHANISM, so the wakeup is genuinely one
+							   # learnable timing regardless of source).
+	knockdown.loop = false
+	var kd_kf := Keyframe.new()
+	kd_kf.frame_start = 1
+	kd_kf.frame_end = knockdown.duration
+	kd_kf.hurtboxes = [_hurt_stand()]
+	knockdown.timeline = [kd_kf]
+	out.append(knockdown)
 
 	return out
 
@@ -892,8 +1088,10 @@ static func _build_throw() -> Array[MoveState]:
 	tb.tech_window = THROW_TECH_WINDOW
 	tb.pushback_hit = FP.from_units(2.0)
 	tb.hitstop = 0
-	tb.hit_reaction = STATE_THROWN
-	tb.block_reaction = STATE_THROWN   # unused (throws bypass block); authored for schema completeness
+	tb.hit_reaction = STATE_KNOCKDOWN   # AD-043 elaboration (TKT-P2-06 catch-up): a grounded
+										  # hard-knockdown hit -- direct to the shared knockdown
+										  # state, no air trip (see this file's header note).
+	tb.block_reaction = STATE_KNOCKDOWN   # unused (throws bypass block); authored for schema completeness
 	tb.id_group = IDG_THROW
 	tb.is_throw = true
 
@@ -911,3 +1109,358 @@ static func _build_throw() -> Array[MoveState]:
 	m.timeline = [kf_start, kf_active, kf_rec]
 	m.cancels = []
 	return [m]
+
+
+# =============================================================================
+# Low slide (character-b.md -> Specials -> Low slide; TKT-P2-06). 236 + L/M/H
+# all route to this ONE canonical move (logged latitude: the spec describes
+# exactly one move's behavior under three input strengths, unlike the
+# divekick/projectile which explicitly enumerate three distinct versions).
+#
+# B-1's hard legibility constraint ("spacing-variable, instrument-readable
+# advantage") falls out of AD-008's LIVE advantage formula for free, with NO
+# new mechanism: the slide is a single moving hitbox authored on ONE keyframe
+# spanning the WHOLE active window (SLIDE_ACTIVE frames) with a constant
+# forward `has_motion` velocity -- so the character's WORLD position (and
+# therefore the hitbox's world rect) advances every active frame even though
+# the keyframe's LOCAL box coordinates never change. A closer defender is
+# reached (and connects) on an EARLIER active frame; a farther defender is
+# reached on a LATER one -- different frame_in_state at the moment of
+# contact, hence different attacker-remaining-recovery, hence different live
+# block advantage (Advantage.live), exactly the mechanism character-b.md
+# names. The CAUSING spacing is separately visible on screen (the geometry
+# overlay already renders both players' positions/boxes every frame; no new
+# field is needed for that half of B-1 -- only the training mode's existing
+# live-advantage readout + the existing geometry overlay, both already built).
+# =============================================================================
+const SLIDE_STARTUP: int = 12
+const SLIDE_ACTIVE: int = 8      # several active frames -- the spacing-variable window (B-1)
+const SLIDE_RECOVERY: int = 10
+const SLIDE_SPEED: float = 5.0   # forward px/f during the active window (constant, AD-043
+								  # keyframe-motion convention -- re-set identically every
+								  # covered tick, not an impulse-then-inherit arc)
+const SLIDE_DAMAGE: int = 50
+const SLIDE_HITSTUN: int = 28    # matches STATE_KNOCKDOWN's authored duration exactly (the
+								  # "one learnable wakeup" convergence -- see this file's
+								  # header note)
+const SLIDE_BLOCKSTUN: int = 14
+const SLIDE_HITSTOP: int = 8
+
+
+static func _build_slide() -> Array[MoveState]:
+	var m := MoveState.new()
+	m.id = STATE_SLIDE
+	m.category = MoveState.CATEGORY_GROUNDED
+	m.duration = SLIDE_STARTUP + SLIDE_ACTIVE + SLIDE_RECOVERY
+	m.loop = false
+	m.is_crouch = true   # crouched throughout (a sliding pose; AD-045: the animation the
+						   # LOW guard reads against)
+
+	var kf_start := Keyframe.new()
+	kf_start.frame_start = 1
+	kf_start.frame_end = SLIDE_STARTUP
+	kf_start.hurtboxes = [_hurt_crouch()]
+
+	var hb := HitBox.new()
+	hb.box = Box.make(FP.from_int(15), FP.from_int(-15), FP.from_int(35), FP.from_int(15))
+	hb.guard_height = HitBox.GUARD_LOW   # must be crouch-blocked (character-b.md)
+	hb.damage = SLIDE_DAMAGE
+	hb.hitstun = SLIDE_HITSTUN
+	hb.blockstun = SLIDE_BLOCKSTUN
+	hb.hitstop = SLIDE_HITSTOP
+	hb.pushback_hit = FP.from_units(2.0)
+	hb.pushback_block = FP.from_units(2.0)
+	hb.hit_reaction = STATE_KNOCKDOWN   # hard knockdown -> knockdown-into-ground oki
+										  # (character-b.md: "via hit_reaction")
+	hb.block_reaction = STATE_CROUCH_BLOCKSTUN
+	hb.id_group = IDG_SLIDE
+
+	var first_active: int = SLIDE_STARTUP + 1
+	var last_active: int = SLIDE_STARTUP + SLIDE_ACTIVE
+	var kf_active := Keyframe.new()
+	kf_active.frame_start = first_active
+	kf_active.frame_end = last_active
+	kf_active.hurtboxes = [_hurt_crouch()]
+	kf_active.hitboxes = [hb]
+	kf_active.has_motion = true
+	kf_active.motion_vel_x = FP.from_units(SLIDE_SPEED)   # constant forward slide (B-1's
+															# spacing-variable mechanism)
+
+	var kf_rec := Keyframe.new()
+	kf_rec.frame_start = last_active + 1
+	kf_rec.frame_end = m.duration
+	kf_rec.hurtboxes = [_hurt_crouch()]
+
+	m.timeline = [kf_start, kf_active, kf_rec]
+	m.cancels = []   # B's most desirable combo ENDER (character-b.md) -- no further cancel authored
+	return [m]
+
+
+# =============================================================================
+# Arc projectile (character-b.md -> Specials -> Arc projectile; AD-047;
+# TKT-P2-06). 214 + L/M/H spawn three genuinely distinct parabolas (different
+# initial velocity AND gravity, character-b.md's own text). ALL THREE are
+# authored `guard_height = GUARD_MID` (logged judgment call, B-2/AD-047): a MID
+# hit is blockable from EITHER stance (test_guard_height.gd's own
+# `_test_mid_blocked_either_stance`), so the projectile can NEVER be in an
+# "opposite guard_height" conflict with any simultaneous B strike, regardless
+# of what that strike's own guard_height is -- this satisfies AD-047's
+# no-unblockable invariant BY CONSTRUCTION rather than by careful timing: the
+# real high/low or strike/throw guess is carried entirely by B's own strike/
+# throw layer (a single, readable axis), with the projectile acting purely as
+# a stance-agnostic space-control/pressure tool that resolves identically no
+# matter which way the defender guesses. L is authored as the "falls right in
+# front" oki version (shortest travel of the three -- logged judgment call: the
+# brief does not name which strength is the oki version).
+# =============================================================================
+const ARC_CHAR_STARTUP: int = 15
+const ARC_SPAWN_FRAME: int = 16   # ARC_CHAR_STARTUP + 1 -- the release frame (AD-030)
+const ARC_CHAR_RECOVERY: int = 26
+const ARC_LIFETIME: int = 200     # generous safety bound; ground-contact despawn (AD-047)
+								   # is what actually ends an arc projectile's life in practice
+const ARC_MAX_PER_OWNER: int = 1
+
+
+static func _build_arc_projectiles() -> Array[MoveState]:
+	var out: Array[MoveState] = []
+	# (state_id, proj_id, id_group, spawn_vel_x, spawn_vel_y (negative = up), gravity,
+	#  damage, hitstun, blockstun, hitstop)
+	out.append(_build_arc_projectile(STATE_ARC_L, PROJ_ARC_L, IDG_ARC_L,
+		2.0, -6.0, FP.from_units(0.5), 30, 14, 10, 6))     # shortest travel -> "falls in front" (oki)
+	out.append(_build_arc_projectile(STATE_ARC_M, PROJ_ARC_M, IDG_ARC_M,
+		4.0, -9.0, FP.from_units(0.4), 38, 16, 11, 7))     # medium arc
+	out.append(_build_arc_projectile(STATE_ARC_H, PROJ_ARC_H, IDG_ARC_H,
+		6.0, -13.0, FP.from_units(0.3), 46, 18, 12, 8))    # longest hangtime/reach -- air-space control
+	return out
+
+
+static func _build_arc_projectile(state_id: int, proj_id: int, id_group: int,
+		spawn_vel_x: float, spawn_vel_y: float, gravity: int,
+		damage: int, hitstun: int, blockstun: int, hitstop: int) -> MoveState:
+	var m := MoveState.new()
+	m.id = state_id
+	m.category = MoveState.CATEGORY_GROUNDED
+	m.duration = ARC_CHAR_STARTUP + 1 + ARC_CHAR_RECOVERY
+	m.loop = false
+
+	var kf_start := Keyframe.new()
+	kf_start.frame_start = 1
+	kf_start.frame_end = ARC_SPAWN_FRAME - 1
+	kf_start.hurtboxes = [_hurt_stand()]
+
+	var kf_spawn := Keyframe.new()
+	kf_spawn.frame_start = ARC_SPAWN_FRAME
+	kf_spawn.frame_end = ARC_SPAWN_FRAME
+	kf_spawn.hurtboxes = [_hurt_stand()]
+	kf_spawn.has_spawn = true
+	kf_spawn.spawn_projectile = _arc_projectile_data(proj_id, id_group, gravity,
+		damage, hitstun, blockstun, hitstop)
+	kf_spawn.spawn_offset_x = FP.from_int(20)     # released in front of the character
+	kf_spawn.spawn_offset_y = FP.from_int(-55)    # AD-037: reflected -- chest height, above the feet-origin
+	kf_spawn.spawn_velocity_x = FP.from_units(spawn_vel_x)
+	kf_spawn.spawn_velocity_y = FP.from_units(spawn_vel_y)   # negative = up (AD-037), then
+															   # ProjectileData.gravity pulls it
+															   # back down into the arc (AD-047)
+
+	var kf_rec := Keyframe.new()
+	kf_rec.frame_start = ARC_SPAWN_FRAME + 1
+	kf_rec.frame_end = m.duration
+	kf_rec.hurtboxes = [_hurt_stand()]
+
+	m.timeline = [kf_start, kf_spawn, kf_rec]
+	m.cancels = []
+	return m
+
+
+## The authored ProjectileData shell (AD-021/030/047): id/hitbox/lifetime/
+## max_per_owner/gravity. Owner and initial position/velocity come from the
+## cast + the spawn keyframe (authored above), NOT here.
+static func _arc_projectile_data(proj_id: int, id_group: int, gravity: int,
+		damage: int, hitstun: int, blockstun: int, hitstop: int) -> ProjectileData:
+	var data := ProjectileData.new()
+	data.id = proj_id
+	data.lifetime = ARC_LIFETIME
+	data.max_per_owner = ARC_MAX_PER_OWNER
+	data.gravity = gravity   # AD-047: nonzero -> parabolic arc + ground-contact despawn
+	var hb := HitBox.new()
+	# NOT reflected (AD-037): symmetric about the projectile's own center, no feet
+	# line to reflect against (mirrors character_a.gd's fireball hitbox note).
+	hb.box = Box.make(FP.from_int(-14), FP.from_int(-14), FP.from_int(28), FP.from_int(28))
+	hb.hit_kind = HitBox.HIT_KIND_PROJECTILE
+	hb.guard_height = HitBox.GUARD_MID   # logged judgment call (B-2/AD-047) -- see file header block above
+	hb.damage = damage
+	hb.hitstun = hitstun
+	hb.blockstun = blockstun
+	hb.hitstop = hitstop
+	hb.pushback_hit = FP.from_units(2.0)
+	hb.pushback_block = FP.from_units(1.0)
+	hb.hit_reaction = STATE_HITSTUN
+	hb.block_reaction = STATE_BLOCKSTUN
+	hb.id_group = id_group
+	hb.rehit_interval = 0
+	data.hitbox = hb
+	return data
+
+
+# =============================================================================
+# Divekick (character-b.md -> Specials -> Divekick; TKT-P2-06). An aerial
+# special ("2+attack in air") reached via JUMP_N/F/B's own CancelRules
+# (_divekick_cancels) resolving each version's DOWN+button button_map entry.
+# Does NOT spend the air action (AD-046) -- it never runs through
+# StepPhases._apply_air_action at all, so there is nothing to un-couple.
+#
+# TRAJECTORY MODEL (AD-043 velocity-sets): a HANG keyframe authors has_motion
+# on EVERY covered frame with the SAME literal (small/zero) vel_y -- since
+# StepPhases._apply_keyframe_motion re-evaluates every tick and gravity is
+# added AFTER the keyframe's set, a fixed authored vel_y is re-imposed each
+# hang tick BEFORE gravity's per-tick addition, giving a near-flat hang (drifts
+## by exactly `gravity` per tick, never accelerating) instead of a free fall --
+# "zero/low vertical velocity for N frames," per the brief. The DIVE is then a
+# SINGLE-FRAME impulse (mirrors the jump takeoff / character_a.gd's own
+# convention) that SETS a strong vel_y (+ vel_x per version); every frame after
+# that authors NO motion, so gravity + the inherited velocity carry an
+# accelerating plummet, exactly like the ordinary jump arc.
+#
+# B-3 (headless-checkable): hang duration STRICTLY increases L < M < H, and
+# each version's dive vel_x/vel_y are pairwise distinct -- the three
+# trajectories are measurably different, and H's hang is the LONGEST (the
+# readable "overhead is coming" tell, character-b.md).
+# =============================================================================
+const DIVEKICK_L_HANG: int = 4
+const DIVEKICK_M_HANG: int = 9
+const DIVEKICK_H_HANG: int = 16   # longest -- the readable overhead tell (character-b.md)
+
+const DIVEKICK_L_DIVE_VX: float = 1.0
+const DIVEKICK_L_DIVE_VY: float = 9.0    # brief hang, FAST dive (mostly vertical)
+const DIVEKICK_M_DIVE_VX: float = 4.5    # more horizontal travel
+const DIVEKICK_M_DIVE_VY: float = 6.0
+const DIVEKICK_H_DIVE_VX: float = 0.0    # near-vertical plummet (character-b.md)
+const DIVEKICK_H_DIVE_VY: float = 10.0
+
+const DIVEKICK_ACTIVE: int = 5
+const DIVEKICK_SAFETY_TAIL: int = 30   # safety bound above physical fall time (mirrors the
+										 # jump arc's own JUMP_DURATION convention) -- the
+										 # continuous ground clamp, not this duration, is what
+										 # actually ends the move (AD-043)
+
+
+static func _build_divekicks() -> Array[MoveState]:
+	var out: Array[MoveState] = []
+	out.append(_build_divekick(STATE_DIVEKICK_L, IDG_DIVEKICK_L, DIVEKICK_L_HANG,
+		DIVEKICK_L_DIVE_VX, DIVEKICK_L_DIVE_VY, HitBox.GUARD_MID, 35, 14, 9, 7))
+	out.append(_build_divekick(STATE_DIVEKICK_M, IDG_DIVEKICK_M, DIVEKICK_M_HANG,
+		DIVEKICK_M_DIVE_VX, DIVEKICK_M_DIVE_VY, HitBox.GUARD_MID, 45, 16, 11, 8))
+	out.append(_build_divekick(STATE_DIVEKICK_H, IDG_DIVEKICK_H, DIVEKICK_H_HANG,
+		DIVEKICK_H_DIVE_VX, DIVEKICK_H_DIVE_VY, HitBox.GUARD_HIGH, 55, 18, 13, 9))   # the ONLY overhead
+	return out
+
+
+static func _build_divekick(state_id: int, id_group: int, hang_frames: int,
+		dive_vx: float, dive_vy: float, guard_height: int,
+		damage: int, hitstun: int, blockstun: int, hitstop: int) -> MoveState:
+	var m := MoveState.new()
+	m.id = state_id
+	m.category = MoveState.CATEGORY_AIRBORNE   # lands like an ordinary jump/air normal (the
+												 # continuous ground clamp -> idle, AD-043) --
+												 # no bespoke landing-recovery state authored
+												 # (would need a NEW engine hook the ticket
+												 # forbids; logged judgment call)
+	m.duration = hang_frames + 1 + DIVEKICK_ACTIVE + DIVEKICK_SAFETY_TAIL
+
+	var kf_hang := Keyframe.new()
+	kf_hang.frame_start = 1
+	kf_hang.frame_end = hang_frames
+	kf_hang.hurtboxes = [_hurt_air()]
+	kf_hang.has_motion = true
+	kf_hang.motion_vel_x = 0
+	kf_hang.motion_vel_y = 0   # re-imposed every hang tick -- see file header note above
+
+	var dive_frame: int = hang_frames + 1
+	var kf_dive := Keyframe.new()
+	kf_dive.frame_start = dive_frame
+	kf_dive.frame_end = dive_frame   # a SINGLE-frame impulse (mirrors the jump takeoff)
+	kf_dive.hurtboxes = [_hurt_air()]
+	kf_dive.has_motion = true
+	kf_dive.motion_vel_x = FP.from_units(dive_vx)
+	kf_dive.motion_vel_y = FP.from_units(dive_vy)   # positive = down (AD-037)
+
+	var active_start: int = dive_frame + 1
+	var active_end: int = active_start + DIVEKICK_ACTIVE - 1
+	var hb := HitBox.new()
+	hb.box = Box.make(FP.from_int(10), FP.from_int(-30), FP.from_int(30), FP.from_int(30))
+	hb.guard_height = guard_height
+	hb.damage = damage
+	hb.hitstun = hitstun
+	hb.blockstun = blockstun
+	hb.hitstop = hitstop
+	hb.pushback_hit = FP.from_units(2.0)
+	hb.pushback_block = FP.from_units(2.0)
+	hb.hit_reaction = STATE_HITSTUN
+	hb.block_reaction = STATE_BLOCKSTUN
+	hb.id_group = id_group
+	var kf_active := Keyframe.new()
+	kf_active.frame_start = active_start
+	kf_active.frame_end = active_end
+	kf_active.hurtboxes = [_hurt_air()]
+	kf_active.hitboxes = [hb]
+	# NO motion authored on/after the active window -- gravity + the dive's
+	# inherited velocity carry the accelerating plummet (AD-043), exactly like
+	# the ordinary jump arc's post-takeoff flight keyframe.
+
+	var kf_tail := Keyframe.new()
+	kf_tail.frame_start = active_end + 1
+	kf_tail.frame_end = m.duration
+	kf_tail.hurtboxes = [_hurt_air()]
+
+	m.timeline = [kf_hang, kf_dive, kf_active, kf_tail]
+	m.cancels = []
+	return m
+
+
+# =============================================================================
+# Air normals (character-b.md -> Normals table, j.L/M/H; TKT-P2-06). Carry the
+# fall (AD-043) -- author NO motion at all, mirroring character_a.gd's
+# _build_air_normal exactly, so the ongoing jump-arc velocity + gravity pass
+# through untouched (criterion 4: "does not stop the arc").
+# =============================================================================
+static func _build_air_normals() -> Array[MoveState]:
+	var out: Array[MoveState] = []
+	out.append(_build_air_normal(STATE_JL, 4, 6, 30, 9, IDG_JL,
+		Box.make(FP.from_int(15), FP.from_int(-40), FP.from_int(25), FP.from_int(20))))
+	out.append(_build_air_normal(STATE_JM, 6, 5, 45, 10, IDG_JM,
+		Box.make(FP.from_int(15), FP.from_int(-40), FP.from_int(30), FP.from_int(25))))
+	out.append(_build_air_normal(STATE_JH, 8, 5, 60, 11, IDG_JH,
+		Box.make(FP.from_int(15), FP.from_int(-40), FP.from_int(35), FP.from_int(30))))
+	return out
+
+
+static func _build_air_normal(state_id: int, startup: int, active: int, damage: int,
+		hitstop: int, id_group: int, hitbox_box: Box) -> MoveState:
+	var m := MoveState.new()
+	m.id = state_id
+	m.category = MoveState.CATEGORY_AIRBORNE
+	m.duration = startup + active
+	m.loop = false
+	var kf_start := Keyframe.new()
+	kf_start.frame_start = 1
+	kf_start.frame_end = startup
+	kf_start.hurtboxes = [_hurt_air()]
+	var hb := HitBox.new()
+	hb.box = hitbox_box
+	hb.damage = damage
+	hb.hitstun = 14
+	hb.blockstun = 8
+	hb.hitstop = hitstop
+	hb.pushback_hit = FP.from_units(1.0)
+	hb.pushback_block = FP.from_units(1.0)
+	hb.hit_reaction = STATE_HITSTUN
+	hb.block_reaction = STATE_BLOCKSTUN
+	hb.id_group = id_group
+	var kf_active := Keyframe.new()
+	kf_active.frame_start = startup + 1
+	kf_active.frame_end = startup + active
+	kf_active.hurtboxes = [_hurt_air()]
+	kf_active.hitboxes = [hb]
+	m.timeline = [kf_start, kf_active]
+	m.cancels = []   # air normals are not special-cancellable (mirrors character A)
+	return m

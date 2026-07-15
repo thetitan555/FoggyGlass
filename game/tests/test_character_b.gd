@@ -465,7 +465,7 @@ func _test_throw_connects_through_block() -> void:
 	var connected: bool = false
 	for _k in range(10):
 		s = SimState.step(s, InputFrame.NEUTRAL, p1_block)
-		if s.players[1].state_id == CharacterB.STATE_THROWN:
+		if s.players[1].state_id == CharacterB.STATE_KNOCKDOWN:
 			connected = true
 			break
 	_true(connected, "throw connects through block (bypasses blockstun)")
@@ -479,9 +479,9 @@ func _test_throw_tech_window() -> void:
 	s.players[0].frame_in_state = 0
 	for _k in range(10):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
-		if s.players[1].state_id == CharacterB.STATE_THROWN:
+		if s.players[1].state_id == CharacterB.STATE_KNOCKDOWN:
 			break
-	_eq(s.players[1].state_id, CharacterB.STATE_THROWN, "throw connected (pre-tech)")
+	_eq(s.players[1].state_id, CharacterB.STATE_KNOCKDOWN, "throw connected (pre-tech)")
 	_true(s.players[1].throw_tech_window > 0 and s.players[1].throw_tech_window <= CharacterB.THROW_TECH_WINDOW,
 		"tech window is open and within the authored window")
 	_cleanup()
@@ -493,9 +493,9 @@ func _test_throw_hard_knockdown() -> void:
 	s.players[0].frame_in_state = 0
 	for _k in range(10):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
-		if s.players[1].state_id == CharacterB.STATE_THROWN:
+		if s.players[1].state_id == CharacterB.STATE_KNOCKDOWN:
 			break
-	_eq(s.players[1].state_id, CharacterB.STATE_THROWN, "throw connected")
+	_eq(s.players[1].state_id, CharacterB.STATE_KNOCKDOWN, "throw connected")
 	for _k in range(18):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
 	var still_down: bool = not Actionability.is_actionable(

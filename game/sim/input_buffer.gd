@@ -24,8 +24,14 @@ extends RefCounted
 # 0 = no motion (a plain button command). Values are stable ids; the direction
 # sequence each expands to lives in _motion_tokens (facing-relative tokens).
 const MOTION_NONE: int = 0
-const MOTION_236: int = 236   # quarter-circle forward (fireball)
+const MOTION_236: int = 236   # quarter-circle forward (fireball; character B's low slide)
 const MOTION_623: int = 623   # dragon-punch / reversal (forward, down, down-forward)
+const MOTION_214: int = 214   # quarter-circle back (character B's arc projectile; TKT-P2-06,
+							   # AD-047 -- a mechanical, symmetric addition to the SAME
+							   # generic motion-token table 236/623 already populate; no new
+							   # recognizer (Tenet 3 -- JC-022's "the scan and token table
+							   # are implementation" extended one entry, logged docs/
+							   # judgment-log.md)
 
 # --- Direction tokens (facing-relative; what a motion frame must satisfy) -----
 # A motion is an ordered list of these tokens. Each token is a required direction
@@ -36,6 +42,7 @@ const DIR_FORWARD: int = 2
 const DIR_DOWN_FORWARD: int = 3   # down AND forward both held
 const DIR_BACK: int = 4
 const DIR_UP: int = 5
+const DIR_DOWN_BACK: int = 6   # down AND back both held (TKT-P2-06; mirrors DIR_DOWN_FORWARD, needed for MOTION_214)
 
 # The window constants (AD-022). Named here so the one buffering definition owns them
 # at the code level; the FEEL values live in AD-022 (sim-side, Architect's).
@@ -59,6 +66,8 @@ static func _motion_tokens(motion: int) -> Array:
 			return [DIR_DOWN, DIR_DOWN_FORWARD, DIR_FORWARD]
 		MOTION_623:
 			return [DIR_FORWARD, DIR_DOWN, DIR_DOWN_FORWARD]
+		MOTION_214:
+			return [DIR_DOWN, DIR_DOWN_BACK, DIR_BACK]
 		_:
 			return []
 
@@ -86,6 +95,8 @@ static func _frame_satisfies(hist: InputHistory, age: int, token: int, facing: i
 			return back
 		DIR_UP:
 			return up
+		DIR_DOWN_BACK:
+			return down and back
 	return false
 
 
