@@ -72,6 +72,56 @@ static func replay_hash_trace(start: SimState, in_p1: PackedInt32Array, in_p2: P
 
 
 # ---------------------------------------------------------------------------
+# Match-layer extension (match-flow.md criterion 1; AD-048; TKT-P2-07). The SAME
+# primitives as above, one layer up: MatchState / match_step in place of
+# SimState / step. This is what makes the per-MATCH determinism proof (serialize
+# mid-match, restore, resume -> identical final hash) go through the same
+# mechanical harness as a single frame of combat, rather than a bespoke path.
+# ---------------------------------------------------------------------------
+
+## Dump a MatchState to a plain-data snapshot Dictionary (deep, float-free).
+static func dump_match_state(match_state: MatchState) -> Dictionary:
+	return match_state.to_dict()
+
+
+## Load a MatchState from a snapshot produced by dump_match_state. Exact inverse.
+static func load_match_state(snapshot: Dictionary) -> MatchState:
+	return MatchState.from_dict(snapshot)
+
+
+## Advance `start` by min(len(in_p1), len(in_p2)) ticks via `MatchState.match_step`
+## (which itself calls `SimState.step` only during ACTIVE, per AD-048). Returns
+## the final MatchState. Non-mutating: `start` is untouched (match_step is pure).
+static func run_match_replay(start: MatchState, in_p1: PackedInt32Array, in_p2: PackedInt32Array) -> MatchState:
+	var n: int = min(in_p1.size(), in_p2.size())
+	var ms: MatchState = start
+	for f in range(n):
+		ms = MatchState.match_step(ms, in_p1[f], in_p2[f])
+	return ms
+
+
+## Convenience: the final canonical match hash after a replay — the primitive
+## the per-match determinism criterion (match-flow.md criterion 1) is verified
+## through: replay one fixed input stream twice -> identical final hash.
+static func match_replay_final_hash(start: MatchState, in_p1: PackedInt32Array, in_p2: PackedInt32Array) -> int:
+	return run_match_replay(start, in_p1, in_p2).hash_state()
+
+
+## A per-tick match hash trace, mirroring replay_hash_trace one layer up — lets
+## QA localize the exact tick a match-level determinism/round-trip divergence
+## first appears.
+static func match_replay_hash_trace(start: MatchState, in_p1: PackedInt32Array, in_p2: PackedInt32Array) -> PackedInt64Array:
+	var n: int = min(in_p1.size(), in_p2.size())
+	var trace: PackedInt64Array = PackedInt64Array()
+	var ms: MatchState = start
+	trace.append(ms.hash_state())
+	for f in range(n):
+		ms = MatchState.match_step(ms, in_p1[f], in_p2[f])
+		trace.append(ms.hash_state())
+	return trace
+
+
+# ---------------------------------------------------------------------------
 # Golden truth dump of the inspection surface (inspection-surface.md criteria 4/6).
 # Produces a stable, plain-data, FIXED-POINT-ONLY dictionary of the sim's inspection
 # truth for a state — NO px projection (AD-019), so a golden taken with or without a

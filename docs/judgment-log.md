@@ -125,3 +125,49 @@ constant that can be made to coincide with the state's own `duration`-driven
 actionability by construction. **Scope.** Test files only
 (`test_airborne_actions.gd`, `test_character_a.gd`); no sim code beyond what
 JC-068/JC-069/JC-070 already cover. Log for ratification.
+
+### JC-073 · 2026-07-14 · TKT-P2-07 · Round length, transition-beat lengths, and the fresh-round-reset/hash-composition mechanics — provisional
+**Decision (round length).** `MatchState.ROUND_LENGTH_TICKS = 5940` — the brief's and
+`match-flow.md`'s OWN stated default ("~99 in-game seconds = ~5940 frames at 60 Hz"),
+adopted verbatim rather than picking an independent number, since nothing in the ticket
+motivates deviating from the spec's own suggested value.
+**Decision (transition beats).** `ROUND_START_BEAT_TICKS = 60` (~1s "ready" beat),
+`ROUND_END_BEAT_TICKS = 90` (~1.5s "result" beat) — short, plain, unproduced counters
+(brief: "no produced intro"), long enough to read the round-end reason before the next
+round starts, short enough not to feel like dead air. Pure feel tuning, no structural
+weight; provisional pending the P2 human-inspection gate, same bar as JC-068/JC-039.
+**Decision (fresh-round reset point + carried fields).** The round-start reset (fresh
+symmetric positions + full health + cleared per-move/projectile/last-hit state) happens
+ONCE, at the moment `ROUND_END`'s resolution transitions into `ROUND_START`
+(`MatchState._enter_next_round`) — not re-applied every tick of the `ROUND_START` beat.
+`tick` and `rng` are CARRIED forward across the reset (not reset to 0/reseeded) — they are
+match-wide clock/seed state (Tenet 1), not per-round state; `stage` is likewise carried
+(the arena doesn't change round to round). `character_id` per side is a parameter threaded
+through from whatever the match was wired with (the AD-048 wiring constant lives at the
+match-construction caller, e.g. `new_match`, not chosen inside the reset itself).
+**Decision (hash composition).** `MatchState.hash_state()` folds its own fields then folds
+`sim.hash_state()` as one value (composing with, not re-walking, `SimState`'s own canonical
+hash) — per AD-048's own text ("composed with the SimState hash"). The wrapper carries its
+own `FORMAT_VERSION` (AD-034 "extends to the wrapper"); `SimState`'s nested `v` inside the
+`"sim"` sub-dict is untouched and independent, per AD-034's existing "no sub-object carries
+its own version" rule read at the WRAPPER's new outer layer.
+**Decision (repeat tie inside sudden death).** The scoring/threshold check
+(`_step_round_end`) is generic and re-applied after EVERY round, not special-cased for the
+first sudden-death trigger only: if a sudden-death round itself resolves in a tie
+(`DOUBLE_KO` or equal-health `TIMEOUT`) and both players are again at/above the match
+threshold, the SAME "both at threshold -> `sudden_death=true`, one more round" rule fires
+again rather than being undefined or forcing an arbitrary winner. This is a literal
+generalization of the stated rule (match-flow.md doesn't name a recursion case), not a new
+invented one, but it is a genuine gap-fill with more than one defensible reading (e.g.
+"sudden death can only ever run once, arbitrate a tie by X" is equally plausible) — flagged
+here explicitly for Architect attention even though it's logged as latitude, since it's the
+one call in this ticket closest to "design intent" rather than pure implementation.
+**Alternatives considered.** Resetting `tick`/`rng` per round (a "fresh start" every round)
+— rejected: `simulation.md` calls `tick` "the authoritative clock" match-wide and AD-048
+explicitly keeps RNG a single match-wide seed ("RNG reuses SimState.rng... the seed lives in
+serialized state per Tenet 1 regardless" — read as ONE seed for the whole match, not
+reseeded per round). Re-deriving the reset every tick of `ROUND_START` (idempotent, simpler
+mental model) — passed over as unnecessary churn once a single-application-at-transition
+point is just as correct and cheaper to reason about/hash-compare (criterion 7).
+**Scope.** `match_state.gd` only; no contract/format change beyond what AD-048 already
+specifies. Log for ratification.
