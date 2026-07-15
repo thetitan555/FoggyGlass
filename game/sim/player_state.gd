@@ -136,6 +136,16 @@ var throw_tech_window: int = 0
 ## resolves. Raised in flag F-010 (Architect-owned; TKT-P0-09).
 var thrown_by: int = -1
 
+# --- Airborne physics (TKT-P2-01; AD-043/046) --------------------------------
+
+## True once this player has spent its ONE air action (air dash OR double jump)
+## since takeoff; reset to false on the landing transition (AD-043's continuous
+## clamp+landing). Gates the second air action off (AD-046; consumed by TKT-P2-02
+## — the double-tap/air-dash/double-jump commands are not built here, only the
+## field + its landing reset). Serialized (0/1), cloned, hashed in fixed field
+## order (simulation.md -> players[i].air_action_used).
+var air_action_used: bool = false
+
 # --- Input substrate --------------------------------------------------------
 
 ## Ring buffer of recent RAW InputFrame values — the substrate buffering / motion
@@ -175,6 +185,7 @@ func clone() -> PlayerState:
 	p.move_contact = move_contact
 	p.throw_tech_window = throw_tech_window
 	p.thrown_by = thrown_by
+	p.air_action_used = air_action_used
 	p.input_history = input_history.clone()
 	return p
 
@@ -204,6 +215,7 @@ func to_dict() -> Dictionary:
 		"move_contact": move_contact,
 		"throw_tech_window": throw_tech_window,
 		"thrown_by": thrown_by,
+		"air_action_used": 1 if air_action_used else 0,
 		"input_history": input_history.to_dict(),
 	}
 
@@ -235,5 +247,8 @@ static func from_dict(d: Dictionary) -> PlayerState:
 	p.move_contact = int(d["move_contact"])
 	p.throw_tech_window = int(d["throw_tech_window"])
 	p.thrown_by = int(d["thrown_by"])
+	# A v1 (pre-P2) dict predates this field (AD-034 migration, SimState.from_dict);
+	# default false is correct for a state that predates the air-action economy.
+	p.air_action_used = int(d.get("air_action_used", 0)) != 0
 	p.input_history = InputHistory.from_dict(d["input_history"])
 	return p

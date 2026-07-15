@@ -48,6 +48,7 @@ func _run() -> void:
 	_test_absent_v_restores_as_legacy_v1()
 	_test_hash_unaffected_by_v_presence()
 	_test_unrecognized_v_fails_loudly()
+	_test_v1_legacy_missing_field_restores_with_default()
 
 
 ## Build a non-trivial state (a few ticks advanced) so round-trip/hash checks
@@ -66,7 +67,7 @@ func _test_v_emitted_at_top_level_only() -> void:
 	var d: Dictionary = s.to_dict()
 	_true(d.has("v"), "top-level to_dict() carries a \"v\" key")
 	_eq(d["v"], SimState.FORMAT_VERSION, "\"v\" equals SimState.FORMAT_VERSION")
-	_eq(SimState.FORMAT_VERSION, 1, "FORMAT_VERSION is 1 (the only version that exists yet)")
+	_eq(SimState.FORMAT_VERSION, 2, "FORMAT_VERSION is 2 (bumped by TKT-P2-01's air_action_used field, AD-034)")
 
 	# No sub-object dict gains its own version (AD-034: one version governs the
 	# whole graph).
@@ -117,7 +118,25 @@ func _test_hash_unaffected_by_v_presence() -> void:
 func _test_unrecognized_v_fails_loudly() -> void:
 	var s := _sample_state()
 	var d_bad: Dictionary = s.to_dict()
-	d_bad["v"] = 2   # a version this code does not understand
+	d_bad["v"] = 99   # a version this code does not understand (2 is now current; 1 is the accepted legacy)
 	var result: SimState = SimState.from_dict(d_bad)
 	_eq(result, null,
 		"from_dict on an unrecognized \"v\" fails loudly (returns null) rather than mis-parsing")
+
+
+## TKT-P2-01 (AD-034 migration): a GENUINE v1 dict -- "v": 1 AND missing the
+## v2-only field (air_action_used), not merely a v2 dict with "v" edited --
+## still restores, with the missing field defaulting to false (the correct
+## value for a state that predates the air-action economy, AD-046).
+func _test_v1_legacy_missing_field_restores_with_default() -> void:
+	var s := _sample_state()
+	var d: Dictionary = s.to_dict()
+	var d_v1: Dictionary = d.duplicate(true)
+	d_v1["v"] = 1
+	for pd in (d_v1["players"] as Array):
+		(pd as Dictionary).erase("air_action_used")
+
+	var restored: SimState = SimState.from_dict(d_v1)
+	_true(restored != null, "from_dict restores a genuine v1 dict (\"v\":1, no air_action_used)")
+	for p in restored.players:
+		_eq(p.air_action_used, false, "a v1 dict's missing air_action_used defaults to false")

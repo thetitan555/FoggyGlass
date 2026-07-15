@@ -30,7 +30,13 @@ extends RefCounted
 ## this number instead. Format metadata, NOT mutable sim truth: emitted by
 ## `to_dict` but deliberately excluded from `hash_state()` (same exclusion
 ## class as the install-generation token AD-024 and px projections AD-019).
-const FORMAT_VERSION: int = 1
+##
+## Bumped 1 -> 2 (TKT-P2-01, AD-043/046): PlayerState gains `air_action_used`,
+## a sub-shape change per AD-034's own rule ("a change to any sub-shape bumps
+## this number instead"). No migration branch exists for v1 (pre-P2) blobs —
+## none are in circulation outside a run's own snapshot/restore, per AD-034's
+## precedent (add a migration branch only when a real v1 payload needs reading).
+const FORMAT_VERSION: int = 2
 
 var tick: int = 0
 var rng: RngState = null
@@ -149,15 +155,23 @@ func to_dict() -> Dictionary:
 
 
 ## Restores a SimState from a `to_dict()` graph, format-version aware (AD-034).
-## `"v"` absent -> treated as version 1 (legacy dicts predate the field; the
-## shape is unchanged, so they parse normally). `"v" == FORMAT_VERSION` ->
-## parses normally. Any other value -> fails loudly (`push_error`) rather than
-## silently mis-parsing a shape this code doesn't understand; there is no
-## migration branch yet (added when a v2 actually exists).
+## `"v"` absent -> treated as version 1. `"v" == FORMAT_VERSION` (2) -> parses
+## normally (the current shape). Any other value -> fails loudly (`push_error`)
+## rather than silently mis-parsing a shape this code doesn't understand.
+##
+## v1 MIGRATION (TKT-P2-01, AD-034's own anticipated trigger: "added when a v2
+## actually exists" -- it now does). v1 predates `PlayerState.air_action_used`
+## (bumped by this ticket); a v1 dict is accepted here and parses through the
+## SAME code path, because the one field that changed is read tolerantly
+## (`PlayerState.from_dict` defaults a missing `air_action_used` to false --
+## the correct value for a v1 state, which predates the whole air-action
+## economy, AD-046). No separate v1 parsing branch is needed for a single
+## default-tolerant field; a future shape change that ISN'T default-safe would
+## need a real branch here.
 static func from_dict(d: Dictionary) -> SimState:
 	var v: int = int(d.get("v", 1))
-	if v != FORMAT_VERSION:
-		push_error("SimState.from_dict: unsupported format version %d (expected %d); refusing to parse." % [v, FORMAT_VERSION])
+	if v != FORMAT_VERSION and v != 1:
+		push_error("SimState.from_dict: unsupported format version %d (expected %d or legacy 1); refusing to parse." % [v, FORMAT_VERSION])
 		return null
 	var s := SimState.new()
 	s.tick = int(d["tick"])
@@ -254,6 +268,8 @@ func hash_state() -> int:
 		h = _fold(h, int(pd["move_contact"]))
 		h = _fold(h, int(pd["throw_tech_window"]))
 		h = _fold(h, int(pd["thrown_by"]))
+		# Air-action economy (AD-043/046, TKT-P2-01): 0/1, folded like any other flag.
+		h = _fold(h, int(pd["air_action_used"]))
 		# Input history: length then each frame, oldest->newest (canonical order).
 		var hist: Dictionary = pd["input_history"]
 		var frames: PackedInt32Array = hist["frames"]

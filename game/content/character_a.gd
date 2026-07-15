@@ -28,20 +28,18 @@ extends RefCounted
 ## structural criterion (frame data, cancels, the fireball, the throw,
 ## no-gatling/no-jump-cancel) is fully authored and enforced by the engine.
 ##
-## JUMP ARC (movement table). The engine has no gravity constant / airborne
-## transition system (nothing in SimState or step_phases.gd integrates gravity
-## or flips a grounded<->airborne category) — but keyframe motion already lets
-## any state author an explicit PER-FRAME velocity (Keyframe.motion_vel_x/y,
-## integrated as plain fixed-point add, phase 3). So the ~45-frame jump arc is
-## authored as a sequence of one-frame keyframes carrying a hand-baked
-## rise/fall vel_y curve (a simple symmetric triangular profile: constant rise
-## velocity for the first half, constant fall velocity for the second,
-## sign-flipped at the apex) — no new engine mechanism needed, purely a bigger
-## timeline. This is a judgment call (logged, docs/judgment-log.md): a
-## parabolic arc would need a authored per-frame table too (the engine has no
-## quadratic/gravity primitive to lean on either way), so the simpler
-## triangular profile is the reasonable data-only reading of "no jump
-## cancels... ~45f airborne" that needs no new engine primitive.
+## JUMP ARC (movement table) — MIGRATED TO THE GRAVITY MODEL (TKT-P2-01, AD-043;
+## supersedes AD-036 and retires the net-zero-arc authoring invariant, JC-017-style).
+## A jump is now a single TAKEOFF IMPULSE (a frame-1 keyframe `motion` that SETS
+## vel_x/vel_y) plus the character's own `physics.gravity` constant; the engine's
+## persistent-velocity integration (phase 3) and continuous `pos_y >= ground_y`
+## clamp+landing do the rest — no per-frame hand-baked arc is authored or required
+## (see `_build_jump_arcs` below for the exact takeoff/gravity values and the
+## judgment-log entry recording them). This replaces the prior triangular
+## rise/hang/fall keyframe table (JC-047) entirely; A's movement goldens
+## (`test_airborne_actions.gd`) are DELIBERATELY re-baselined against the new
+## physically-derived flight time (verified by actual headless replay, not
+## hand-derivation) rather than hand-tuned to match the old 45-frame arc.
 
 const CHAR_ID: int = 2
 
@@ -149,8 +147,14 @@ static func build_character() -> Character:
 
 	var phys := CharacterPhysics.new()
 	phys.walk_speed = FP.from_units(2.2)   # movement table: forward walk speed (data only; back walk is authored per-state)
-	phys.gravity = 0                        # no engine gravity primitive; jump arc is keyframe-authored (see header note)
-	phys.jump_velocity = 0
+	# Gravity + takeoff impulse (TKT-P2-01, AD-043; logged in judgment-log.md): chosen
+	# so the discrete integration (vel_n = -TAKEOFF_SPEED + n*gravity, applied every
+	# tick starting the takeoff tick itself) nets EXACTLY back to ground_y after 43
+	# ticks (verified by headless replay, test_airborne_actions.gd) — a deliberate,
+	# clean-number choice close to the prior ~45f feel, not a requirement (the
+	# continuous clamp lands correctly on any remainder).
+	phys.gravity = FP.from_units(1.0)
+	phys.jump_velocity = FP.from_units(22.0)   # takeoff impulse magnitude (see _build_jump_arcs)
 	c.physics = phys
 
 	c.default_pushbox = Box.make(   # AD-037: reflected -> lower/nearer-to-feet portion of the hurtbox
@@ -461,39 +465,30 @@ static func _build_prejump(state_id: int, target: int) -> MoveState:
 
 
 ## The jump arc (movement table: "~45f airborne, no air dash, no double jump,
-## no jump cancels"). Authored as a hand-baked triangular vel_y profile over
-## one-frame keyframes (see this file's header note: the engine has no gravity
-## primitive, so an arc is authored data, not computed). Rise for 22f, a single
-## one-frame APEX HANG (vel_y = 0) at frame 23, then fall for the remaining
-## 22f -- symmetric magnitude, sign-flipped either side of the hang. JUMP_N/F/B
-## share the same vertical profile; only horizontal carry differs (0 / forward
-## / back).
+## no jump cancels") -- GRAVITY MODEL (TKT-P2-01, AD-043; supersedes the prior
+## hand-baked triangular vel_y profile, JC-047, entirely). A jump is now a
+## single TAKEOFF IMPULSE authored on frame 1 (has_motion sets vel_x/vel_y);
+## every subsequent frame authors NO motion, so the engine's persistent-
+## velocity + gravity integration (phase 3) carries the arc, and the continuous
+## `pos_y >= ground_y` clamp lands it flush -- no per-frame arc data at all.
+## JUMP_N/F/B share the same vertical takeoff/gravity; only the horizontal
+## takeoff carry differs (0 / forward / back).
 ##
-## FIX NOTE (2026-07-08 human-inspection-gate flag, "player sinks ~5px below
-## the floor on landing"). The original split was 22 rise frames / 23 fall
-## frames (JUMP_DURATION=45 is odd, so an even 22/22 split leaves one frame
-## over) at EQUAL rise/fall speed -- so the arc's net vertical displacement was
-## NOT zero: 22*(-6.0) + 23*(+6.0) = +6.0 units of permanent downward drift
-## every single jump (confirmed by driving the arc headlessly: pos_y lands
-## exactly 6 units below its start, not "close to" as the prior dev-test
-## tolerated -- see test_character_a.gd's _test_jump_arc_integrates, updated
-## alongside this fix). Nothing in step_phases.gd clamps pos_y to ground_y
-## (P0 movement is pure keyframe integration, AD-014), so that drift was never
-## corrected and the character landed standing 6 units into the floor. Rather
-## than change either tuned speed value (RISE_SPEED/FALL_SPEED, ratified
-## content, JC-A-01), the extra frame is spent as an explicit one-frame apex
-## hang (vel_y = 0) -- a common, feel-plausible jump-arc convention -- so
-## 22 rise + 1 hang + 22 fall = 45 (JUMP_DURATION unchanged) nets to exactly
-## zero and the character always lands flush at ground_y. Determinism-affecting
-## (frame-23 vel_y changes from a fall frame to a hang frame, and the whole
-## back half of the arc's positions shift up by up to 6 units) -- a deliberate,
-## conscious change; recorded per JC-017-style convention in judgment-log.md.
+## TUNING (judgment-log.md; the Developer's per AD-043's "gravity values"
+## call). TAKEOFF_SPEED=22.0, GRAVITY=1.0 (friendly units, baked fixed-point):
+## chosen so the discrete integration nets EXACTLY back to ground_y after 43
+## ticks -- vel_n = -22+n (gravity applied every tick starting the takeoff tick
+## itself, per combat-resolution.md phase 3's order), and
+## sum_{n=1..43}(-22+n) = 0 exactly (43*44/2 - 22*43 = 946-946 = 0) -- a clean,
+## deterministic choice close to the prior ~45f feel (not a requirement: the
+## continuous clamp lands correctly on any remainder). `JUMP_DURATION` is kept
+## generously ABOVE the physical flight time so the state's own
+## once-through-ended/actionable bookkeeping and the air-normal cancel window
+## never race the physical landing (the clamp is what actually ends the jump,
+## in phase 3, before phase 2's "duration elapsed" path would ever fire).
 static func _build_jump_arcs() -> Array[MoveState]:
-	const JUMP_DURATION: int = 45
-	const RISE_FRAMES: int = 22
-	const APEX_HANG_FRAME: int = RISE_FRAMES + 1   # frame 23: vel_y = 0
-	const RISE_SPEED: float = 6.0    # px/f upward (negative y, screen-up convention: rising is -y)
-	const FALL_SPEED: float = 6.0
+	const JUMP_DURATION: int = 50   # safety bound ABOVE the ~43-tick physical flight time (see note above)
+	const TAKEOFF_SPEED: float = 22.0   # upward impulse (screen -y); nets to ground_y at tick 43 given GRAVITY below
 	const JUMP_HORIZ_SPEED: float = 3.5   # forward/back carry during a directional jump
 
 	var out: Array[MoveState] = []
@@ -508,26 +503,26 @@ static func _build_jump_arcs() -> Array[MoveState]:
 		m.category = MoveState.CATEGORY_AIRBORNE
 		m.duration = JUMP_DURATION
 		m.loop = false
-		var timeline: Array[Keyframe] = []
-		for f in range(1, JUMP_DURATION + 1):
-			var kf := Keyframe.new()
-			kf.frame_start = f
-			kf.frame_end = f
-			kf.hurtboxes = [_hurt_air()]
-			kf.has_motion = true
-			kf.motion_vel_x = FP.from_units(horiz_by_state[state_id])
-			# Rising (screen -y) for RISE_FRAMES, a single zero-velocity apex-hang
-			# frame, then falling (+y) for the symmetric remainder. Baked as
-			# CONSTANT velocities (a triangular position curve with a flat apex tick),
-			# authored data -- see header/fix note above.
-			if f <= RISE_FRAMES:
-				kf.motion_vel_y = FP.from_units(-RISE_SPEED)
-			elif f == APEX_HANG_FRAME:
-				kf.motion_vel_y = 0
-			else:
-				kf.motion_vel_y = FP.from_units(FALL_SPEED)
-			timeline.append(kf)
-		m.timeline = timeline
+
+		# Frame 1: the takeoff IMPULSE (a keyframe motion SET; AD-043). Gravity is
+		# added to this SAME tick's velocity by phase 3, after this set.
+		var kf_takeoff := Keyframe.new()
+		kf_takeoff.frame_start = 1
+		kf_takeoff.frame_end = 1
+		kf_takeoff.hurtboxes = [_hurt_air()]
+		kf_takeoff.has_motion = true
+		kf_takeoff.motion_vel_x = FP.from_units(horiz_by_state[state_id])
+		kf_takeoff.motion_vel_y = FP.from_units(-TAKEOFF_SPEED)
+
+		# Frames 2..duration: NO authored motion -- gravity + persistent velocity
+		# carry the whole arc (AD-043's "inherits the ongoing fall"); this keyframe
+		# supplies only the airborne hurtbox for box resolution.
+		var kf_flight := Keyframe.new()
+		kf_flight.frame_start = 2
+		kf_flight.frame_end = JUMP_DURATION
+		kf_flight.hurtboxes = [_hurt_air()]
+
+		m.timeline = [kf_takeoff, kf_flight]
 		m.cancels = _air_normal_cancels(JUMP_DURATION)
 		out.append(m)
 	return out

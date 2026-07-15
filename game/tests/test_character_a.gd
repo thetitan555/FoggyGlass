@@ -570,8 +570,9 @@ func _test_footsie_route_2m_dp_l() -> void:
 
 func _test_jump_arc_integrates() -> void:
 	# The jump states are reachable via button_map now (AD-032, TKT-P1-12), but
-	# this test still drives the state directly to isolate the AUTHORED KEYFRAME
-	# MOTION itself (data), independent of command recognition.
+	# this test still drives the state directly to isolate the AUTHORED TAKEOFF
+	# IMPULSE + engine gravity/clamp (AD-043, TKT-P2-01) themselves, independent
+	# of command recognition / the prejump lead-in.
 	var s := _two_char_state(200)
 	s.players[0].state_id = CharacterA.STATE_JUMP_N
 	s.players[0].frame_in_state = 0
@@ -581,20 +582,32 @@ func _test_jump_arc_integrates() -> void:
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
 		if s.players[0].pos_y < apex_y:
 			apex_y = s.players[0].pos_y
-	_true(apex_y < start_y, "the jump arc rises (pos_y decreases) during the authored rise frames")
-	for _k in range(23):
+	_true(apex_y < start_y, "the jump arc rises (pos_y decreases) under the takeoff impulse + gravity")
+	_eq(s.players[0].state_id, CharacterA.STATE_JUMP_N,
+		"still airborne (mid-flight) after 22 ticks -- has not physically reached the ground yet")
+
+	# RE-BASELINED (TKT-P2-01, AD-043; supersedes JC-047's authored net-zero
+	# arc). The takeoff impulse (-22.0 units) + gravity (1.0/tick) net the
+	# discrete integration back to ground_y EXACTLY 43 ticks after entry (see
+	# character_a.gd's _build_jump_arcs doc comment for the exact arithmetic;
+	# confirmed by actual headless replay, not hand-derived). The CONTINUOUS
+	# clamp (not an authored arc length) is what ends the jump: at tick 43 the
+	# character lands, is clamped to EXACTLY ground_y, velocity zeroed, and
+	# transitioned AIRBORNE -> GROUNDED into STATE_IDLE -- all inside phase 3,
+	# the same tick physical contact occurs.
+	for _k in range(21):   # 22 + 21 = 43 total ticks
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
-	# FIX (2026-07-08 human-inspection-gate flag, "player sinks ~5px below the
-	# floor on landing"): 22 rise frames + a one-frame zero-velocity apex hang
-	# (frame 23) + 22 fall frames now nets to EXACTLY zero displacement (was: 22
-	# rise @ -6.0 + 23 fall @ +6.0 = +6 units of permanent downward drift, since
-	# 45 is odd and the old split gave the extra frame entirely to the fall
-	# half). Assert the arc returns BIT-EXACT to its starting height, not merely
-	# "close" -- this is the deliberate behavior change the fix makes (recorded
-	# JC-017-style in judgment-log.md: this test's prior tolerance documented the
-	# very drift that was the reported defect).
 	_eq(s.players[0].pos_y, start_y,
-		"the jump arc returns EXACTLY to its starting height after the full authored duration (no floor-sink drift)")
+		"the jump lands EXACTLY back at its starting height -- the continuous clamp, not an authored arc length")
+	_eq(s.players[0].vel_y, 0, "landing zeroes vertical velocity (AD-043's clamp+landing)")
+	_eq(s.players[0].state_id, CharacterA.STATE_IDLE,
+		"the continuous clamp transitions AIRBORNE -> GROUNDED into STATE_IDLE on landing")
+	_eq(s.players[0].air_action_used, false,
+		"landing resets air_action_used (AD-046; a no-op here since it was never set, but the reset path runs)")
+
+	# A further tick (resting in IDLE, no input) stays flush -- no post-landing drift.
+	s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+	_eq(s.players[0].pos_y, start_y, "stays flush at ground_y one tick after landing (idle, no motion)")
 	_cleanup()
 
 

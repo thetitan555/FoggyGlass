@@ -308,11 +308,14 @@ static func _last_active_frame_local(move: MoveState) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Phase 3: Movement integration (combat-resolution.md phase 3; AD-014). Apply per-
-# keyframe motion (velocity sets) to velocity, integrate velocity into position
-# (integer add), then resolve stage bounds and pushbox collisions. Fixed-point ints
-# only. Projectiles integrate here too (AD-021), and any `spawn` actions firing
-# this tick are processed here (TKT-P1-0P), subject to the owner's live cap.
+# Phase 3: Movement integration (combat-resolution.md phase 3; AD-014/AD-043). Apply
+# per-keyframe motion (velocity sets/impulses) to velocity, apply GRAVITY to a
+# physically-airborne character, integrate velocity into position (integer add), then
+# apply the CONTINUOUS ground clamp fused with landing, then resolve stage bounds and
+# pushbox collisions. Fixed-point ints only. Projectiles integrate here too (AD-021,
+# each applying its own optional gravity, AD-047 — not this ticket), and any `spawn`
+# actions firing this tick are processed here (TKT-P1-0P), subject to the owner's
+# live cap.
 # ---------------------------------------------------------------------------
 
 static func phase3_movement(next: SimState) -> void:
@@ -323,6 +326,7 @@ static func phase3_movement(next: SimState) -> void:
 	# does not immediately age/move again this tick" convention already used for
 	# hitstop and lifetime — TKT-P1-0P).
 	var pre_spawn_count: int = next.projectiles.size()
+	var ground_y: int = next.stage.ground_y
 
 	for i in range(2):
 		var p: PlayerState = next.players[i]
@@ -333,14 +337,38 @@ static func phase3_movement(next: SimState) -> void:
 		var move: MoveState = character.get_state(p.state_id) if character != null else null
 
 		# Per-keyframe motion sets velocity for this frame (authored fixed-point,
-		# applied along facing for horizontal). A keyframe with has_motion overrides
-		# velocity; otherwise horizontal velocity decays to 0 (grounded, no slide).
+		# applied along facing for horizontal). A keyframe with has_motion SETS
+		# velocity (an impulse — takeoff, air dash, double jump, a divekick's dive);
+		# otherwise a GROUNDED state decays to 0 (no slide/vertical), while any other
+		# category INHERITS the ongoing velocity (AD-043 — an air normal / a launched
+		# reaction carries the fall instead of stopping it).
 		if move != null:
 			_apply_keyframe_motion(p, move)
+
+		# --- Airborne physics (AD-043): gravity, gated by GENUINE physical airborne-
+		# ness, not by category alone. A standing HITSTUN/BLOCKSTUN reaction (category
+		# HITSTUN/BLOCKSTUN, vel_y == 0, pos_y == ground_y already) must NOT accrete
+		# gravity every tick just because its category isn't GROUNDED — only a
+		# character actually off the ground (pos_y < ground_y) or carrying nonzero
+		# vertical velocity this tick (a freshly set takeoff/launch impulse, still at
+		# ground_y before integration) is "airborne" here. This is exactly what
+		# distinguishes a "launched (airborne HITSTUN)" reaction (AD-043) from an
+		# ordinary standing one sharing the same engine-level category.
+		var grounded_category: bool = move == null or move.category == MoveState.CATEGORY_GROUNDED
+		var was_airborne: bool = not grounded_category and (p.pos_y < ground_y or p.vel_y != 0)
+		if character != null and was_airborne:
+			p.vel_y += character.physics.gravity
 
 		# Integrate velocity into position (integer add — AD-014).
 		p.pos_x = p.pos_x + p.vel_x
 		p.pos_y = p.pos_y + p.vel_y
+
+		# --- Continuous ground clamp fused with landing (AD-043) --- After
+		# integration, a character that WAS physically airborne this tick and has now
+		# reached/passed the floor lands: clamped position, velocity zeroed, one
+		# mechanism (never leaves a character nominally airborne at the floor).
+		if character != null and was_airborne and p.pos_y >= ground_y:
+			_land(next, p, character, move)
 
 		# Process any spawn action firing this tick (AD-021; move-format.md
 		# Keyframe.spawn), subject to the owner's live-projectile cap.
@@ -359,6 +387,29 @@ static func phase3_movement(next: SimState) -> void:
 		var pr: Projectile = next.projectiles[idx]
 		pr.pos_x += pr.vel_x
 		pr.pos_y += pr.vel_y
+
+
+## Land a physically-airborne character (AD-043's continuous clamp fused with
+## landing): clamp to the floor, zero velocity, and reset the one-air-action
+## economy (AD-046 — landing resets `air_action_used` regardless of how the
+## character got airborne). The STATE transition differs by what was airborne:
+##   - AIRBORNE category (a jump / air normal): transition to idle, exactly like
+##     the prior grounded-entry snap's landing case (AD-042, now subsumed).
+##   - Any other category reaching here (a launched HITSTUN reaction — hit-set
+##     `vel_y` via `HitBox.launch`): NO state change. The character's current
+##     reaction state is already a non-actionable, fixed-`duration` HITSTUN-
+##     category state (e.g. character A's STATE_HITSTUN_LAUNCH / STATE_AIR_RESET);
+##     landing simply stops it falling further and lets that SAME authored
+##     duration/stun keep counting down to wakeup — this is AD-043's "knockdown
+##     reaction," which explicitly introduces no new engine category or
+##     destination state ("knockdown is a grounded reaction state").
+static func _land(next: SimState, p: PlayerState, character: Character, move: MoveState) -> void:
+	p.pos_y = next.stage.ground_y
+	p.vel_x = 0
+	p.vel_y = 0
+	p.air_action_used = false
+	if move != null and move.category == MoveState.CATEGORY_AIRBORNE:
+		_enter_state(next, p, character, character.idle_state_id)
 
 
 ## Fire a keyframe's `spawn` action on the EXACT tick its range is entered
@@ -408,10 +459,19 @@ static func _try_spawn_projectile(next: SimState, owner: int, p: PlayerState, kf
 
 
 ## Apply a keyframe's authored motion for the current frame to the player's velocity.
-## has_motion sets an explicit per-tick velocity (fixed-point), applied along facing
-## for the horizontal component (forward is +facing). A frame with no motion keyframe
-## zeroes horizontal velocity (grounded characters don't slide at P0; gravity/air is
-## post-slice). Uses the FIRST covering keyframe with motion (deterministic order).
+## has_motion SETS an explicit velocity this frame (fixed-point; an impulse — takeoff,
+## air dash, double jump, a divekick's dive), applied along facing for the horizontal
+## component (forward is +facing; vertical is facing-independent). Uses the FIRST
+## covering keyframe with motion (deterministic order).
+##
+## A frame with NO authored motion (AD-043, move-format.md movement invariants):
+##   - GROUNDED category: zero velocity (no slide, no vertical — grounded states are
+##     unchanged, pos_y pinned at ground_y, no gravity).
+##   - Any other category (AIRBORNE, or a launched HITSTUN/BLOCKSTUN reaction):
+##     INHERIT the ongoing velocity (leave it untouched) — this is what lets an air
+##     normal carry the jump arc's fall, and a launched reaction keep falling under
+##     gravity, instead of the velocity being reset to zero every frame it isn't
+##     explicitly re-authored.
 static func _apply_keyframe_motion(p: PlayerState, move: MoveState) -> void:
 	var vx: int = 0
 	var vy: int = 0
@@ -428,10 +488,10 @@ static func _apply_keyframe_motion(p: PlayerState, move: MoveState) -> void:
 	if found:
 		p.vel_x = vx
 		p.vel_y = vy
-	else:
-		# No authored motion this frame: grounded rest (no horizontal slide at P0).
+	elif move.category == MoveState.CATEGORY_GROUNDED:
 		p.vel_x = 0
 		p.vel_y = 0
+	# else: inherit (no-op) — see doc comment above.
 
 
 ## Clamp each player to the stage walls and resolve pushbox overlap (AD-012, integer
@@ -1178,6 +1238,16 @@ static func _advance_and_despawn_projectiles(next: SimState, existing_count: int
 ## transition, resolving the re-gate-3 D3 aerial float. Character-agnostic (reads the
 ## TARGET state's category + the stage's ground_y; no character-A branch).
 ## Deterministic — a pure function of state.
+##
+## SUBSUMED BY AD-043 (TKT-P2-01). The continuous `pos_y >= ground_y` clamp fused
+## with landing (phase 3, StepPhases._land) now handles the ordinary jump-landing
+## case directly (and does so BEFORE any once-through-ended/actionable race can
+## even arise, since it runs on physical ground contact, not on the state's
+## authored `duration`). This snap remains as a defensive backstop for any OTHER
+## path that enters a GROUNDED state while marginally off `ground_y` (e.g. a
+## direct-to-GROUNDED transition that never went through the airborne clamp) —
+## harmless and cheap to keep, not required for the jump/knockdown cases AD-043
+## itself now covers.
 static func _enter_state(next: SimState, p: PlayerState, character: Character, state_id: int) -> void:
 	p.state_id = state_id
 	p.frame_in_state = 1
