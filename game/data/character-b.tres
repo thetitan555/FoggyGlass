@@ -1,0 +1,1883 @@
+[gd_resource type="Resource" script_class="Character" load_steps=174 format=3]
+
+[ext_resource type="Script" path="res://sim/data/button_map_entry.gd" id="1_6cv7q"]
+[ext_resource type="Script" path="res://sim/data/cancel_group.gd" id="2_2jtju"]
+[ext_resource type="Script" path="res://sim/data/box.gd" id="3_t3wsr"]
+[ext_resource type="Script" path="res://sim/data/character_physics.gd" id="4_l8ljo"]
+[ext_resource type="Script" path="res://sim/data/character.gd" id="5_l401d"]
+[ext_resource type="Script" path="res://sim/data/move_state.gd" id="6_o63iu"]
+[ext_resource type="Script" path="res://sim/data/cancel_rule.gd" id="7_dekoi"]
+[ext_resource type="Script" path="res://sim/data/keyframe.gd" id="8_m3dua"]
+[ext_resource type="Script" path="res://sim/data/hit_box.gd" id="9_1sadx"]
+
+[sub_resource type="Resource" id="Resource_p1hqj"]
+script = ExtResource("1_6cv7q")
+button_index = 0
+chord_button_index = 2
+required_direction = 0
+motion = 0
+target_state_id = 350
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_cev0x"]
+script = ExtResource("1_6cv7q")
+button_index = 1
+chord_button_index = -1
+required_direction = 2
+motion = 0
+target_state_id = 313
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_umu36"]
+script = ExtResource("1_6cv7q")
+button_index = 0
+chord_button_index = -1
+required_direction = 2
+motion = 0
+target_state_id = 311
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_ynqhk"]
+script = ExtResource("1_6cv7q")
+button_index = 2
+chord_button_index = -1
+required_direction = 2
+motion = 0
+target_state_id = 315
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_07m7p"]
+script = ExtResource("1_6cv7q")
+button_index = -1
+chord_button_index = -1
+required_direction = 2
+motion = 0
+target_state_id = 305
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_1nqwn"]
+script = ExtResource("1_6cv7q")
+button_index = -1
+chord_button_index = -1
+required_direction = 9
+motion = 0
+target_state_id = 360
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_40hih"]
+script = ExtResource("1_6cv7q")
+button_index = -1
+chord_button_index = -1
+required_direction = 5
+motion = 0
+target_state_id = 361
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_7syjh"]
+script = ExtResource("1_6cv7q")
+button_index = -1
+chord_button_index = -1
+required_direction = 1
+motion = 0
+target_state_id = 306
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_14ai7"]
+script = ExtResource("1_6cv7q")
+button_index = 2
+chord_button_index = -1
+required_direction = 8
+motion = 0
+target_state_id = 316
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_wl6mn"]
+script = ExtResource("1_6cv7q")
+button_index = 0
+chord_button_index = -1
+required_direction = 0
+motion = 0
+target_state_id = 310
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_l2rxj"]
+script = ExtResource("1_6cv7q")
+button_index = 1
+chord_button_index = -1
+required_direction = 0
+motion = 0
+target_state_id = 312
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_57vnm"]
+script = ExtResource("1_6cv7q")
+button_index = 2
+chord_button_index = -1
+required_direction = 0
+motion = 0
+target_state_id = 314
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_6ytk1"]
+script = ExtResource("1_6cv7q")
+button_index = -1
+chord_button_index = -1
+required_direction = 8
+motion = 0
+target_state_id = 303
+double_tap = true
+
+[sub_resource type="Resource" id="Resource_j8crv"]
+script = ExtResource("1_6cv7q")
+button_index = -1
+chord_button_index = -1
+required_direction = 4
+motion = 0
+target_state_id = 304
+double_tap = true
+
+[sub_resource type="Resource" id="Resource_rlkok"]
+script = ExtResource("1_6cv7q")
+button_index = -1
+chord_button_index = -1
+required_direction = 8
+motion = 0
+target_state_id = 301
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_yq076"]
+script = ExtResource("1_6cv7q")
+button_index = -1
+chord_button_index = -1
+required_direction = 4
+motion = 0
+target_state_id = 302
+double_tap = false
+
+[sub_resource type="Resource" id="Resource_evi34"]
+script = ExtResource("2_2jtju")
+id = 1
+members = Array[int]([310, 311, 312, 313, 314, 315])
+
+[sub_resource type="Resource" id="Resource_45trk"]
+script = ExtResource("2_2jtju")
+id = 2
+members = Array[int]([313, 314, 315])
+
+[sub_resource type="Resource" id="Resource_r4axt"]
+script = ExtResource("2_2jtju")
+id = 3
+members = Array[int]([312, 314, 315])
+
+[sub_resource type="Resource" id="Resource_vue8l"]
+script = ExtResource("2_2jtju")
+id = 4
+members = Array[int]([315])
+
+[sub_resource type="Resource" id="Resource_1cd88"]
+script = ExtResource("2_2jtju")
+id = 5
+members = Array[int]([314])
+
+[sub_resource type="Resource" id="Resource_wy1ds"]
+script = ExtResource("3_t3wsr")
+x = -655360
+y = -2621440
+w = 1310720
+h = 2621440
+
+[sub_resource type="Resource" id="Resource_bqcog"]
+script = ExtResource("4_l8ljo")
+walk_speed = 131072
+gravity = 65536
+jump_velocity = 1441792
+air_dash_speed = 393216
+double_jump_velocity = 1179648
+
+[sub_resource type="Resource" id="Resource_awwh8"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_tvwna"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 1
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_awwh8")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_efxvl"]
+script = ExtResource("6_o63iu")
+id = 300
+category = 0
+duration = 1
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_tvwna")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = true
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_173n1"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_di8t6"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 1
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_173n1")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = true
+motion_vel_x = 131072
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_nppvg"]
+script = ExtResource("6_o63iu")
+id = 301
+category = 0
+duration = 1
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_di8t6")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = true
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_4ueh6"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_f7h4h"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 1
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_4ueh6")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = true
+motion_vel_x = -117965
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_6vx8y"]
+script = ExtResource("6_o63iu")
+id = 302
+category = 0
+duration = 1
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_f7h4h")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = true
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_5qa0g"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_8cn0v"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 1
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_5qa0g")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_h42tl"]
+script = ExtResource("6_o63iu")
+id = 305
+category = 0
+duration = 1
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_8cn0v")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = true
+is_crouch = true
+
+[sub_resource type="Resource" id="Resource_sb3d4"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_nak4k"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 18
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_sb3d4")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = true
+motion_vel_x = 308019
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_m4wo8"]
+script = ExtResource("6_o63iu")
+id = 303
+category = 0
+duration = 18
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_nak4k")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_wqwx8"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_pnaff"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 16
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_wqwx8")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = true
+motion_vel_x = -288358
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_0n3fh"]
+script = ExtResource("6_o63iu")
+id = 304
+category = 0
+duration = 16
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_pnaff")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_q8hbi"]
+script = ExtResource("7_dekoi")
+target = 307
+target_is_group = false
+condition = 4
+window_start = 3
+window_end = 3
+input = 0
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_7drqc"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_3gapm"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 4
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_7drqc")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_htt6o"]
+script = ExtResource("6_o63iu")
+id = 306
+category = 0
+duration = 4
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_3gapm")])
+cancels = Array[ExtResource("7_dekoi")]([SubResource("Resource_q8hbi")])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_8fo05"]
+script = ExtResource("7_dekoi")
+target = 308
+target_is_group = false
+condition = 4
+window_start = 3
+window_end = 3
+input = 0
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_aq2fy"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_tpg2g"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 4
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_aq2fy")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_plg6c"]
+script = ExtResource("6_o63iu")
+id = 360
+category = 0
+duration = 4
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_tpg2g")])
+cancels = Array[ExtResource("7_dekoi")]([SubResource("Resource_8fo05")])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_bl6mm"]
+script = ExtResource("7_dekoi")
+target = 309
+target_is_group = false
+condition = 4
+window_start = 3
+window_end = 3
+input = 0
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_kykgd"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_oiw6o"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 4
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_kykgd")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_08x1v"]
+script = ExtResource("6_o63iu")
+id = 361
+category = 0
+duration = 4
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_oiw6o")])
+cancels = Array[ExtResource("7_dekoi")]([SubResource("Resource_bl6mm")])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_difp2"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -4915200
+w = 1966080
+h = 4915200
+
+[sub_resource type="Resource" id="Resource_cqta4"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 1
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_difp2")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = true
+motion_vel_x = 0
+motion_vel_y = -1441792
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_8fyvw"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -4915200
+w = 1966080
+h = 4915200
+
+[sub_resource type="Resource" id="Resource_l34mb"]
+script = ExtResource("8_m3dua")
+frame_start = 2
+frame_end = 50
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_8fyvw")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_v5vax"]
+script = ExtResource("6_o63iu")
+id = 307
+category = 1
+duration = 50
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_cqta4"), SubResource("Resource_l34mb")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_gknm8"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -4915200
+w = 1966080
+h = 4915200
+
+[sub_resource type="Resource" id="Resource_e1c5k"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 1
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_gknm8")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = true
+motion_vel_x = 229376
+motion_vel_y = -1441792
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_mu47x"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -4915200
+w = 1966080
+h = 4915200
+
+[sub_resource type="Resource" id="Resource_fh4ax"]
+script = ExtResource("8_m3dua")
+frame_start = 2
+frame_end = 50
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_mu47x")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_qelnk"]
+script = ExtResource("6_o63iu")
+id = 308
+category = 1
+duration = 50
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_e1c5k"), SubResource("Resource_fh4ax")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_5cxd4"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -4915200
+w = 1966080
+h = 4915200
+
+[sub_resource type="Resource" id="Resource_msd0j"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 1
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_5cxd4")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = true
+motion_vel_x = -229376
+motion_vel_y = -1441792
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_ypaav"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -4915200
+w = 1966080
+h = 4915200
+
+[sub_resource type="Resource" id="Resource_kys57"]
+script = ExtResource("8_m3dua")
+frame_start = 2
+frame_end = 50
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_ypaav")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_873r3"]
+script = ExtResource("6_o63iu")
+id = 309
+category = 1
+duration = 50
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_msd0j"), SubResource("Resource_kys57")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_ouiu1"]
+script = ExtResource("7_dekoi")
+target = 1
+target_is_group = true
+condition = 2
+window_start = 0
+window_end = 0
+input = 0
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_xuear"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_uqq2f"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 4
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_xuear")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_p65pf"]
+script = ExtResource("3_t3wsr")
+x = 1638400
+y = -4259840
+w = 1441792
+h = 1179648
+
+[sub_resource type="Resource" id="Resource_csnpj"]
+script = ExtResource("9_1sadx")
+hit_kind = 0
+box = SubResource("Resource_p65pf")
+damage = 20
+hitstun = 14
+blockstun = 10
+hitstop = 7
+pushback_hit = 131072
+pushback_block = 131072
+launch = 0
+hit_reaction = 320
+block_reaction = 321
+cancel_tags = PackedInt32Array()
+id_group = 1
+rehit_interval = 0
+tech_window = 0
+guard_height = 0
+
+[sub_resource type="Resource" id="Resource_x4cbv"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_vsdpr"]
+script = ExtResource("8_m3dua")
+frame_start = 5
+frame_end = 7
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_x4cbv")])
+hitboxes = Array[ExtResource("9_1sadx")]([SubResource("Resource_csnpj")])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_2n4fg"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_xvppi"]
+script = ExtResource("8_m3dua")
+frame_start = 8
+frame_end = 14
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_2n4fg")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_1yac1"]
+script = ExtResource("6_o63iu")
+id = 310
+category = 0
+duration = 14
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_uqq2f"), SubResource("Resource_vsdpr"), SubResource("Resource_xvppi")])
+cancels = Array[ExtResource("7_dekoi")]([SubResource("Resource_ouiu1")])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_ic12q"]
+script = ExtResource("7_dekoi")
+target = 1
+target_is_group = true
+condition = 2
+window_start = 0
+window_end = 0
+input = 0
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_po6dg"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_8s1nb"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 4
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_po6dg")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_cj325"]
+script = ExtResource("3_t3wsr")
+x = 1310720
+y = -1310720
+w = 1441792
+h = 983040
+
+[sub_resource type="Resource" id="Resource_rfano"]
+script = ExtResource("9_1sadx")
+hit_kind = 0
+box = SubResource("Resource_cj325")
+damage = 18
+hitstun = 15
+blockstun = 11
+hitstop = 7
+pushback_hit = 98304
+pushback_block = 98304
+launch = 0
+hit_reaction = 320
+block_reaction = 322
+cancel_tags = PackedInt32Array()
+id_group = 2
+rehit_interval = 0
+tech_window = 0
+guard_height = 2
+
+[sub_resource type="Resource" id="Resource_yb6mf"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_yvtcv"]
+script = ExtResource("8_m3dua")
+frame_start = 5
+frame_end = 7
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_yb6mf")])
+hitboxes = Array[ExtResource("9_1sadx")]([SubResource("Resource_rfano")])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_8r6u8"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_vkq2f"]
+script = ExtResource("8_m3dua")
+frame_start = 8
+frame_end = 15
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_8r6u8")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_hqf3l"]
+script = ExtResource("6_o63iu")
+id = 311
+category = 0
+duration = 15
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_8s1nb"), SubResource("Resource_yvtcv"), SubResource("Resource_vkq2f")])
+cancels = Array[ExtResource("7_dekoi")]([SubResource("Resource_ic12q")])
+loop = false
+is_crouch = true
+
+[sub_resource type="Resource" id="Resource_ccxpm"]
+script = ExtResource("7_dekoi")
+target = 2
+target_is_group = true
+condition = 2
+window_start = 0
+window_end = 0
+input = 0
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_b1x5b"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_3y5i4"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 6
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_b1x5b")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_wu8i6"]
+script = ExtResource("3_t3wsr")
+x = 1835008
+y = -3932160
+w = 1966080
+h = 1310720
+
+[sub_resource type="Resource" id="Resource_7o2wd"]
+script = ExtResource("9_1sadx")
+hit_kind = 0
+box = SubResource("Resource_wu8i6")
+damage = 45
+hitstun = 17
+blockstun = 12
+hitstop = 9
+pushback_hit = 196608
+pushback_block = 196608
+launch = 0
+hit_reaction = 320
+block_reaction = 321
+cancel_tags = PackedInt32Array()
+id_group = 3
+rehit_interval = 0
+tech_window = 0
+guard_height = 0
+
+[sub_resource type="Resource" id="Resource_pyor1"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_tt7qh"]
+script = ExtResource("8_m3dua")
+frame_start = 7
+frame_end = 9
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_pyor1")])
+hitboxes = Array[ExtResource("9_1sadx")]([SubResource("Resource_7o2wd")])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_ovhnt"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_vcaae"]
+script = ExtResource("8_m3dua")
+frame_start = 10
+frame_end = 21
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_ovhnt")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_xav5h"]
+script = ExtResource("6_o63iu")
+id = 312
+category = 0
+duration = 21
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_3y5i4"), SubResource("Resource_tt7qh"), SubResource("Resource_vcaae")])
+cancels = Array[ExtResource("7_dekoi")]([SubResource("Resource_ccxpm")])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_pgkun"]
+script = ExtResource("7_dekoi")
+target = 3
+target_is_group = true
+condition = 2
+window_start = 0
+window_end = 0
+input = 0
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_o6ebq"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_16fwh"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 7
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_o6ebq")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_awpnl"]
+script = ExtResource("3_t3wsr")
+x = 1835008
+y = -1638400
+w = 2490368
+h = 1179648
+
+[sub_resource type="Resource" id="Resource_bqobt"]
+script = ExtResource("9_1sadx")
+hit_kind = 0
+box = SubResource("Resource_awpnl")
+damage = 40
+hitstun = 19
+blockstun = 15
+hitstop = 9
+pushback_hit = 65536
+pushback_block = 65536
+launch = 0
+hit_reaction = 320
+block_reaction = 322
+cancel_tags = PackedInt32Array()
+id_group = 4
+rehit_interval = 0
+tech_window = 0
+guard_height = 2
+
+[sub_resource type="Resource" id="Resource_l3r2w"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_8ufyh"]
+script = ExtResource("8_m3dua")
+frame_start = 8
+frame_end = 11
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_l3r2w")])
+hitboxes = Array[ExtResource("9_1sadx")]([SubResource("Resource_bqobt")])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_81yq5"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_mi2nv"]
+script = ExtResource("8_m3dua")
+frame_start = 12
+frame_end = 24
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_81yq5")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_my0md"]
+script = ExtResource("6_o63iu")
+id = 313
+category = 0
+duration = 24
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_16fwh"), SubResource("Resource_8ufyh"), SubResource("Resource_mi2nv")])
+cancels = Array[ExtResource("7_dekoi")]([SubResource("Resource_pgkun")])
+loop = false
+is_crouch = true
+
+[sub_resource type="Resource" id="Resource_gr1xi"]
+script = ExtResource("7_dekoi")
+target = 4
+target_is_group = true
+condition = 2
+window_start = 0
+window_end = 0
+input = 0
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_b64ls"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_otqnq"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 7
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_b64ls")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_fttu6"]
+script = ExtResource("3_t3wsr")
+x = 1835008
+y = -3801088
+w = 2097152
+h = 1441792
+
+[sub_resource type="Resource" id="Resource_lbnjl"]
+script = ExtResource("9_1sadx")
+hit_kind = 0
+box = SubResource("Resource_fttu6")
+damage = 65
+hitstun = 27
+blockstun = 20
+hitstop = 11
+pushback_hit = 131072
+pushback_block = 196608
+launch = 0
+hit_reaction = 320
+block_reaction = 321
+cancel_tags = PackedInt32Array()
+id_group = 5
+rehit_interval = 0
+tech_window = 0
+guard_height = 0
+
+[sub_resource type="Resource" id="Resource_fgx34"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_7gt8d"]
+script = ExtResource("8_m3dua")
+frame_start = 8
+frame_end = 10
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_fgx34")])
+hitboxes = Array[ExtResource("9_1sadx")]([SubResource("Resource_lbnjl")])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_bqkog"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_wgvcb"]
+script = ExtResource("8_m3dua")
+frame_start = 11
+frame_end = 30
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_bqkog")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_hprr5"]
+script = ExtResource("6_o63iu")
+id = 314
+category = 0
+duration = 30
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_otqnq"), SubResource("Resource_7gt8d"), SubResource("Resource_wgvcb")])
+cancels = Array[ExtResource("7_dekoi")]([SubResource("Resource_gr1xi")])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_rsxen"]
+script = ExtResource("7_dekoi")
+target = 5
+target_is_group = true
+condition = 2
+window_start = 0
+window_end = 0
+input = 0
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_gahfc"]
+script = ExtResource("7_dekoi")
+target = 306
+target_is_group = false
+condition = 1
+window_start = 0
+window_end = 0
+input = 1
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_mnjwt"]
+script = ExtResource("7_dekoi")
+target = 360
+target_is_group = false
+condition = 1
+window_start = 0
+window_end = 0
+input = 9
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_p6y8s"]
+script = ExtResource("7_dekoi")
+target = 361
+target_is_group = false
+condition = 1
+window_start = 0
+window_end = 0
+input = 5
+requires_tag = 0
+
+[sub_resource type="Resource" id="Resource_2ewsl"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_vqf8s"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 9
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_2ewsl")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_xeq1i"]
+script = ExtResource("3_t3wsr")
+x = 983040
+y = -5898240
+w = 2293760
+h = 3932160
+
+[sub_resource type="Resource" id="Resource_ws2t1"]
+script = ExtResource("9_1sadx")
+hit_kind = 0
+box = SubResource("Resource_xeq1i")
+damage = 55
+hitstun = 30
+blockstun = 16
+hitstop = 10
+pushback_hit = 196608
+pushback_block = 131072
+launch = -393216
+hit_reaction = 323
+block_reaction = 322
+cancel_tags = PackedInt32Array()
+id_group = 6
+rehit_interval = 0
+tech_window = 0
+guard_height = 0
+
+[sub_resource type="Resource" id="Resource_ergb2"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_p2o0t"]
+script = ExtResource("8_m3dua")
+frame_start = 10
+frame_end = 13
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_ergb2")])
+hitboxes = Array[ExtResource("9_1sadx")]([SubResource("Resource_ws2t1")])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_aa474"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_1b13h"]
+script = ExtResource("8_m3dua")
+frame_start = 14
+frame_end = 27
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_aa474")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_bpra2"]
+script = ExtResource("6_o63iu")
+id = 315
+category = 0
+duration = 27
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_vqf8s"), SubResource("Resource_p2o0t"), SubResource("Resource_1b13h")])
+cancels = Array[ExtResource("7_dekoi")]([SubResource("Resource_rsxen"), SubResource("Resource_gahfc"), SubResource("Resource_mnjwt"), SubResource("Resource_p6y8s")])
+loop = false
+is_crouch = true
+
+[sub_resource type="Resource" id="Resource_duoon"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_ou0bn"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 22
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_duoon")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_2wosf"]
+script = ExtResource("3_t3wsr")
+x = 1310720
+y = -5570560
+w = 1966080
+h = 1310720
+
+[sub_resource type="Resource" id="Resource_h0i82"]
+script = ExtResource("9_1sadx")
+hit_kind = 0
+box = SubResource("Resource_2wosf")
+damage = 55
+hitstun = 24
+blockstun = 16
+hitstop = 10
+pushback_hit = 131072
+pushback_block = 131072
+launch = 0
+hit_reaction = 320
+block_reaction = 321
+cancel_tags = PackedInt32Array()
+id_group = 7
+rehit_interval = 0
+tech_window = 0
+guard_height = 1
+
+[sub_resource type="Resource" id="Resource_p0tls"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_wt6im"]
+script = ExtResource("8_m3dua")
+frame_start = 23
+frame_end = 25
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_p0tls")])
+hitboxes = Array[ExtResource("9_1sadx")]([SubResource("Resource_h0i82")])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_lpxey"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_tkjd2"]
+script = ExtResource("8_m3dua")
+frame_start = 26
+frame_end = 43
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_lpxey")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_lk2j2"]
+script = ExtResource("6_o63iu")
+id = 316
+category = 0
+duration = 43
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_ou0bn"), SubResource("Resource_wt6im"), SubResource("Resource_tkjd2")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_881u4"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_ce2va"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 27
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_881u4")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_e2300"]
+script = ExtResource("6_o63iu")
+id = 320
+category = 2
+duration = 27
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_ce2va")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_sklo8"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_qrd35"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 20
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_sklo8")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_p1wqp"]
+script = ExtResource("6_o63iu")
+id = 321
+category = 3
+duration = 20
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_qrd35")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_a02f6"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -3604480
+w = 1966080
+h = 3604480
+
+[sub_resource type="Resource" id="Resource_qbj01"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 16
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_a02f6")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_fpq57"]
+script = ExtResource("6_o63iu")
+id = 322
+category = 3
+duration = 16
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_qbj01")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = true
+
+[sub_resource type="Resource" id="Resource_j55ve"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -4915200
+w = 1966080
+h = 4915200
+
+[sub_resource type="Resource" id="Resource_3nb4f"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 40
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_j55ve")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_q6i4p"]
+script = ExtResource("6_o63iu")
+id = 323
+category = 2
+duration = 40
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_3nb4f")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_gw3ed"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_2jam6"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 28
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_gw3ed")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_1myh1"]
+script = ExtResource("6_o63iu")
+id = 324
+category = 2
+duration = 28
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_2jam6")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[sub_resource type="Resource" id="Resource_k0eus"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_5xy1f"]
+script = ExtResource("8_m3dua")
+frame_start = 1
+frame_end = 4
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_k0eus")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_574kv"]
+script = ExtResource("3_t3wsr")
+x = 655360
+y = -3932160
+w = 3604480
+h = 3932160
+
+[sub_resource type="Resource" id="Resource_7a0u2"]
+script = ExtResource("9_1sadx")
+hit_kind = 1
+box = SubResource("Resource_574kv")
+damage = 90
+hitstun = 28
+blockstun = 0
+hitstop = 0
+pushback_hit = 131072
+pushback_block = 0
+launch = 0
+hit_reaction = 324
+block_reaction = 324
+cancel_tags = PackedInt32Array()
+id_group = 8
+rehit_interval = 0
+tech_window = 7
+guard_height = 0
+
+[sub_resource type="Resource" id="Resource_qebma"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_13m26"]
+script = ExtResource("8_m3dua")
+frame_start = 5
+frame_end = 5
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_qebma")])
+hitboxes = Array[ExtResource("9_1sadx")]([SubResource("Resource_7a0u2")])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_s40gm"]
+script = ExtResource("3_t3wsr")
+x = -983040
+y = -5242880
+w = 1966080
+h = 5242880
+
+[sub_resource type="Resource" id="Resource_1hlq5"]
+script = ExtResource("8_m3dua")
+frame_start = 6
+frame_end = 23
+hurtboxes = Array[ExtResource("3_t3wsr")]([SubResource("Resource_s40gm")])
+hitboxes = Array[ExtResource("9_1sadx")]([])
+throwboxes = Array[ExtResource("3_t3wsr")]([])
+has_motion = false
+motion_vel_x = 0
+motion_vel_y = 0
+invuln_strike = false
+invuln_throw = false
+has_spawn = false
+spawn_offset_x = 0
+spawn_offset_y = 0
+spawn_velocity_x = 0
+spawn_velocity_y = 0
+
+[sub_resource type="Resource" id="Resource_vutgm"]
+script = ExtResource("6_o63iu")
+id = 350
+category = 0
+duration = 23
+timeline = Array[ExtResource("8_m3dua")]([SubResource("Resource_5xy1f"), SubResource("Resource_13m26"), SubResource("Resource_1hlq5")])
+cancels = Array[ExtResource("7_dekoi")]([])
+loop = false
+is_crouch = false
+
+[resource]
+script = ExtResource("5_l401d")
+id = 3
+states = Array[ExtResource("6_o63iu")]([SubResource("Resource_efxvl"), SubResource("Resource_nppvg"), SubResource("Resource_6vx8y"), SubResource("Resource_h42tl"), SubResource("Resource_m4wo8"), SubResource("Resource_0n3fh"), SubResource("Resource_htt6o"), SubResource("Resource_plg6c"), SubResource("Resource_08x1v"), SubResource("Resource_v5vax"), SubResource("Resource_qelnk"), SubResource("Resource_873r3"), SubResource("Resource_1yac1"), SubResource("Resource_hqf3l"), SubResource("Resource_xav5h"), SubResource("Resource_my0md"), SubResource("Resource_hprr5"), SubResource("Resource_bpra2"), SubResource("Resource_lk2j2"), SubResource("Resource_e2300"), SubResource("Resource_p1wqp"), SubResource("Resource_fpq57"), SubResource("Resource_q6i4p"), SubResource("Resource_1myh1"), SubResource("Resource_vutgm")])
+button_map = Array[ExtResource("1_6cv7q")]([SubResource("Resource_p1hqj"), SubResource("Resource_cev0x"), SubResource("Resource_umu36"), SubResource("Resource_ynqhk"), SubResource("Resource_07m7p"), SubResource("Resource_1nqwn"), SubResource("Resource_40hih"), SubResource("Resource_7syjh"), SubResource("Resource_14ai7"), SubResource("Resource_wl6mn"), SubResource("Resource_l2rxj"), SubResource("Resource_57vnm"), SubResource("Resource_6ytk1"), SubResource("Resource_j8crv"), SubResource("Resource_rlkok"), SubResource("Resource_yq076")])
+physics = SubResource("Resource_bqcog")
+default_pushbox = SubResource("Resource_wy1ds")
+cancel_groups = Array[ExtResource("2_2jtju")]([SubResource("Resource_evi34"), SubResource("Resource_45trk"), SubResource("Resource_r4axt"), SubResource("Resource_vue8l"), SubResource("Resource_1cd88")])
+idle_state_id = 300

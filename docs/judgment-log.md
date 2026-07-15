@@ -321,3 +321,121 @@ for projectiles in general — Tenet 3 (build for extension) favors the narrower
 **Scope.** `step_phases.gd`'s projectile-integration loop only; `ProjectileData.gravity`'s own
 meaning (0 = straight line) is unchanged either way. Test-covered (`test_arc_projectile.gd`'s
 `_test_non_arc_projectile_does_not_ground_despawn`).
+
+### JC-081 · 2026-07-15 · TKT-P2-05 · Character B's damage/hitstun/blockstun/hitstop values — provisional (tuning)
+**Decision.** `character-b.md`'s Normals table gives startup/active/recovery and
+`guard_height` for every normal but no damage/hitstun/blockstun/hitstop column (unlike
+`character-a.md`, which has a separate "Damage & stun" table) — these are genuinely
+unspecified, Developer-provisional tuning (the spec's own header: "frame numbers, box
+geometry, and the exact tuning values here are slice-provisional"). Authored per B's stated
+identity: lights fast/plus-ish (5L dmg 20/hitstun 14/blockstun 10/hitstop 7; 2L dmg 18/
+hitstun 15/blockstun 11/hitstop 7), mediums "weak absolute" (5M dmg 45, 2M dmg 40; both
+roughly A's-medium-minus), 5H a heavy whiff-punisher payoff (dmg 65) with a severe (20f)
+single authored recovery, 2H a launcher (dmg 55, hitstun 30 matching character A's DP-tier
+launch-stun convention, `launch = -6.0`), 6H a heavy overhead (dmg 55, hitstun 24/blockstun
+16 — clearly minus on block, matching a slow/reactable overhead's real risk). Throw: dmg 90,
+tech window 7f (same as A), hard-knockdown hitstun 28f — deliberately a notch below A's
+throw (120/30f) per B's "still weak absolute" damage identity.
+**Alternatives considered.** Copying character A's numbers verbatim for the equivalent slot
+(e.g. B's 5L = A's 5L exactly) — rejected: B's own frame data (startup/active/recovery) already
+differs from A's per-move, so a straight copy would frequently NOT reconcile through the one
+canonical advantage formula (move-format.md AD-008) the way A's hand-checked numbers do;
+picking values that reconcile against B's OWN authored frame data was the more honest
+"provisional but internally consistent" choice, same discipline as character_a.gd's own 2L note.
+**Scope.** `character_b.gd` data only. No format/contract change. Log for ratification (numbers
+settle at the P2 human-inspection gate, same bar as `AirHeightScaling`/`DamageScaling`).
+
+### JC-082 · 2026-07-15 · TKT-P2-05 · Character B reuses character A's verified gravity/jump constants; air_dash_speed/double_jump_velocity reuse the test-verified TKT-P2-02 values — provisional
+**Decision.** `CharacterB.physics.gravity = FP.from_units(1.0)`, `jump_velocity =
+FP.from_units(22.0)` (identical to character A's TKT-P2-01 values) and `air_dash_speed =
+FP.from_units(6.0)`, `double_jump_velocity = FP.from_units(18.0)` (identical to the values
+`test_dash_air_action.gd` already exercises the generic air-action engine mechanism against).
+character-b.md's Movement table gives no gravity/jump-arc numbers for B at all (only walk
+speeds, ~2.0/~1.8, which ARE used verbatim), so these are a genuine gap-fill, not a spec
+reading. Reusing A's already-tuned, already-headless-verified constants is the reasonable
+provisional default absent any stated differentiation — B's jump ARC feel (if it should differ
+from A's) is a human-inspection-gate tuning question (P2 staging note), not a P05 content call,
+and re-tuning later touches only these four constants, no structural change.
+**Alternatives considered.** Inventing new provisional numbers for B specifically (equally
+defensible, but arbitrary either way, and reusing A's ALREADY-VERIFIED-BY-HEADLESS-REPLAY
+constants (JC-068's "verified by actual headless replay, not hand-derivation") is strictly safer
+than picking a fresh, unverified pair that might net a weird half-tick landing remainder).
+**Scope.** `character_b.gd`'s `physics` block only. Log for ratification.
+
+### JC-083 · 2026-07-15 · TKT-P2-05 · 5H's whiff-punish (B-6) is an EMERGENT property of the ladder's on_contact-only cancel gate, not a separate authored mechanism — provisional (interpretation)
+**Decision.** `character-b.md`'s B-6 criterion ("whiffing 5H leaves severe recovery... whiff
+recovery ≫ its on-block recovery") is satisfied WITHOUT any new engine mechanism: 5H is
+authored with exactly ONE recovery value (20f, `duration` 30), and its ONLY cancel is the
+ladder's `on_contact` rule into 2H (per AD-044, 5H's ladder group). Since `on_contact` holds
+for BOTH `CONTACT_HIT` and `CONTACT_BLOCK` but NEVER for `CONTACT_WHIFF`, the cancel is
+available on hit/block (letting B escape most of the raw 20f recovery by chaining into 2H
+almost immediately) but categorically unavailable on a clean whiff (no contact ever recorded,
+so no cancel condition ever holds) — B is stuck through the FULL 30f duration. This reads B-6
+as an EMERGENT consequence of the ladder's own contact-gating, not a request for a genuinely
+different (longer) authored recovery specifically on whiff, which the move-format schema has no
+field to express (`MoveState.duration` is single-valued, outcome-independent).
+**Alternatives considered.** Authoring a SEPARATE longer "whiff recovery tail" state reached via
+an `on_whiff`, input-gateless `CancelRule` (inverting the format's usual "whiff-cancel = escape"
+use into "whiff-cancel = extra punishment") — technically expressible with existing fields, but
+rejected as needlessly building a new state/transition to reproduce an effect the EXISTING
+contact-gated ladder cancel already produces for free, and it would be a stranger, less obvious
+reading of `on_whiff`'s documented intent ("classes are expressed... whiff-cancel = on_whiff," an
+escape mechanism, not a penalty mechanism) than the ladder-gating reading. Verified end-to-end:
+`test_character_b.gd`'s `_test_5h_whiff_is_severely_punishable_vs_block_cancels_early`.
+**Scope.** Interpretation only; no engine change either way. Flagging for ratification since it is
+the one place this ticket reads a hard legibility/acceptance criterion (B-6) against the format
+rather than against an unambiguous spec instruction — the Architect may prefer the explicit
+whiff-tail alternative if B-6's intent was a literally-longer whiff recovery rather than an
+effective/emergent one.
+
+### JC-084 · 2026-07-15 · TKT-P2-05 · Character B's back dash authored with ZERO invuln frames (character-a's contrasts with invuln 1-7) — provisional (design-adjacent)
+**Decision.** `character-b.md`'s Movement table: back dash is "brief low-commit... Not
+invulnerable (or minimal), so it is a read-beatable escape... no invincible reversal (defense is
+movement)." The brief's own "(or minimal)" leaves room for a SMALL invuln window, but B's
+identity line ("no invincible reversal") is the more specific, load-bearing statement — read as
+the tie-breaker, `STATE_DASH_B` is authored with NO `invuln_strike`/`invuln_throw` anywhere in
+its timeline (a deliberate CONTRAST with character A's back dash, invuln frames 1-7). This is the
+reading most consistent with B's "defense is movement, not a true reversal" design contrast
+against A (character-b.md's "Identity in one line").
+**Alternatives considered.** A short (e.g. 3-4f) invuln window ("or minimal," read literally) —
+equally defensible textually; rejected as the primary reading only because B's own identity
+line names "no invincible reversal" as a headline contrast, and a dash with ANY invuln reads
+closer to "a lesser DP-style reversal" than "movement as defense." Genuinely a design-adjacent
+latitude call (not pure implementation) — flagged here explicitly for Architect attention, not
+silently assumed.
+**Scope.** `character_b.gd`'s `STATE_DASH_B` only. Test-covered
+(`test_character_b.gd`'s `_test_dash_b_reachable_via_44_and_carries_no_invuln`). Log for
+ratification; easy to add an invuln window later if overturned (one field, no structural change).
+
+### JC-085 · 2026-07-15 · TKT-P2-05 · 6H (command overhead) disambiguated from 2H/5H via button_map AUTHORING ORDER, no new recognizer shape — provisional
+**Decision.** `character-b.md`'s 6H is "forward + H," and the existing recognizer's
+`_required_direction_held(RIGHT)` gate is satisfied by ANY held-forward input INCLUDING a
+down-forward (numpad 3) hold (it checks only the forward bit, not the absence of DOWN) — so a
+down-forward+H input would satisfy BOTH 2H's (DOWN+H) and 6H's (forward+H) button_map gates
+simultaneously. Resolved purely by AUTHORING ORDER (first-match-wins, AD-032): B's
+`button_map` lists the DOWN-gated crouching normals (2M/2L/2H) BEFORE 6H, which is listed
+BEFORE the direction-agnostic standing normals (5L/5M/5H) — mirrors character_a.gd's own
+established "more specific DOWN-gated entry first" convention exactly, extended one level
+further (crouching, then a forward-gated command normal, then direction-agnostic standing).
+So: down-forward+H → 2H (crouching wins, matching real-FG genre convention that a low input
+never accidentally produces an overhead); pure forward (no down)+H → 6H; any direction+H (no
+forward, no down) → 5H.
+**Alternatives considered.** A new `required_direction` "exact match" / "excludes DOWN" gate on
+`ButtonMapEntry` (would need an engine/format change — explicitly out of this ticket's "no
+engine change" scope, and unnecessary since ordering alone fully resolves the ambiguity).
+**Scope.** `character_b.gd`'s `_build_button_map` ordering only; no recognizer change. Test-
+covered (`test_character_b.gd`'s `_test_6h_is_reachable_and_not_shadowed_by_5h`). Log for
+ratification.
+
+### JC-086 · 2026-07-15 · TKT-P2-05 · Cancel-group split: one shared group for both lights, one group per higher-strength source — provisional
+**Decision.** Five `CancelGroup`s author B's ladder: `GROUP_ALL_NORMALS` (shared by BOTH 5L
+and 2L — their legal-destination sets are IDENTICAL per AD-044's rule, so one group correctly
+expresses both), then one group each for 5M/2M/5H/2H (`GROUP_FROM_5M`, `GROUP_FROM_2M`,
+`GROUP_FROM_5H`, `GROUP_FROM_2H`), since each of those four has a DISTINCT legal-destination
+set. This is the direct, mechanical application of AD-044's own worked-out rule (recorded in
+`decisions.md`) to B's six chainable normals — no independent design choice, just naming/
+factoring (AD-044's own text: "shared groups where sets coincide — both lights share one
+group").
+**Scope.** `character_b.gd`'s `_build_cancel_groups` only; purely a "how to factor the already-
+decided rule" call. Log for ratification (low-stakes, included for completeness per the
+ticket's "record cancel-group membership" instruction).
