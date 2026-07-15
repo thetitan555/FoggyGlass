@@ -47,15 +47,35 @@ static func find_cancel(p: PlayerState, move: MoveState, character: Character) -
 		# destination is a member — resolved to that concrete destination state, since
 		# a group has no single destination of its own. A concrete (non-group) target
 		# transitions directly to `rule.target`.
+		#
+		# SAME-STATE TARGET (AD-044 resolution, flags.md, 2026-07-15): a cancel whose
+		# resolved destination equals the player's CURRENT state_id is now PERMITTED --
+		# this is what makes B's exact light self-repeat (5L->5L, 2L->2L) fire -- EXCEPT
+		# when the rule is a truly GATELESS self-target (condition == ALWAYS AND
+		# input == 0), which would loop unconditionally within one tick and stays
+		# rejected. Any cancel gated on a real input and/or a contact condition
+		# re-enters through _enter_state, which resets frame_in_state/active_hit_ids/
+		# move_contact/cancel_tags -- a fresh instance of the same move that must
+		# independently re-satisfy its own gate next time, so it cannot loop.
 		if rule.target_is_group:
 			var group_target: int = _group_cancel_target(rule.target, p, character)
-			if group_target == -1 or group_target == p.state_id:
+			if group_target == -1:
+				continue
+			if group_target == p.state_id and _is_gateless_self(rule):
 				continue
 			return group_target
-		if rule.target == p.state_id:
+		if rule.target == p.state_id and _is_gateless_self(rule):
 			continue
 		return rule.target
 	return -1
+
+
+## True iff this rule is a truly GATELESS self-target -- condition == ALWAYS AND
+## input == 0 -- the one same-state case that must stay rejected (it would loop
+## unconditionally within a single tick, since nothing gates it from firing again
+## the instant it re-enters). See find_cancel's same-state note above.
+static func _is_gateless_self(rule: CancelRule) -> bool:
+	return rule.condition == CancelRule.CONDITION_ALWAYS and rule.input == 0
 
 
 ## Group-target resolution (AD-044, move-format.md criterion 10). Finds the first

@@ -9,15 +9,17 @@ extends SceneTree
 ## Run:  godot --headless --path game -s res://tests/test_character_b.gd
 ## Exits non-zero on any failure so a harness/CI can gate on it.
 ##
-## FLAGGED ENGINE GAP (docs/flags.md; see character_b.gd's header comment for
+## RESOLVED ENGINE GAP (docs/flags.md; see character_b.gd's header comment for
 ## the full write-up): a cancel (concrete OR group-resolved) whose destination
-## equals the player's CURRENT state_id never fires (CancelEval.find_cancel /
-## phase2_state_machine both guard `target == p.state_id`). This blocks the
-## LITERAL self-repeat step of the lights' self-chain (5L->5L, 2L->2L) — every
-## other ladder transition (including light -> non-light, and non-light ->
-## non-light per AD-044's stance-toggle rule) is unaffected. The self-repeat
-## tests below assert the CURRENT (blocked) behavior and are clearly marked —
-## they document the gap rather than silently passing as if it were fixed.
+## equals the player's CURRENT state_id used to never fire (CancelEval.
+## find_cancel guarded `target == p.state_id` / `group_target == p.state_id`
+## unconditionally). The Architect's resolution: the guard is now relaxed to
+## PERMIT a same-state cancel except a truly gateless self-target (condition
+## ALWAYS + input 0) — this is what makes the lights' literal self-repeat
+## (5L->5L, 2L->2L) fire (`CancelEval` only; `step_phases.gd`'s identical
+## neutral-branch guard, `target_state != p.state_id`, is intentionally left
+## as-is — it sits on a different path, the actionable/neutral re-derivation,
+## which this self-repeat cancel does not exercise).
 
 var _failures: int = 0
 var _checks: int = 0
@@ -262,22 +264,29 @@ func _test_ladder_rejects_5m_into_5l() -> void:
 
 
 func _test_ladder_self_repeat_5l_currently_blocked() -> void:
-	# DOCUMENTS THE FLAGGED GAP (see file header + character_b.gd): AD-044 says
-	# "lights self-chain, including exact repeat," so 5L is authored with itself
-	# IN its own ladder group (GROUP_ALL_NORMALS). But CancelEval rejects any
-	# cancel whose resolved destination equals the player's CURRENT state_id, so
-	# this currently does NOT fire. This assertion locks in today's real,
-	# empirically-verified behavior — it is NOT the spec's intent, and should be
-	# flipped the moment the Architect resolves the flag.
+	# RESOLVED (flags.md, 2026-07-15): AD-044 says "lights self-chain, including
+	# exact repeat," so 5L is authored with itself IN its own ladder group
+	# (GROUP_ALL_NORMALS). CancelEval's same-state guard was relaxed to permit a
+	# same-state cancel except a truly gateless self-target — this on_contact,
+	# input-gated cancel is exactly the case now permitted, so 5L->5L fires. Test
+	# name kept (drives _drive_and_attempt_cancel's early-cancel proof) but the
+	# expectation is flipped from "blocked" to "succeeds."
 	var s := _drive_and_attempt_cancel(CharacterB.STATE_5L, 35, InputFrame.BUTTON_0, 20)
-	_eq(s.players[0].state_id, CharacterB.STATE_5L, "5L->5L self-repeat does NOT currently fire (flagged engine gap, not a design choice)")
+	_eq(s.players[0].state_id, CharacterB.STATE_5L, "5L->5L self-repeat fires (AD-044 exact light self-repeat, CancelEval fix)")
+	_true(s.players[0].frame_in_state < move_duration(CharacterB.STATE_5L), "the self-repeat re-entered as a FRESH instance (frame_in_state reset), not merely finishing out the original")
 	_cleanup()
 
 
 func _test_ladder_self_repeat_2l_currently_blocked() -> void:
 	var s := _drive_and_attempt_cancel(CharacterB.STATE_2L, 35, InputFrame.DOWN | InputFrame.BUTTON_0, 20)
-	_eq(s.players[0].state_id, CharacterB.STATE_2L, "2L->2L self-repeat does NOT currently fire (flagged engine gap, not a design choice)")
+	_eq(s.players[0].state_id, CharacterB.STATE_2L, "2L->2L self-repeat fires (AD-044 exact light self-repeat, CancelEval fix)")
 	_cleanup()
+
+
+## The authored `duration` of a character-B state (fresh lookup — avoids caching a
+## builder instance across the self-repeat assertion above).
+func move_duration(state_id: int) -> int:
+	return CharacterB.build_character().get_state(state_id).duration
 
 
 ## The brief/AD-044's own worked example, "5L 2L 2L 5M 2M 2H 5H," driven END TO

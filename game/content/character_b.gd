@@ -23,25 +23,16 @@ extends RefCounted
 ## header: "frame numbers, box geometry, and the exact tuning values here are
 ## slice-provisional") — recorded in docs/judgment-log.md, not re-litigated here.
 ##
-## FLAGGED ENGINE GAP (docs/flags.md, raised with this ticket): AD-044's "lights
-## self-chain, including exact repeat" (5L->5L, 2L->2L) does NOT currently fire.
-## CancelEval.find_cancel rejects ANY cancel (concrete or group-resolved) whose
-## destination equals the player's CURRENT state_id (`target == p.state_id` /
-## `group_target == p.state_id` -> `continue`), and phase2_state_machine's own
-## ordinary actionable/buffered-command branch carries an identical guard
-## (`target_state != p.state_id`). This predates AD-044 (P0 code, before any
-## character needed self-repeat) and was never exercised by a test until this
-## ticket. Verified empirically (a scratch trace: a concrete on_contact,
-## input-gateless cancel targeting the attacker's OWN state never fires — the
-## state's frame_in_state keeps advancing instead of resetting to 1). B's
-## 5L/2L are authored below EXACTLY as AD-044 specifies (their ladder group
-## includes themselves), so no re-authoring is needed once the gap is fixed —
-## only the CURRENTLY-BLOCKED transition (5L->5L, 2L->2L) is affected; every
-## cross-state ladder transition (5L->2L, 2L->5M, 5M->2M, 2M->2H, 2H->5H, 5H->2H,
-## …) is unaffected and verified working in test_character_b.gd. This is an
-## engine-capability question ("no engine change" is this ticket's explicit
-## scope), not a data-authoring gap — flagged to the Architect/Strategist rather
-## than patched here.
+## RESOLVED ENGINE GAP (docs/flags.md, raised with this ticket, resolved
+## 2026-07-15): AD-044's "lights self-chain, including exact repeat" (5L->5L,
+## 2L->2L) initially did not fire — CancelEval.find_cancel rejected ANY cancel
+## (concrete or group-resolved) whose destination equalled the player's CURRENT
+## state_id unconditionally. The Architect's fix (CancelEval only, game/sim/
+## cancel_eval.gd): permit a same-state cancel EXCEPT a truly gateless
+## self-target (condition ALWAYS + input 0), which stays rejected. B's 5L/2L
+## needed NO re-authoring — they were already authored exactly per AD-044 (each
+## names itself as a legal member of its own ladder group, GROUP_ALL_NORMALS)
+## before the fix landed; only the engine guard changed.
 
 const CHAR_ID: int = 3
 
@@ -482,9 +473,8 @@ static func _build_normals() -> Array[MoveState]:
 
 ## 5L: 4 startup / 3 active / 7 recovery (duration 14). MID. Fast pressure
 ## starter; self-chains (ladder group = ALL_NORMALS, includes 5L itself --
-## AD-044 -- but see the FLAGGED ENGINE GAP header note: the literal 5L->5L
-## repeat step does not currently fire; every OTHER transition in the group
-## does).
+## AD-044 -- including the literal 5L->5L repeat step, per the CancelEval fix
+## above).
 static func _build_5l() -> MoveState:
 	var m := MoveState.new()
 	m.id = STATE_5L
