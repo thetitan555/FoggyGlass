@@ -852,7 +852,23 @@ static func _resolve_one_hit(next: SimState, attacker: int, defender: int, hb: H
 	# attacker) in a blockable state. "Blockable" at P0 = the defender is actionable
 	# or already in blockstun (a grounded, non-stunned defender may block). A defender
 	# already in hitstun cannot block (combo).
-	var blocking: bool = _defender_is_blocking(def, attacker, next)
+	var attempted_block: bool = _defender_is_blocking(def, attacker, next)
+
+	# --- Directional block enforcement (AD-045) -------------------------------
+	# A back-hold is only a VALID block if the defender's STANCE (crouching, per
+	# MoveState.is_crouch on the defender's CURRENT state) is compatible with the
+	# attack's guard_height: HIGH needs standing, LOW needs crouching, MID either.
+	# A wrong-stance back-hold resolves as a HIT (hitstun/damage), not a block —
+	# this is what makes a high/low mixup real and readable (combat-resolution.md
+	# "Directional block enforcement"). `block_valid` stays true when the defender
+	# did not attempt to block at all (no stance violation happened — HitEvent can
+	# then distinguish "didn't block" from "blocked in the wrong stance").
+	var def_move: MoveState = character_def.get_state(def.state_id) if character_def != null else null
+	var defender_crouching: bool = def_move != null and def_move.is_crouch
+	var block_valid: bool = true
+	if attempted_block:
+		block_valid = _stance_valid_for_guard(hb.guard_height, defender_crouching)
+	var blocking: bool = attempted_block and block_valid
 
 	var reaction_state: int
 	var stun_frames: int
@@ -966,11 +982,33 @@ static func _resolve_one_hit(next: SimState, attacker: int, defender: int, hb: H
 	# on the airborne-attacker hit branch, otherwise left at their zero defaults.
 	rec.contact_depth = contact_depth
 	rec.air_height_hitstun_delta = air_height_hitstun_delta
+	# Guard-height attribution (AD-045): the connecting attack's block-height
+	# requirement, and whether the defender's block was stance-valid — surfaced
+	# regardless of whether the contact resolved as a hit or a block, so the
+	# training mode can show "this was an overhead/a low" and "why" on either
+	# outcome (inspection-surface.md → HitEvent.guard_height/block_valid).
+	rec.guard_height = hb.guard_height
+	rec.block_valid = block_valid
 	# The hit is observable on the frame this step PRODUCES. Phase 7 sets the final tick
 	# to next.tick + 1, so record that value now — HitEvent.tick then equals the tick of
 	# the state in which last_hit is first readable (deterministic, phase-order-stable).
 	rec.tick = next.tick + 1
 	next.last_hit = rec
+
+
+## Directional block enforcement (AD-045): true iff a back-hold in the defender's
+## CURRENT stance (`crouching`) is a VALID block against `guard_height`. HIGH
+## (overhead) requires standing; LOW requires crouching; MID (and any other/
+## unauthored value, defensively) is valid either way — the default that leaves
+## every P1 move unchanged.
+static func _stance_valid_for_guard(guard_height: int, crouching: bool) -> bool:
+	match guard_height:
+		HitBox.GUARD_HIGH:
+			return not crouching
+		HitBox.GUARD_LOW:
+			return crouching
+		_:
+			return true
 
 
 ## Whether the defender is blocking the incoming hit: holding BACK (raw resolved to

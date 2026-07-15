@@ -79,3 +79,19 @@ var is_throw: bool:
 ## 0 = none / not a throw window. Read on connect by the throw path (step_phases.gd
 ## `_resolve_throw`), which copies it into the defender's `throw_tech_window`.
 @export var tech_window: int = 0
+
+## Block-height requirement (AD-045): GUARD_HIGH (overhead — must be blocked
+## STANDING), GUARD_LOW (must be blocked CROUCHING), GUARD_MID (blockable either
+## stance). Default GUARD_MID leaves every existing/authored move unchanged (P1
+## moves never set this). Consumed in phase 5's hit-vs-block resolution
+## (step_phases.gd `_resolve_one_hit`): a defender holding back in the WRONG stance
+## for this attack's guard_height is an invalid block and resolves as a HIT (hitstun/
+## damage), not a block — this is what makes a high/low mixup real and readable
+## (move-format.md → HitBox.guard_height; combat-resolution.md "Directional block
+## enforcement"). The connecting attack's guard_height and whether the block was
+## stance-valid are surfaced on HitRecord/HitEvent (inspection-surface.md).
+@export var guard_height: int = GUARD_MID
+
+const GUARD_MID: int = 0
+const GUARD_HIGH: int = 1
+const GUARD_LOW: int = 2

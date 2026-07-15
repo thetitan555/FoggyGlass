@@ -262,3 +262,26 @@ distinguishable from character A's other movement speeds in test assertions — 
 character tuning for whichever character actually ships an air dash / double jump (character
 B, TKT-P2-05/06) is that ticket's call, not this one's.
 **Scope.** Test file only. No production content change. Log for ratification.
+
+### JC-078 · 2026-07-15 · TKT-P2-03 · `MoveState.is_crouch` — the stance signal AD-045's block-height check reads — provisional
+**Decision.** AD-045 / `combat-resolution.md` say directional-block validity reads "whether the
+defender is in a crouch-category state (already tracked, AD-038 crouch stance)" — but no engine
+signal for "is this state a crouching one" actually existed: `MoveState.category` is the small
+fixed engine set (`GROUNDED`/`AIRBORNE`/`HITSTUN`/`BLOCKSTUN`/`HITSTOP`) and does not distinguish
+stand from crouch at any of those categories (character A's `STATE_CROUCH` and `STATE_IDLE` are
+both plain `CATEGORY_GROUNDED`; `STATE_BLOCKSTUN` and `STATE_CROUCH_BLOCKSTUN` are both plain
+`CATEGORY_BLOCKSTUN`). Added `MoveState.is_crouch: bool = false` (default false, authored content,
+mirrors `loop`) so phase 5 can read the DEFENDER's current-state flag to derive stance, with no
+`SimState`/`PlayerState` shape change (state_id — already serialized — is what resolves to this
+flag through `MoveRegistry`, exactly like `category`/`pushbox` resolve today).
+**Alternative considered.** A `Character`-level named group (`crouch_state_ids`, mirroring
+AD-044's `cancel_groups` pattern) instead of a per-`MoveState` flag — also data-only, also no
+`SimState` change. Rejected only for locality: a state's own stance is a property of that state,
+readable at the state itself rather than cross-referenced through a second authored table; the
+two are behaviorally identical (same defender-stance answer, same seam surface), so this is a
+"how," not a "what," call.
+**Scope.** `move-format.md`'s `MoveState` schema table does not currently list this field —
+flagging the gap so the Architect can fold it into the schema table on ratification (or overturn
+in favor of the group-table alternative); either reading satisfies AD-045 identically. Character
+A's `STATE_CROUCH` and `STATE_CROUCH_BLOCKSTUN` are authored `is_crouch = true`; every other A
+state defaults false (unaffected).

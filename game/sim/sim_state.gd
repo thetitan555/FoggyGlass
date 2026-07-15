@@ -36,7 +36,14 @@ extends RefCounted
 ## this number instead"). No migration branch exists for v1 (pre-P2) blobs —
 ## none are in circulation outside a run's own snapshot/restore, per AD-034's
 ## precedent (add a migration branch only when a real v1 payload needs reading).
-const FORMAT_VERSION: int = 2
+##
+## Bumped 2 -> 3 (TKT-P2-03, AD-045): HitRecord (last_hit) gains `guard_height` /
+## `block_valid_int`, another sub-shape change. Same tolerant-field precedent: a
+## v1/v2 dict is accepted below and parses through the SAME code path because
+## HitRecord.from_dict reads the two new keys with `.get(...)` defaults (GUARD_MID
+## / valid — the correct reading for a hit recorded before directional-block
+## enforcement existed).
+const FORMAT_VERSION: int = 3
 
 var tick: int = 0
 var rng: RngState = null
@@ -155,23 +162,31 @@ func to_dict() -> Dictionary:
 
 
 ## Restores a SimState from a `to_dict()` graph, format-version aware (AD-034).
-## `"v"` absent -> treated as version 1. `"v" == FORMAT_VERSION` (2) -> parses
+## `"v"` absent -> treated as version 1. `"v" == FORMAT_VERSION` (3) -> parses
 ## normally (the current shape). Any other value -> fails loudly (`push_error`)
-## rather than silently mis-parsing a shape this code doesn't understand.
+## rather than silently mis-parsing a shape this code doesn't understand — EXCEPT
+## the specific older versions below, each accepted because every field that
+## changed since is read tolerantly (`.get(...)` with a correct-for-that-version
+## default), so the SAME parse path is safe for them too.
 ##
 ## v1 MIGRATION (TKT-P2-01, AD-034's own anticipated trigger: "added when a v2
 ## actually exists" -- it now does). v1 predates `PlayerState.air_action_used`
-## (bumped by this ticket); a v1 dict is accepted here and parses through the
+## (bumped by TKT-P2-01); a v1 dict is accepted here and parses through the
 ## SAME code path, because the one field that changed is read tolerantly
 ## (`PlayerState.from_dict` defaults a missing `air_action_used` to false --
 ## the correct value for a v1 state, which predates the whole air-action
-## economy, AD-046). No separate v1 parsing branch is needed for a single
-## default-tolerant field; a future shape change that ISN'T default-safe would
-## need a real branch here.
+## economy, AD-046).
+##
+## v2 MIGRATION (TKT-P2-03, AD-045). v2 predates `HitRecord.guard_height` /
+## `block_valid` (bumped by this ticket); a v2 dict is accepted the same way —
+## `HitRecord.from_dict` defaults the two missing keys to GUARD_MID / valid, the
+## correct reading for a hit recorded before directional-block enforcement
+## existed. No separate v1/v2 parsing branch is needed for default-tolerant
+## fields; a future shape change that ISN'T default-safe would need a real branch.
 static func from_dict(d: Dictionary) -> SimState:
 	var v: int = int(d.get("v", 1))
-	if v != FORMAT_VERSION and v != 1:
-		push_error("SimState.from_dict: unsupported format version %d (expected %d or legacy 1); refusing to parse." % [v, FORMAT_VERSION])
+	if v != FORMAT_VERSION and v != 1 and v != 2:
+		push_error("SimState.from_dict: unsupported format version %d (expected %d, or legacy 1/2); refusing to parse." % [v, FORMAT_VERSION])
 		return null
 	var s := SimState.new()
 	s.tick = int(d["tick"])

@@ -384,6 +384,7 @@ static func _build_movement() -> Array[MoveState]:
 	cr_kf.frame_end = 1
 	cr_kf.hurtboxes = [_hurt_crouch()]
 	crouch.timeline = [cr_kf]
+	crouch.is_crouch = true   # AD-045: the stance a LOW must be held into to block
 	out.append(crouch)
 
 	# FORWARD DASH: 20f, ~95px, fully committed (no cancel -- authoring omits
@@ -780,18 +781,25 @@ static func _build_5h() -> MoveState:
 ## this is the correct data-only reading; logged (docs/judgment-log.md) since
 ## a future tuning pass may want to close the gap by adjusting recovery
 ## instead of hitstun.
+##
+## GUARD_LOW (AD-045, TKT-P2-03; ratified scope call): a real low -- must be
+## blocked crouching; a standing back-hold resolves as a HIT. `is_crouch = true`
+## (the character is crouched throughout, matching the animation the guard
+## reads against -- charter "the art teaches before the HUD").
 static func _build_2l() -> MoveState:
 	var m := MoveState.new()
 	m.id = STATE_2L
 	m.category = MoveState.CATEGORY_GROUNDED
 	m.duration = 14   # 4 + 3 + 7
 	m.loop = false
+	m.is_crouch = true
 	var kf_start := Keyframe.new()
 	kf_start.frame_start = 1
 	kf_start.frame_end = 4
 	kf_start.hurtboxes = [_hurt_crouch()]
 	var hb := HitBox.new()
 	hb.box = Box.make(FP.from_int(20), FP.from_int(-20), FP.from_int(25), FP.from_int(15))   # AD-037 reflected
+	hb.guard_height = HitBox.GUARD_LOW   # AD-045 (ratified scope call): 2L is now an enforced low
 	hb.damage = 20
 	hb.hitstun = 15
 	hb.blockstun = 10
@@ -818,18 +826,23 @@ static func _build_2l() -> MoveState:
 
 ## 2M: 6 startup / 3 active / 13 recovery -- "the signature poke," long range.
 ## dmg 70, blockstun 14, hitstun 18, hitstop 10. On block -1, on hit +3.
+## GUARD_LOW (AD-045, TKT-P2-03; ratified scope call): a real low -- must be
+## blocked crouching. `is_crouch = true` (crouched throughout, matching the
+## animation the guard reads against).
 static func _build_2m() -> MoveState:
 	var m := MoveState.new()
 	m.id = STATE_2M
 	m.category = MoveState.CATEGORY_GROUNDED
 	m.duration = 22   # 6 + 3 + 13
 	m.loop = false
+	m.is_crouch = true
 	var kf_start := Keyframe.new()
 	kf_start.frame_start = 1
 	kf_start.frame_end = 6
 	kf_start.hurtboxes = [_hurt_crouch()]
 	var hb := HitBox.new()
 	hb.box = Box.make(FP.from_int(30), FP.from_int(-28), FP.from_int(45), FP.from_int(18))   # long range; AD-037 reflected
+	hb.guard_height = HitBox.GUARD_LOW   # AD-045 (ratified scope call): 2M is now an enforced low
 	hb.damage = 70
 	hb.hitstun = 18
 	hb.blockstun = 14
@@ -866,6 +879,7 @@ static func _build_2h() -> MoveState:
 	m.category = MoveState.CATEGORY_GROUNDED
 	m.duration = 21   # 5 + 3 + 13
 	m.loop = false
+	m.is_crouch = true   # AD-045: crouched throughout (guard_height stays default MID -- unaffected)
 	var kf_start := Keyframe.new()
 	kf_start.frame_start = 1
 	kf_start.frame_end = 5
@@ -1004,6 +1018,7 @@ static func _build_reactions() -> Array[MoveState]:
 	crouch_blockstun.category = MoveState.CATEGORY_BLOCKSTUN
 	crouch_blockstun.duration = 14   # longest crouch-blocked hit (2M, 14f)
 	crouch_blockstun.loop = false
+	crouch_blockstun.is_crouch = true   # AD-045: a chain-blocked low reads a subsequent low correctly
 	var cbs_kf := Keyframe.new()
 	cbs_kf.frame_start = 1
 	cbs_kf.frame_end = crouch_blockstun.duration

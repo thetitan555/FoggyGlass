@@ -27,6 +27,17 @@ extends Resource
 ## Whether `duration` loops (idle/walk) or plays once.
 @export var loop: bool = false
 
+## Whether this state is a CROUCHING stance (AD-038's "crouch stance" — e.g. the
+## held-DOWN loop state, a crouching normal, or a crouch-blockstun reaction).
+## Authored content (like `loop`), read by phase 5's directional-block-enforcement
+## check (AD-045, combat-resolution.md "Directional block enforcement") to derive
+## the defender's stance for `HitBox.guard_height` compatibility — a defender whose
+## CURRENT state has `is_crouch == true` is crouching; standing otherwise. Default
+## false (every existing non-crouch state is unaffected). No SimState shape change:
+## this is authored move data, resolved through the same MoveRegistry lookup that
+## already backs `state_id`, exactly like `loop`/`category`/`pushbox`.
+@export var is_crouch: bool = false
+
 ## Pushbox for this state (character-local, fixed-point). Per move-format.md the
 ## pushbox is defined per MoveState/category unless a move overrides it. A move with
 ## a null pushbox uses the character's default (Character.default_pushbox).

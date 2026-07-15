@@ -40,11 +40,22 @@ var tick: int = 0
 var contact_depth: int = 0
 var air_height_hitstun_delta: int = 0
 
+## Directional-block attribution (AD-045; TKT-P2-03). `guard_height` is the
+## connecting attack's block-height requirement (HitBox.GUARD_HIGH/LOW/MID);
+## `block_valid` is whether the defender's block was stance-valid for it — true
+## when the defender did not attempt to block at all (no violation to report) or
+## attempted a stance-correct block, false only for a wrong-stance back-hold (the
+## hit that lands "through" an attempted block). Defaults (GUARD_MID, true) match
+## every P1 hit unchanged (move-format.md → HitBox.guard_height default MID).
+var guard_height: int = HitBox.GUARD_MID
+var block_valid: bool = true
+
 ## Canonical hash field order (AD-023). SimState.hash_state folds these in order.
 const HASH_FIELDS: Array[String] = [
 	"attacker", "defender", "damage_dealt", "was_block_int",
 	"scaling_applied_pct", "combo_count_after", "tick",
 	"contact_depth", "air_height_hitstun_delta",
+	"guard_height", "block_valid_int",
 ]
 
 
@@ -59,11 +70,14 @@ func clone() -> HitRecord:
 	r.tick = tick
 	r.contact_depth = contact_depth
 	r.air_height_hitstun_delta = air_height_hitstun_delta
+	r.guard_height = guard_height
+	r.block_valid = block_valid
 	return r
 
 
-## Serialize to plain-data. `was_block` is stored as an int (0/1) under
-## `was_block_int` so both to_dict and the hash walk see a pure-integer stream.
+## Serialize to plain-data. `was_block` / `block_valid` are stored as ints (0/1)
+## under their `_int`-suffixed keys so both to_dict and the hash walk see a
+## pure-integer stream.
 func to_dict() -> Dictionary:
 	return {
 		"attacker": attacker,
@@ -75,6 +89,8 @@ func to_dict() -> Dictionary:
 		"tick": tick,
 		"contact_depth": contact_depth,
 		"air_height_hitstun_delta": air_height_hitstun_delta,
+		"guard_height": guard_height,
+		"block_valid_int": 1 if block_valid else 0,
 	}
 
 
@@ -89,4 +105,9 @@ static func from_dict(d: Dictionary) -> HitRecord:
 	r.tick = int(d["tick"])
 	r.contact_depth = int(d["contact_depth"])
 	r.air_height_hitstun_delta = int(d["air_height_hitstun_delta"])
+	# A pre-P2 (v2) dict predates guard_height/block_valid (AD-034 migration,
+	# SimState.from_dict); defaults (MID / valid) are correct for a hit recorded
+	# before directional-block enforcement existed.
+	r.guard_height = int(d.get("guard_height", HitBox.GUARD_MID))
+	r.block_valid = int(d.get("block_valid_int", 1)) != 0
 	return r

@@ -25,6 +25,16 @@ var tick: int = 0
 var contact_depth: int = 0
 var air_height_hitstun_delta: int = 0
 
+## Directional-block attribution (AD-045; TKT-P2-03; inspection-surface.md
+## criterion 8). `guard_height` is the connecting attack's block-height
+## requirement (HitBox.GUARD_HIGH/LOW/MID); `block_valid` is whether the
+## defender's block was stance-valid for it. When the defender held back but in
+## the wrong stance (`block_valid == false`, `was_block == false`), the training
+## mode shows *why* the hit landed — an overhead that beat a crouch, a low that
+## beat a stand-block.
+var guard_height: int = 0
+var block_valid: bool = true
+
 
 ## Build a view from the sim's serialized HitRecord. The single source of truth is
 ## the record in state; this only re-shapes it for the seam.
@@ -39,4 +49,6 @@ static func from_record(rec: HitRecord) -> HitEvent:
 	e.tick = rec.tick
 	e.contact_depth = rec.contact_depth
 	e.air_height_hitstun_delta = rec.air_height_hitstun_delta
+	e.guard_height = rec.guard_height
+	e.block_valid = rec.block_valid
 	return e
