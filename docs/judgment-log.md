@@ -162,6 +162,14 @@ invented one, but it is a genuine gap-fill with more than one defensible reading
 "sudden death can only ever run once, arbitrate a tie by X" is equally plausible) — flagged
 here explicitly for Architect attention even though it's logged as latitude, since it's the
 one call in this ticket closest to "design intent" rather than pure implementation.
+**Decision (same-tick KO-vs-timeout priority).** If a KO (or double-KO) and the timer
+reaching 0 both become true on the SAME tick, `_step_active` resolves it as a KO/
+double-KO, never `TIMEOUT` — the health outcome that actually happened this tick is
+the more specific, more legible truth ("why did the round end" reads as "someone got
+KO'd," not "oh, and also the clock happened to hit zero"). `match-flow.md` doesn't
+name this exact coincidence; read as the obvious tie-break rather than a genuine
+open question, but recorded since it does shape `last_round_end_reason` — the
+serialized, legibility-load-bearing field the brief cares most about getting right.
 **Alternatives considered.** Resetting `tick`/`rng` per round (a "fresh start" every round)
 — rejected: `simulation.md` calls `tick` "the authoritative clock" match-wide and AD-048
 explicitly keeps RNG a single match-wide seed ("RNG reuses SimState.rng... the seed lives in
