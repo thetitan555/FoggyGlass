@@ -42,14 +42,40 @@ static func find_cancel(p: PlayerState, move: MoveState, character: Character) -
 			continue
 		if not _input_buffered(rule, p, character):
 			continue
-		# A group target (target_is_group) names a SET of states; at P0 we resolve a
-		# group to nothing actionable (no groups authored in the slice) — treat a plain
-		# state target only. A concrete state target transitions directly.
+		# A group target (target_is_group, AD-044) names a SET of states (character.
+		# cancel_groups); it is satisfied when SOME buffered button_map command's
+		# destination is a member — resolved to that concrete destination state, since
+		# a group has no single destination of its own. A concrete (non-group) target
+		# transitions directly to `rule.target`.
 		if rule.target_is_group:
-			continue
+			var group_target: int = _group_cancel_target(rule.target, p, character)
+			if group_target == -1 or group_target == p.state_id:
+				continue
+			return group_target
 		if rule.target == p.state_id:
 			continue
 		return rule.target
+	return -1
+
+
+## Group-target resolution (AD-044, move-format.md criterion 10). Finds the first
+## button_map entry (authored order, deterministic) whose target_state_id is a
+## MEMBER of the group named by `group_id`, and whose command is buffered THIS
+## tick (the same recognizer every other command reads — InputBuffer.entry_
+## satisfied). Returns that entry's target_state_id (the concrete destination the
+## cancel resolves to), or -1 if no group member's command is currently buffered
+## or the group/character is unresolvable.
+static func _group_cancel_target(group_id: int, p: PlayerState, character: Character) -> int:
+	if character == null:
+		return -1
+	var group: CancelGroup = character.cancel_group(group_id)
+	if group == null:
+		return -1
+	for entry in character.button_map:
+		if not group.has_member(entry.target_state_id):
+			continue
+		if InputBuffer.entry_satisfied(p.input_history, entry, p.facing):
+			return entry.target_state_id
 	return -1
 
 

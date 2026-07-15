@@ -10,6 +10,15 @@ extends Resource
 
 ## Destination state_id, or a tag/group id naming a set of states (interpretation
 ## fixed by `target_is_group`).
+##
+## GROUP TARGETS (AD-044, `target_is_group == true`): `target` names a
+## `Character.cancel_groups` entry's `id`, not a state_id. Resolution differs from
+## a concrete target: there is no single destination to gate one `input` command
+## against, so `input` is authored `0` (no gate) and CancelEval instead scans the
+## character's `button_map` for WHICHEVER group-member command is buffered this
+## tick, resolving to that entry's concrete `target_state_id` (see
+## CancelEval._group_cancel_target). Character B's gatling ladder is authored
+## this way (move-format.md → CancelRule; character-b.md).
 @export var target: int = 0
 @export var target_is_group: bool = false
 
