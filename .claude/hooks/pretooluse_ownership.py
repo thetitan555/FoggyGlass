@@ -44,7 +44,12 @@ USER_ONLY = (
 # ---------------------------------------------------------------------------
 OWNERSHIP = [
     ("docs/flags.md",                 {"strategist", "architect", "developer", "qa"}),
-    ("docs/judgment-log.md",          {"developer", "architect"}),
+    # Strategist also writes here, but ONLY for the closed-body sweep (moving
+    # ratified/overturned entries out to judgment-log-archive.md) — the
+    # maintenance split in protocol.md. Developer appends provisional bodies;
+    # Architect flips status in place. The hook can't express "delete-closed-only,"
+    # so this is a full grant scoped by convention (see protocol.md).
+    ("docs/judgment-log.md",          {"developer", "architect", "strategist"}),
     ("docs/judgment-log-archive.md",  {"strategist"}),
     ("docs/flags-archive.md",         {"strategist"}),
     ("docs/protocol.md",              {"strategist"}),

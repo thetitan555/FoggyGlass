@@ -85,7 +85,7 @@ project tree — **`/game`** at repo root (the Architect's call, recorded in
 | Tickets | `/docs/tickets/*.md` | **Architect** | Developer, QA |
 | Game production code | `/game` (non-test) | **Developer** | all |
 | Game tests + harnesses | `/game/**/tests`, `test_*.gd`, `*_test.gd` | **Developer** + **QA** | all |
-| Judgment-call log (provisional bodies only) | `/docs/judgment-log.md` | **Developer** writes; **Architect** ratifies | QA, Architect |
+| Judgment-call log (provisional bodies only) | `/docs/judgment-log.md` | **Developer** writes; **Architect** ratifies; **Strategist** sweeps closed bodies out | QA, Architect |
 | Judgment-call archive (closed, verbatim) | `/docs/judgment-log-archive.md` | **Strategist** moves entries in | on demand |
 | Audit + drift reports | `/docs/audits/*.md` | **QA** | routed to owner |
 | Flag ledger (open) | `/docs/flags.md` | **any role** appends; **owner** resolves | all |
