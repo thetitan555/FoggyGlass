@@ -34,3 +34,15 @@ extends Resource
 
 ## Destination state_id this input produces.
 @export var target_state_id: int = 0
+
+## Double-tap recognition (AD-046, TKT-P2-02). When true, the command is a
+## DOUBLE-TAP of `required_direction`: pressed -> released -> pressed within the
+## slice-wide double-tap window (InputBuffer.DOUBLE_TAP_WINDOW), recognized by the
+## one recognizer over `input_history` (pure function of history, Tenet 2). Shares
+## the pure-direction shape (`button_index == -1`, `motion == 0`,
+## `chord_button_index == -1`; `required_direction` names the tapped direction) but
+## is a DISTINCT recognition path from a plain held direction (AD-032) — a
+## continuous hold never satisfies a double-tap, only a genuine press-release-
+## press. Routes to a dash state (character B's ground dash; character A's
+## `66`/`44` -> `STATE_DASH_F`/`STATE_DASH_B`).
+@export var double_tap: bool = false

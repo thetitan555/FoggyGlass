@@ -69,6 +69,12 @@ var throw_tech_window: int = 0
 ## The attacker index that threw this player, or -1 if not currently thrown (AD-028).
 var thrown_by: int = -1
 
+## Whether this player has spent its ONE air action (air dash OR double jump) since
+## takeoff (AD-046) — a straight read-only projection of PlayerState.air_action_used
+## (no re-derivation). Backs the air-economy readout ("your air action is spent");
+## resets to false on landing (AD-043's continuous clamp+landing).
+var air_action_used: bool = false
+
 ## This player's CURRENT-frame invulnerability (AD-031), read from its covering
 ## keyframe(s) for `frame_in_state`: `{ strike, throw }` bools. A DERIVED projection
 ## (like box geometry) — not a serialized SimState field. Backs "this frame is
@@ -120,6 +126,7 @@ func _init(state: SimState, i: int, roster: Dictionary = {}) -> void:
 	cancel_tags = p.cancel_tags.duplicate()
 	throw_tech_window = p.throw_tech_window
 	thrown_by = p.thrown_by
+	air_action_used = p.air_action_used
 
 	input_current = p.input_history.newest()
 	input_history = _history_oldest_to_newest(p.input_history)

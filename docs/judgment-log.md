@@ -179,3 +179,86 @@ mental model) — passed over as unnecessary churn once a single-application-at-
 point is just as correct and cheaper to reason about/hash-compare (criterion 7).
 **Scope.** `match_state.gd` only; no contract/format change beyond what AD-048 already
 specifies. Log for ratification.
+
+### JC-074 · 2026-07-15 · TKT-P2-02 · Double-tap window value + recognition shape — provisional
+**Decision.** `InputBuffer.DOUBLE_TAP_WINDOW = 12` — adopted verbatim from AD-046's own
+placeholder text ("~12f"), rather than picking an independent number. Recognition
+(`double_tap_recognized`) scans the window oldest→newest through a 3-state machine (await
+first press → await release → await second press), mirroring `motion_recognized`'s existing
+scan shape but over press/release EDGES of one direction rather than an ordered token
+sequence — a continuous hold never advances past "await release," so an ordinary walk/dash-
+hold never spuriously satisfies a double-tap. `ButtonMapEntry.double_tap` is checked FIRST
+and exclusively in `entry_satisfied` (never falls through to the plain-direction path it
+otherwise shares button_index/motion shape with) — a double-tap entry and an ordinary
+pure-direction entry (AD-032) are genuinely distinct recognition paths, never merged.
+**Alternatives considered.** Folding double-tap into `_motion_tokens` as a new "motion" (e.g.
+a 2-token same-direction sequence) — rejected per AD-046's own text ("a re-press is not a
+direction sequence; conflates two recognizer concepts"), and mechanically wrong besides:
+`_frame_satisfies`/`motion_recognized` model an ORDERED sequence of DIFFERENT tokens
+completing once, not a press/release/press edge pattern of the SAME token.
+**Scope.** `input_buffer.gd`, `button_map_entry.gd`. No contract shape change beyond what
+`move-format.md`'s own `ButtonMapEntry.double_tap` entry already names. Log for ratification.
+
+### JC-075 · 2026-07-15 · TKT-P2-02 · Air-action mechanism shape: engine-generic, phase-3, velocity-only (no state transition) — provisional
+**Decision.** Air dash / double jump are NOT authored via `CancelRule`/`ButtonMapEntry` at
+all (unlike the ground dash, which explicitly is one) — they are a generic engine check
+(`StepPhases._apply_air_action`) run in phase 3 for every physically-airborne player every
+tick, gated only by `air_action_used` and two new per-character `CharacterPhysics` fields
+(`air_dash_speed`, `double_jump_velocity`; both default 0 — a character with no such kit
+simply authors nothing, mirroring `gravity`/`jump_velocity`'s own 0-disables convention).
+Neither action transitions state — both are pure velocity SETS on whatever airborne state
+the player is already in, run immediately BEFORE gravity is added the same tick (mirroring
+the takeoff impulse's own documented "gravity accrues the same tick as the set" contract).
+This reads AD-046's own text literally: it describes both as "set horizontal velocity, zero
+vertical" / "re-impulse" — never "routes to a state," which is language AD-046 reserves
+explicitly for the ground dash's double-tap entries ("routing to a dash state"). Divekick
+not spending the air action falls out for free: it is authored later as its own
+CancelRule/state, entirely outside this mechanism — there is nothing here to un-couple.
+**Alternatives considered.** Authoring air actions as CancelRules on the jump states
+(consistent with the air-normal-cancel pattern, AD-039) — rejected: a CancelRule names a
+destination STATE, but neither action has one (both keep the player in whatever airborne
+state it's already in); forcing a state-machine shape onto a pure velocity effect would be
+the less honest reading of AD-046's own wording, and would need a "self-cancel" (target ==
+current state) with no engine precedent.
+**Priority order (double jump checked before air-dash-forward before air-dash-back)** in
+`_apply_air_action` — arbitrary among three mutually-exclusive-in-practice input axes (UP vs.
+forward/back), recorded for completeness; no observed scenario makes the order matter.
+**Scope.** `step_phases.gd`, `character_physics.gd`. No contract/format change (`air_action_
+used`'s shape is unchanged from TKT-P2-01; these are new CharacterPhysics authoring fields,
+same latitude precedent as JC-068's gravity/jump_velocity addition). Log for ratification.
+
+### JC-076 · 2026-07-15 · TKT-P2-02 · Double jump requires a STRICT this-tick edge, not a buffered one — provisional
+**Decision.** `InputBuffer.direction_pressed_edge` checks ONLY "held now (age 0) AND not
+held the tick immediately before (age 1)" — no `COMMAND_BUFFER` lookback window, unlike
+every other direction/button recognizer in this file. Discovered via an actual regression
+(`test_airborne_actions.gd`'s held-jump tests started failing — the jump's OWN initiating
+UP-press was still "inside" a 6-frame buffered edge-scan several ticks into the SAME flight,
+so `direction_pressed_edge` falsely fired the instant the character became airborne,
+zeroing/overwriting the takeoff impulse's `vel_y` with a same-tick double-jump re-impulse of
+magnitude 0 for character A, corrupting the whole arc). A strict, zero-leniency edge check
+is the only reading that lets a player hold UP continuously from the initial jump takeoff
+without instantly (and silently) spending the double jump, while still correctly firing on a
+genuine release-then-re-press once truly airborne.
+**Alternatives considered.** A buffered edge scan over `COMMAND_BUFFER` (my first attempt,
+reverted after the regression); requiring a full double-tap of UP instead of a single fresh
+press (would satisfy AD-046's spirit too, but AD-046's own text says "up while airborne," not
+"double-tap up" — reserving double-tap language specifically for the dash/air-dash case, so a
+plain single-press reading is the more literal one, made safe by the strict-edge fix rather
+than by adding double-tap semantics UP doesn't ask for).
+**Verification.** `test_dash_air_action.gd`'s `_test_held_up_from_takeoff_does_not_spend_
+double_jump` pins this exact regression as a standing test, in addition to the full existing
+suite (`test_airborne_actions.gd` et al.) passing green again after the fix.
+**Scope.** `input_buffer.gd` (`direction_pressed_edge`) only. No contract change. Log for
+ratification.
+
+### JC-077 · 2026-07-15 · TKT-P2-02 · Air-dash speed / double-jump velocity test-only tuning values — provisional (test-only)
+**Decision.** `test_dash_air_action.gd` exercises the air-action mechanism against character
+A's builder with `physics.air_dash_speed = FP.from_units(6.0)` and `physics.double_jump_
+velocity = FP.from_units(18.0)` MUTATED ONTO A TEST-LOCAL COPY of `CharacterA.build_
+character()` — character A's shipped, baked `.tres` kit is untouched (A does not carry these
+values; A's `66`/`44` dash is the only air/dash-adjacent content this ticket adds to A's
+actual authored kit). These two numbers are arbitrary, chosen only to be nonzero and mutually
+distinguishable from character A's other movement speeds in test assertions — real per-
+character tuning for whichever character actually ships an air dash / double jump (character
+B, TKT-P2-05/06) is that ticket's call, not this one's.
+**Scope.** Test file only. No production content change. Log for ratification.

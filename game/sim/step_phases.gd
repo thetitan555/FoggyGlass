@@ -356,6 +356,16 @@ static func phase3_movement(next: SimState) -> void:
 		# ordinary standing one sharing the same engine-level category.
 		var grounded_category: bool = move == null or move.category == MoveState.CATEGORY_GROUNDED
 		var was_airborne: bool = not grounded_category and (p.pos_y < ground_y or p.vel_y != 0)
+
+		# --- Air-action commands (AD-046, TKT-P2-02): air dash / double jump --------
+		# Runs BEFORE gravity is added this tick so a fired air action's impulse takes
+		# the SAME "gravity accrues the same tick as the impulse" contract the takeoff
+		# keyframe already uses (character_a.gd's jump-arc note). Only considered for a
+		# GENUINELY physically airborne player (was_airborne, the same gate gravity
+		# uses just below) with its one air action unspent.
+		if character != null and was_airborne:
+			_apply_air_action(p, character)
+
 		if character != null and was_airborne:
 			p.vel_y += character.physics.gravity
 
@@ -387,6 +397,50 @@ static func phase3_movement(next: SimState) -> void:
 		var pr: Projectile = next.projectiles[idx]
 		pr.pos_x += pr.vel_x
 		pr.pos_y += pr.vel_y
+
+
+## Air-action commands (AD-046, TKT-P2-02): consumes a player's ONE air action per
+## jump (`players[i].air_action_used`) on either a DOUBLE JUMP (a FRESH up-press) or
+## an AIR DASH (double-tap forward/back), whichever is recognized first. Both read
+## the ONE recognizer (InputBuffer) over `input_history` — pure functions of history,
+## no new input path (Tenet 2). No-op once `air_action_used` is already true (the
+## suppression AD-046 requires until the landing transition resets it, `_land` above).
+##
+## DOUBLE JUMP uses `direction_pressed_edge`, not the leniently-buffered
+## `direction_buffered`: a player holding UP continuously from the INITIAL jump
+## takeoff must press UP AGAIN once airborne — a level check would instantly spend
+## the air action the moment `was_airborne` becomes true, since UP is already (and
+## typically still) held from the jump input itself. AIR DASH reuses the SAME
+## double-tap recognizer AD-046 gives character A's ground dash (`InputBuffer.
+## double_tap_recognized`) — a continuous forward/back hold never satisfies it.
+##
+## DIVEKICK IS NOT RECOGNIZED HERE AT ALL (AD-046: an aerial special must never
+## spend this budget) — it is authored later as its own CancelRule/state, entirely
+## outside this generic mechanism, so there is no coupling to un-author.
+##
+## `character.physics.air_dash_speed` / `double_jump_velocity` are per-character
+## fixed-point constants (0 = the character has no such kit, mirroring `gravity`/
+## `jump_velocity`'s own 0-disables convention) — this mechanism is engine-uniform,
+## never character-branched (move-format.md criterion 4 in spirit).
+static func _apply_air_action(p: PlayerState, character: Character) -> void:
+	if p.air_action_used:
+		return
+	if InputBuffer.direction_pressed_edge(p.input_history, InputFrame.UP, p.facing):
+		p.vel_y = -character.physics.double_jump_velocity
+		p.air_action_used = true
+		return
+	if InputBuffer.double_tap_recognized(p.input_history, InputFrame.RIGHT, p.facing):
+		# RIGHT in required_direction means FORWARD (facing-resolved, AD-002) — apply
+		# along facing, mirroring the keyframe-motion convention (_apply_keyframe_motion).
+		p.vel_x = character.physics.air_dash_speed * p.facing
+		p.vel_y = 0
+		p.air_action_used = true
+		return
+	if InputBuffer.double_tap_recognized(p.input_history, InputFrame.LEFT, p.facing):
+		p.vel_x = -character.physics.air_dash_speed * p.facing
+		p.vel_y = 0
+		p.air_action_used = true
+		return
 
 
 ## Land a physically-airborne character (AD-043's continuous clamp fused with

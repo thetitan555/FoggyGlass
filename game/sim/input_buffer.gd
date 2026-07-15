@@ -42,6 +42,13 @@ const DIR_UP: int = 5
 const MOTION_WINDOW: int = 9
 const COMMAND_BUFFER: int = 6
 
+# DOUBLE-TAP WINDOW (AD-046, TKT-P2-02; feel value, Strategist-tunable like the two
+# windows above — placeholder ~12f per AD-046's own text, logged JC-074). A double-tap
+# (press -> release -> press of the SAME direction) must complete within this many
+# frames of history, oldest to newest, for the pattern to be recognized. Wider than
+# COMMAND_BUFFER because a double-tap is a whole 3-edge gesture, not a single press.
+const DOUBLE_TAP_WINDOW: int = 12
+
 
 ## The ordered facing-relative token sequence a motion id expands to. 236 = down,
 ## down-forward, forward (a quarter-circle toward the opponent). 623 = forward, down,
@@ -165,6 +172,62 @@ static func direction_buffered(hist: InputHistory, required_direction: int, faci
 	return false
 
 
+## Whether `required_direction` was DOUBLE-TAPPED (AD-046: pressed -> released ->
+## pressed) within the last DOUBLE_TAP_WINDOW frames of history. Scans oldest
+## (age = DOUBLE_TAP_WINDOW-1) toward newest (age 0) through a tiny 3-state
+## machine — looking for the first press, then a release, then a second press —
+## mirroring `motion_recognized`'s scan shape but over PRESS/RELEASE edges of one
+## direction rather than an ordered token sequence. A direction held continuously
+## through the whole window never reaches the "seen a release" state, so a plain
+## sustained hold (e.g. walking) never falsely satisfies a double-tap. Pure
+## function of (input_history, facing) — no new input path (Tenet 2).
+static func double_tap_recognized(hist: InputHistory, required_direction: int, facing: int) -> bool:
+	if required_direction == 0:
+		return false
+	const STATE_AWAIT_FIRST_PRESS: int = 0
+	const STATE_AWAIT_RELEASE: int = 1
+	const STATE_AWAIT_SECOND_PRESS: int = 2
+	var state: int = STATE_AWAIT_FIRST_PRESS
+	var oldest_age: int = DOUBLE_TAP_WINDOW - 1
+	for age in range(oldest_age, -1, -1):
+		var frame: int = StepPhases.socd_normalize(hist.at(age))
+		var held: bool = _required_direction_held(frame, required_direction, facing)
+		match state:
+			STATE_AWAIT_FIRST_PRESS:
+				if held:
+					state = STATE_AWAIT_RELEASE
+			STATE_AWAIT_RELEASE:
+				if not held:
+					state = STATE_AWAIT_SECOND_PRESS
+			STATE_AWAIT_SECOND_PRESS:
+				if held:
+					return true
+	return false
+
+
+## True iff `required_direction` is held THIS TICK (age 0) and was NOT held the
+## tick immediately before (age 1) — a strict, UN-BUFFERED rising edge (no
+## COMMAND_BUFFER leniency window). Needed for AD-046's double jump: a player
+## holding UP continuously from the INITIAL jump takeoff must press UP AGAIN once
+## airborne to double-jump. A BUFFERED edge (scanning back COMMAND_BUFFER frames
+## for any transition) would falsely fire the moment airborne becomes true, because
+## the jump's OWN initiating UP-press is itself a transition that stays inside a
+## multi-frame lookback window for several ticks afterward — exactly the takeoff
+## tick, when the air action must NOT fire. Requiring the edge on the EXACT current
+## tick (no lookback) means a stale, already-in-progress hold from before takeoff
+## can never re-trigger; only a genuine fresh press, happening while the caller has
+## already confirmed the player is physically airborne, satisfies it. Pure function
+## of (input_history, facing) — no new input path (Tenet 2).
+static func direction_pressed_edge(hist: InputHistory, required_direction: int, facing: int) -> bool:
+	if required_direction == 0:
+		return false
+	var frame: int = StepPhases.socd_normalize(hist.at(0))
+	if not _required_direction_held(frame, required_direction, facing):
+		return false
+	var prev_frame: int = StepPhases.socd_normalize(hist.at(1))
+	return not _required_direction_held(prev_frame, required_direction, facing)
+
+
 ## Whether a two-button CHORD (AD-032: `button_index` + `chord_button_index`, e.g.
 ## throw `L+H`) is satisfied within the command buffer window. "Same frame" is
 ## load-bearing (move-format.md): both bits must be held on ONE buffered frame,
@@ -229,16 +292,23 @@ static func entry_satisfied_now(hist: InputHistory, entry: ButtonMapEntry, facin
 
 
 ## The full recognition for one ButtonMapEntry against a player's history: true iff the
-## entry's command is satisfied within its buffer window. A motion entry (motion != 0)
-## requires the motion recognized within MOTION_WINDOW AND (if it also names a button)
-## the button pressed within COMMAND_BUFFER. A CHORD entry (chord_button_index set)
-## requires both buttons held on the SAME buffered frame (AD-032). A PURE-DIRECTION
-## entry (button_index == -1, no motion, no chord) requires only `required_direction`
-## held within COMMAND_BUFFER (AD-032; e.g. jump). A plain button entry requires the
-## button (+ optional direction) within COMMAND_BUFFER. This is the ONE recognizer
-## phase 2 and the buffered-command executor both call, so there is a single
-## buffering definition.
+## entry's command is satisfied within its buffer window. A DOUBLE-TAP entry
+## (double_tap == true, AD-046) requires `required_direction` pressed -> released ->
+## pressed within DOUBLE_TAP_WINDOW — checked FIRST and exclusively (it never falls
+## through to the plain-direction path below, even though it shares that path's
+## button_index/motion shape). A motion entry (motion != 0) requires the motion
+## recognized within MOTION_WINDOW AND (if it also names a button) the button pressed
+## within COMMAND_BUFFER. A CHORD entry (chord_button_index set) requires both buttons
+## held on the SAME buffered frame (AD-032). A PURE-DIRECTION entry (button_index == -1,
+## no motion, no chord, no double_tap) requires only `required_direction` held within
+## COMMAND_BUFFER (AD-032; e.g. jump). A plain button entry requires the button (+
+## optional direction) within COMMAND_BUFFER. This is the ONE recognizer phase 2 and the
+## buffered-command executor both call, so there is a single buffering definition.
 static func entry_satisfied(hist: InputHistory, entry: ButtonMapEntry, facing: int) -> bool:
+	if entry.double_tap:
+		# Double-tap (AD-046) is its OWN recognition shape — a distinct scan, never
+		# folded into the plain-direction/motion/chord branches below.
+		return double_tap_recognized(hist, entry.required_direction, facing)
 	if entry.motion != MOTION_NONE:
 		if not motion_recognized(hist, entry.motion, facing):
 			return false

@@ -234,6 +234,19 @@ static func _build_button_map() -> Array[ButtonMapEntry]:
 	map.append(_map(0, 0, 0, STATE_5L))
 	map.append(_map(1, 0, 0, STATE_5M))
 	map.append(_map(2, 0, 0, STATE_5H))
+	# Dash (double-tap direction command, AD-046/TKT-P2-02): 66/44 -- wires A's
+	# already-authored-but-previously-unreachable STATE_DASH_F/STATE_DASH_B to the
+	# shared double-tap recognizer (InputBuffer.double_tap_recognized). Confirmed-
+	# marginal cost (AD-046 / p2-char-b-match.md's TKT-P2-02 flags note, "no A
+	# engine/state work"): exactly two ButtonMapEntry additions, no other change to
+	# DASH_F/DASH_B. Listed after the standing normals (a double-tap never shadows a
+	# bare button command anyway -- distinct recognition path -- but grouping keeps
+	# movement commands visually adjacent) and before the plain-hold walk entries
+	# below (dash and walk never compete: dash is a DISCRETE target, resolved in
+	# phase 2's tier-1 buffered-command branch; walk is a LOOP target, resolved in
+	# tier 2 -- see step_phases.gd's two-tier loop-state branch, AD-038).
+	map.append(_map_double_tap(InputFrame.RIGHT, STATE_DASH_F))
+	map.append(_map_double_tap(InputFrame.LEFT, STATE_DASH_B))
 	# Walk (pure-direction command, AD-032): held forward/back, no button, into
 	# the already-authored STATE_WALK_F/STATE_WALK_B (movement table, below in
 	# _build_movement) -- these states and their keyframe motion were authored
@@ -271,6 +284,20 @@ static func _map_chord(button_bit_a: int, button_bit_b: int, target_state_id: in
 	e.chord_button_index = _bit_to_index(button_bit_b)
 	e.required_direction = 0
 	e.motion = 0
+	e.target_state_id = target_state_id
+	return e
+
+
+## A double-tap direction entry (AD-046/TKT-P2-02: 66/44 -> dash). Pure-direction
+## shape (no button, no motion, no chord) with `double_tap` set -- recognized as
+## press -> release -> press of `required_direction` within
+## InputBuffer.DOUBLE_TAP_WINDOW (a distinct scan from a plain held direction).
+static func _map_double_tap(required_direction: int, target_state_id: int) -> ButtonMapEntry:
+	var e := ButtonMapEntry.new()
+	e.button_index = -1
+	e.required_direction = required_direction
+	e.motion = 0
+	e.double_tap = true
 	e.target_state_id = target_state_id
 	return e
 
