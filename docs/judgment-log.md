@@ -285,3 +285,39 @@ flagging the gap so the Architect can fold it into the schema table on ratificat
 in favor of the group-table alternative); either reading satisfies AD-045 identically. Character
 A's `STATE_CROUCH` and `STATE_CROUCH_BLOCKSTUN` are authored `is_crouch = true`; every other A
 state defaults false (unaffected).
+
+### JC-079 · 2026-07-15 · TKT-P2-03 · `CancelGroup` packaged as its own Resource, not a `Dictionary`/inline field — provisional
+**Decision.** AD-044 specifies group-target resolution's BEHAVIOR precisely (a buffered command
+whose destination is a group member satisfies the cancel) but not the group's own STORAGE shape.
+Added `game/sim/data/cancel_group.gd` (`CancelGroup`: `id: int`, `members: Array[int]`) and
+`Character.cancel_groups: Array[CancelGroup]`, mirroring the existing `button_map: Array[
+ButtonMapEntry]` convention — a typed Resource list keeps the `.tres` diffable/golden-able
+(move-format.md's own "authoring stays data, never engine code" bar) exactly like every other
+authored collection on `Character`.
+**Alternative considered.** A `Dictionary[int, Array[int]]` field directly on `Character` (fewer
+lines, no new file) — rejected only for stylistic consistency: every other `Character` collection
+in the format is a typed `Resource` list, and a bare `Dictionary` doesn't serialize to the same
+diffable `.tres` shape QA goldens the rest of the format against (move-format.md criterion 3).
+Behaviorally identical either way — this is a "how," not a "what," call.
+**Scope.** Internal data shape only; `CancelRule.target`/`target_is_group` (the actual contract
+surface AD-044 touches) are unchanged.
+
+### JC-080 · 2026-07-15 · TKT-P2-04 · Ground-contact despawn scoped to `gravity != 0` (an "arc" projectile), not every projectile — provisional
+**Decision.** AD-047's text names the despawn rule specifically as "an ARC projectile whose
+`pos_y >= ground_y` despawns" — read literally, this scopes the new despawn check to a projectile
+with nonzero `gravity`, not to every live projectile regardless of authored gravity. Implemented
+the ground-contact despawn (`step_phases.gd` phase 3) gated on `gravity != 0`, so a hypothetical
+future 0-gravity projectile authored at/below `ground_y` (e.g. a ground-level slide/zoning shot —
+AD-047 explicitly reserves "ground zoning" as *not* this mechanism's role) is never affected by it.
+Character A's fireball (gravity 0) is unaffected either way since it never reaches `ground_y` in
+its authored flight; the distinction is only observable for a projectile deliberately spawned at
+floor height.
+**Alternative considered.** Applying the `pos_y >= ground_y` despawn unconditionally to every live
+projectile (arc or not) — also satisfies every acceptance criterion the ticket names (A's fireball
+never reaches `ground_y` regardless), and is one line simpler (no `gravity != 0` guard). Rejected
+because it would silently foreclose a legitimate future 0-gravity ground-level projectile the AD's
+own "not ground zoning" framing anticipates as out-of-scope for THIS despawn rule specifically, not
+for projectiles in general — Tenet 3 (build for extension) favors the narrower, literal reading.
+**Scope.** `step_phases.gd`'s projectile-integration loop only; `ProjectileData.gravity`'s own
+meaning (0 = straight line) is unchanged either way. Test-covered (`test_arc_projectile.gd`'s
+`_test_non_arc_projectile_does_not_ground_despawn`).
