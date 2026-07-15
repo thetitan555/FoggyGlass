@@ -6,7 +6,7 @@
 
 ---
 
-### [open] 2026-07-15 · raised-by: Developer · owner: Architect · re: /docs/spec/decisions.md (AD-044) + /docs/spec/move-format.md (criterion 10) + /game/sim/cancel_eval.gd
+### [resolved-awaiting-relay] 2026-07-15 · raised-by: Developer · owner: Architect · re: /docs/spec/decisions.md (AD-044) + /docs/spec/move-format.md (criterion 10) + /game/sim/cancel_eval.gd
 Problem: AD-044 / move-format.md both explicitly require that character B's lights
 self-chain "including exact repeat" (5L→5L, 2L→2L legal — `decisions.md`'s own worked
 example marks `2L 2L` as a light self-repeat). Empirically verified (a throwaway scratch
@@ -42,4 +42,30 @@ the `target == p.state_id` guard would still protect against a truly gateless
 (`ALWAYS`+`input==0`) self-target looping forever in one tick. This is the Architect's
 call to make (or reject in favor of a different fix), not mine to implement here.
 ---
-Resolution (owner fills): …
+Resolution (Architect, 2026-07-15): **Exact light self-repeat is INTENDED — the P0 engine
+guard is the defect, not the contract.** AD-044 and move-format.md criterion 10 both require
+`5L→5L`/`2L→2L` (the worked example marks `2L 2L` legal); that stands unchanged. The fix is an
+**engine change** (game code, Developer-owned — I rule and specify, I do not implement):
+
+Fix contract — in `CancelEval.find_cancel`, **relax the `target`/`group_target == p.state_id`
+rejection to PERMIT a same-state cancel EXCEPT when it is a truly gateless self-target
+(`condition == ALWAYS` AND `input == 0`), which stays rejected.** This is exactly the minimal
+change the Developer proposed on this flag — **accepted as specified.** Rationale: any cancel
+gated on a real `input` and/or a `condition` (contact outcome) re-enters through `_enter_state`,
+which already resets `frame_in_state`/`active_hit_ids`/`move_contact`/`cancel_tags`, so the
+re-entered same-state move is a fresh instance that must independently re-satisfy its gate — it
+cannot loop unconditionally; only the gateless-`ALWAYS` case could, and it remains guarded.
+
+Scope of the fix: **`CancelEval` only.** The identical `step_phases.gd` neutral-branch guard
+(`target_state != p.state_id`) is **left as-is** — it sits on the actionable/neutral
+re-derivation path, which criterion 10 does not exercise (B's ladder self-repeat is an
+`on_contact` chain-*cancel*, resolved through `CancelEval`), and keeping it avoids an unscoped
+same-state neutral re-latch. So self-repeat is delivered as a chain-cancel on contact (the
+intended "lights self-chain"), not a neutral-frame self-link.
+
+Developer follow-up (dispatch): apply the `CancelEval` relaxation; flip the two documenting
+assertions (`_test_ladder_self_repeat_5l_currently_blocked` /
+`_test_ladder_self_repeat_2l_currently_blocked`) from "blocked" to "succeeds." No re-authoring
+of B (5L/2L already name themselves in `GROUP_ALL_NORMALS`); no format/`SimState`/`decisions.md`
+contract change (folded a one-line resolution note into AD-044 recording the guard was a P0
+defect). Contract text (AD-044, criterion 10) was correct throughout.
