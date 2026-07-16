@@ -1,0 +1,109 @@
+STATE id=300 category=0 duration=1 loop=1 is_crouch=0 | startup=0 active=0 recovery=0 total=1 on_hit_adv=0 on_block_adv=0
+  kf[1..1] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=301 category=0 duration=1 loop=1 is_crouch=0 | startup=0 active=0 recovery=0 total=1 on_hit_adv=0 on_block_adv=0
+  kf[1..1] invuln_strike=0 invuln_throw=0 motion=131072,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=302 category=0 duration=1 loop=1 is_crouch=0 | startup=0 active=0 recovery=0 total=1 on_hit_adv=0 on_block_adv=0
+  kf[1..1] invuln_strike=0 invuln_throw=0 motion=-117965,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=303 category=0 duration=18 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=18 on_hit_adv=0 on_block_adv=0
+  kf[1..18] invuln_strike=0 invuln_throw=0 motion=308019,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=304 category=0 duration=16 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=16 on_hit_adv=0 on_block_adv=0
+  kf[1..16] invuln_strike=0 invuln_throw=0 motion=-288358,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=305 category=0 duration=1 loop=1 is_crouch=1 | startup=0 active=0 recovery=0 total=1 on_hit_adv=0 on_block_adv=0
+  kf[1..1] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1)
+STATE id=306 category=0 duration=4 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=4 on_hit_adv=0 on_block_adv=0
+  kf[1..4] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=307 category=1 duration=50 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=50 on_hit_adv=0 on_block_adv=0
+  kf[1..1] invuln_strike=0 invuln_throw=0 motion=0,-1441792 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[2..50] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+STATE id=308 category=1 duration=50 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=50 on_hit_adv=0 on_block_adv=0
+  kf[1..1] invuln_strike=0 invuln_throw=0 motion=229376,-1441792 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[2..50] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+STATE id=309 category=1 duration=50 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=50 on_hit_adv=0 on_block_adv=0
+  kf[1..1] invuln_strike=0 invuln_throw=0 motion=-229376,-1441792 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[2..50] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+STATE id=310 category=0 duration=14 loop=0 is_crouch=0 | startup=4 active=3 recovery=7 total=14 on_hit_adv=5 on_block_adv=1
+  kf[1..4] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[5..7] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1); HIT(x=1638400,y=-4259840,w=1441792,h=1179648,gh=0)
+  kf[8..14] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=311 category=0 duration=15 loop=0 is_crouch=1 | startup=4 active=3 recovery=8 total=15 on_hit_adv=5 on_block_adv=1
+  kf[1..4] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1)
+  kf[5..7] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1); HIT(x=1310720,y=-1310720,w=1441792,h=983040,gh=2)
+  kf[8..15] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1)
+STATE id=312 category=0 duration=21 loop=0 is_crouch=0 | startup=6 active=3 recovery=12 total=21 on_hit_adv=3 on_block_adv=-2
+  kf[1..6] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[7..9] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1); HIT(x=1835008,y=-3932160,w=1966080,h=1310720,gh=0)
+  kf[10..21] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=313 category=0 duration=24 loop=0 is_crouch=1 | startup=7 active=4 recovery=13 total=24 on_hit_adv=3 on_block_adv=-1
+  kf[1..7] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1)
+  kf[8..11] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1); HIT(x=1835008,y=-1638400,w=2490368,h=1179648,gh=2)
+  kf[12..24] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1)
+STATE id=314 category=0 duration=30 loop=0 is_crouch=0 | startup=7 active=3 recovery=20 total=30 on_hit_adv=5 on_block_adv=-2
+  kf[1..7] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[8..10] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1); HIT(x=1835008,y=-3801088,w=2097152,h=1441792,gh=0)
+  kf[11..30] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=315 category=0 duration=27 loop=0 is_crouch=1 | startup=9 active=4 recovery=14 total=27 on_hit_adv=13 on_block_adv=-1
+  kf[1..9] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1)
+  kf[10..13] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1); HIT(x=983040,y=-5898240,w=2293760,h=3932160,gh=0)
+  kf[14..27] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1)
+STATE id=316 category=0 duration=43 loop=0 is_crouch=0 | startup=22 active=3 recovery=18 total=43 on_hit_adv=4 on_block_adv=-4
+  kf[1..22] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[23..25] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1); HIT(x=1310720,y=-5570560,w=1966080,h=1310720,gh=1)
+  kf[26..43] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=320 category=2 duration=27 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=27 on_hit_adv=0 on_block_adv=0
+  kf[1..27] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=321 category=3 duration=20 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=20 on_hit_adv=0 on_block_adv=0
+  kf[1..20] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=322 category=3 duration=16 loop=0 is_crouch=1 | startup=0 active=0 recovery=0 total=16 on_hit_adv=0 on_block_adv=0
+  kf[1..16] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1)
+STATE id=323 category=2 duration=40 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=40 on_hit_adv=0 on_block_adv=0
+  kf[1..40] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+STATE id=324 category=2 duration=28 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=28 on_hit_adv=0 on_block_adv=0
+  kf[1..28] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=350 category=0 duration=23 loop=0 is_crouch=0 | startup=4 active=1 recovery=18 total=23 on_hit_adv=10 on_block_adv=-18
+  kf[1..4] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[5..5] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1); THROW(x=655360,y=-3932160,w=3604480,h=3932160,gh=0)
+  kf[6..23] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=360 category=0 duration=4 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=4 on_hit_adv=0 on_block_adv=0
+  kf[1..4] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=361 category=0 duration=4 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=4 on_hit_adv=0 on_block_adv=0
+  kf[1..4] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=365 category=0 duration=30 loop=0 is_crouch=1 | startup=12 active=8 recovery=10 total=30 on_hit_adv=11 on_block_adv=-3
+  kf[1..12] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1)
+  kf[13..20] invuln_strike=0 invuln_throw=0 motion=327680,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1); HIT(x=983040,y=-983040,w=2293760,h=983040,gh=2)
+  kf[21..30] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-3604480,w=1966080,h=3604480,gh=-1)
+STATE id=366 category=0 duration=42 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=42 on_hit_adv=0 on_block_adv=0
+  kf[1..15] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[16..16] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=1 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[17..42] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=367 category=0 duration=42 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=42 on_hit_adv=0 on_block_adv=0
+  kf[1..15] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[16..16] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=1 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[17..42] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=368 category=0 duration=42 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=42 on_hit_adv=0 on_block_adv=0
+  kf[1..15] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[16..16] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=1 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+  kf[17..42] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=370 category=1 duration=40 loop=0 is_crouch=0 | startup=5 active=5 recovery=30 total=40 on_hit_adv=-20 on_block_adv=-25
+  kf[1..4] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[5..5] invuln_strike=0 invuln_throw=0 motion=65536,589824 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[6..10] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1); HIT(x=655360,y=-1966080,w=1966080,h=1966080,gh=0)
+  kf[11..40] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+STATE id=371 category=1 duration=45 loop=0 is_crouch=0 | startup=10 active=5 recovery=30 total=45 on_hit_adv=-18 on_block_adv=-23
+  kf[1..9] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[10..10] invuln_strike=0 invuln_throw=0 motion=294912,393216 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[11..15] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1); HIT(x=655360,y=-1966080,w=1966080,h=1966080,gh=0)
+  kf[16..45] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+STATE id=372 category=1 duration=52 loop=0 is_crouch=0 | startup=17 active=5 recovery=30 total=52 on_hit_adv=-16 on_block_adv=-21
+  kf[1..16] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[17..17] invuln_strike=0 invuln_throw=0 motion=0,655360 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[18..22] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1); HIT(x=655360,y=-1966080,w=1966080,h=1966080,gh=1)
+  kf[23..52] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+STATE id=375 category=1 duration=10 loop=0 is_crouch=0 | startup=4 active=6 recovery=0 total=10 on_hit_adv=9 on_block_adv=3
+  kf[1..4] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[5..10] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1); HIT(x=983040,y=-2621440,w=1638400,h=1310720,gh=0)
+STATE id=376 category=1 duration=11 loop=0 is_crouch=0 | startup=6 active=5 recovery=0 total=11 on_hit_adv=10 on_block_adv=4
+  kf[1..6] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[7..11] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1); HIT(x=983040,y=-2621440,w=1966080,h=1638400,gh=0)
+STATE id=377 category=1 duration=13 loop=0 is_crouch=0 | startup=8 active=5 recovery=0 total=13 on_hit_adv=10 on_block_adv=4
+  kf[1..8] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
+  kf[9..13] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1); HIT(x=983040,y=-2621440,w=2293760,h=1966080,gh=0)
