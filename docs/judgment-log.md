@@ -19,7 +19,7 @@
 
 ## Provisional (awaiting ratification)
 
-### JC-087 · 2026-07-15 · AD-043 elaboration (JC-070 ratified) · Character A's `STATE_THROWN` renamed/reused as `STATE_KNOCKDOWN`, not a second authored state — provisional
+### JC-087 · 2026-07-15 · AD-043 elaboration (JC-070 ratified) · Character A's `STATE_THROWN` renamed/reused as `STATE_KNOCKDOWN`, not a second authored state — **ratified** (2026-07-16; latitude, in place — one state realizing AD-043's convergence is the reading intended; no dead duplicate content)
 **Decision.** Implementing `knockdown_state_id`, character A needed SOME `state_id` to point
 it at. Rather than authoring a brand-new, near-duplicate grounded-HITSTUN state alongside the
 existing `STATE_THROWN` (id 123; duration 30; `CATEGORY_HITSTUN`; standing hurtbox) — which
@@ -47,7 +47,7 @@ No `SimState`/`PlayerState` shape change (AD-034): `knockdown_state_id` is `Char
 resolved through `MoveRegistry` exactly like `idle_state_id`, not serialized runtime state — no
 `FORMAT_VERSION` bump. Log for ratification.
 
-### JC-088 · 2026-07-15 · AD-043 elaboration (JC-070 ratified) · `_land`'s knockdown transition re-arms `p.stun` to the knockdown state's own `duration`; the natural same-tick decrement is accepted, not specially frozen — provisional
+### JC-088 · 2026-07-15 · AD-043 elaboration (JC-070 ratified) · `_land`'s knockdown transition re-arms `p.stun` to the knockdown state's own `duration`; the natural same-tick decrement is accepted, not specially frozen — **ratified, folded into AD-043** (2026-07-16; the re-arm is contract — a bare state transition does not deliver "counts from landing" — and the `duration − 1` readout is now a pinned intended semantic, not an off-by-one)
 **Decision.** The AD's contract ("fixed wakeup `duration` counted from entry/landing,
 independent of air-time") is NOT satisfied merely by transitioning `state_id` on landing:
 `p.stun` — the actual engine countdown that gates the "become actionable" transition
@@ -79,7 +79,7 @@ test-covered by a new regression, `test_airborne_physics.gd`'s
 empirically-verified `duration - 1` readout and that it derives from `knockdown_move.duration`,
 not from whatever remained of the original hit's stun. Log for ratification.
 
-### JC-089 · 2026-07-15 · AD-043 elaboration (JC-070 ratified) · `STATE_KNOCKDOWN` keeps the standing hurtbox inherited from `STATE_THROWN`; no distinct downed-hurtbox geometry authored — provisional (deferred, not rejected)
+### JC-089 · 2026-07-15 · AD-043 elaboration (JC-070 ratified) · `STATE_KNOCKDOWN` keeps the standing hurtbox inherited from `STATE_THROWN`; no distinct downed-hurtbox geometry authored — **ratified; deferral confirmed** (2026-07-16; AD-043 says "may," not "must" — this is optional content the mechanism already supports adding as a pure data edit)
 **Decision.** AD-043's elaboration says the knockdown state "MAY author a downed hurtbox
 distinct from the airborne launch hurtbox" — permissive, not required. `STATE_KNOCKDOWN`
 (renamed from `STATE_THROWN`, JC-087) keeps its existing `_hurt_stand()` geometry unchanged;
@@ -94,7 +94,7 @@ hurtbox shape) and easy to add later without touching any of the logic these two
 **Scope.** None (no code change) — recorded so the deferral is visible rather than silently
 assumed. Log for ratification (or explicit deferral confirmation).
 
-### JC-090 · 2026-07-15 · TKT-P2-06 (character-b.md Arc projectile, AD-047) · `InputBuffer.MOTION_214` + `DIR_DOWN_BACK` added to the existing motion-token table — provisional
+### JC-090 · 2026-07-15 · TKT-P2-06 (character-b.md Arc projectile, AD-047) · `InputBuffer.MOTION_214` + `DIR_DOWN_BACK` added to the existing motion-token table — **ratified, clarification folded into `move-format.md`** (2026-07-16; latitude confirmed — the motion set is open and data-populated, so adding a motion the spec names populates the existing recognizer rather than extending the format. The `ButtonMapEntry.motion` row now pins that, and pins the line: a new *recognition shape* would be a format matter, a new motion id is not)
 **Decision.** B's arc projectile is specced as `214L/M/H` (a reverse quarter-circle). The one
 motion recognizer (`InputBuffer.motion_recognized`) already generalizes over a
 motion-id -> ordered-token-sequence table (`_motion_tokens`), populated so far with `MOTION_236`
@@ -120,7 +120,7 @@ recognition SHAPE (still the same ordered-token-sequence scan `motion_recognized
 determinism/round-trip untouched. Character A is unaffected (never references `MOTION_214`). Log
 for ratification.
 
-### JC-091 · 2026-07-15 · TKT-P2-06 (AD-043 elaboration, JC-070 ratified) · Character B's `STATE_THROWN` renamed/reused as `STATE_KNOCKDOWN`; throw + the new low slide both route directly into it — provisional
+### JC-091 · 2026-07-15 · TKT-P2-06 (AD-043 elaboration, JC-070 ratified) · Character B's `STATE_THROWN` renamed/reused as `STATE_KNOCKDOWN`; throw + the new low slide both route directly into it — **ratified** (2026-07-16; latitude — applying an already-ratified AD to owned content, mirroring JC-087. All three of B's hard-KD sources converging on one authored 28-tick wakeup is exactly AD-043's "one learnable wakeup")
 **Decision.** TKT-P2-05 (B's ground content) landed BEFORE JC-070's overturn was ratified
 (2026-07-15), so B's throw still routed its hard knockdown to a standalone `STATE_THROWN`, and
 `Character.knockdown_state_id` was never set for B at all. This ticket's own scope item (the low
@@ -151,7 +151,7 @@ tests — all still pass unmodified in substance); `data/character-b.tres` re-ba
 `SimState`/`PlayerState` shape change (AD-034) — `knockdown_state_id` is `Character` content, not
 serialized runtime state. Log for ratification.
 
-### JC-092 · 2026-07-15 · TKT-P2-06 (character-b.md Specials -> Low slide) · The low slide is ONE canonical move reachable via all of `236L/M/H`, not three distinct strength variants — provisional
+### JC-092 · 2026-07-15 · TKT-P2-06 (character-b.md Specials -> Low slide) · The low slide is ONE canonical move reachable via all of `236L/M/H`, not three distinct strength variants — **ratified, pinned in `character-b.md`** (2026-07-16; the reading is correct and confirmed against the spec — the slide subsection describes one behavior with no per-strength detail, unlike the divekick/projectile sections that explicitly enumerate three. Three slides would be a contract addition; the spec now says so in place)
 **Decision.** character-b.md's Specials section headers the slide `` `236L/M/H` or a command —
 provisional input `` and then describes exactly ONE move's behavior (LOW guard, hard knockdown,
 spacing-variable block advantage, "B's most desirable combo ender") — no per-strength
@@ -173,7 +173,7 @@ B-1's acceptance (spacing-variable, instrument-readable advantage) is fully sati
 canonical move (see the "several active frames" mechanism, character-b.md's own text). Log for
 ratification.
 
-### JC-093 · 2026-07-15 · TKT-P2-06 (character-b.md Arc projectile; AD-047/B-2) · All three arc-projectile strengths authored `guard_height = GUARD_MID`; L designated the "falls-in-front" oki version — provisional
+### JC-093 · 2026-07-15 · TKT-P2-06 (character-b.md Arc projectile; AD-047/B-2) · All three arc-projectile strengths authored `guard_height = GUARD_MID`; L designated the "falls-in-front" oki version — **ratified, folded into AD-047 + `character-b.md`** (2026-07-16; **confirmed: this satisfies B-2** — MID blockable-either-stance plus B's no-untechable-throw closes both halves of the invariant structurally. Promoted from an authoring choice to a stated invariant with a standing condition, since a future non-MID arc projectile or an untechable throw would silently reopen B-2. L-as-oki pinned in the spec)
 **Decision.** AD-047/B-2 require that the falls-in-front oki setup never force a defender into
 incompatible simultaneous defense (opposite `guard_height`, or block-vs-untechable-throw). Rather
 than carefully timing the projectile's active window to never OVERLAP a same-tick opposite-guard
@@ -203,7 +203,7 @@ Verified: `test_character_b_air.gd`'s `_test_arc_projectiles_are_guard_mid_by_co
 (the last a dynamic same-held-stance proof: a live projectile hit and a genuine 2L both resolve as
 BLOCKED against one continuously-held crouch-block, no stance switch). Log for ratification.
 
-### JC-094 · 2026-07-15 · TKT-P2-06 (character-b.md Divekick) · Divekicks land like an ordinary jump/air-normal (continuous ground clamp -> idle); no bespoke landing-recovery state authored — provisional
+### JC-094 · 2026-07-15 · TKT-P2-06 (character-b.md Divekick) · Divekicks land like an ordinary jump/air-normal (continuous ground clamp -> idle); no bespoke landing-recovery state authored — **ratified; deferral confirmed + routed** (2026-07-16; correct call — a landing-redirect hook is a format/AD change, not a content session's to invent. `character-b.md` now records the absence as a deliberate deferral and carries it as a live human-gate open item, since a divekick with no landing recovery is a strong, low-risk approach)
 **Decision.** `StepPhases._land` unconditionally transitions an `AIRBORNE`-category move's landing
 to `character.idle_state_id` — this is hardcoded engine behavior, not something a `MoveState` can
 override by authoring alone. Since the ticket forbids adding a new engine primitive, and a
@@ -226,7 +226,7 @@ change). If playtest/the human gate finds divekicks need real landing punishment
 flag to the Architect (a genuine format/engine gap, not a data fix), per the ticket's own routing
 instruction for exactly this situation. Log for ratification.
 
-### JC-095 · 2026-07-15 · TKT-P2-06 · Provisional tuning bundle — divekick hang/dive numbers, low-slide frame/speed/stun numbers, arc-projectile parabolas, and the B-4 reaction-window-floor placeholder — provisional, settles at the human-inspection gate
+### JC-095 · 2026-07-15 · TKT-P2-06 · Provisional tuning bundle — divekick hang/dive numbers, low-slide frame/speed/stun numbers, arc-projectile parabolas, and the B-4 reaction-window-floor placeholder — **ratified as provisional-pending-gate** (2026-07-16; ratified *as staged*, not frozen — these are explicitly the gate's to settle and no final value is forced now. The B-4 floor placeholder (12) and H-divekick's measured 17-tick delay are now recorded in `character-b.md` so the gate has both numbers in front of it; the floor stays the Strategist's feel value)
 **Decision.** Per character-b.md's own staging note ("frame numbers, divekick trajectories,
 projectile parabolas, and the overhead reaction-window floor are provisional tuning... settle
 against the human gate"), the following are authored as sensible, internally-consistent
@@ -262,7 +262,7 @@ is trivially adjustable without touching the mechanism they ride on (AD-008's li
 formula, AD-043's velocity-set model, AD-047's gravity field) — that mechanism, not these values,
 is the contract. Log for ratification alongside the human-gate tuning pass.
 
-### JC-096 · 2026-07-16 · TKT-P2-08 (match-flow.md "Health") · `MatchState.FULL_HEALTH` tuned 1000 -> 500 against A's and B's authored damage — provisional
+### JC-096 · 2026-07-16 · TKT-P2-08 (match-flow.md "Health") · `MatchState.FULL_HEALTH` tuned 1000 -> 500 against A's and B's authored damage — **ratified, folded into `match-flow.md`** (2026-07-16; this is an Architect-owned tuning the spec had left open, so ratifying it in code alone would have left the spec stale — 500 and its derivation are now the specced value and the Open item is closed. The reasoning holds against the brief's target, and the refusal to split health per character is the right read of the "one conventional total" contract. Slice-provisional; the gate may move it)
 **Decision.** Set `MatchState.FULL_HEALTH = 500`, replacing the prior 1000 placeholder (which
 only mirrored `SimState.new_initial()`'s own untuned P0 scaffold default — "data, not feel,"
 per that constructor's own comment — not a real tuning pass). Chosen by hand-summing both
@@ -298,7 +298,7 @@ feel value per match-flow.md's own "Open items" note ("tuned after B's damage la
 mechanism is done") — settles at the human-inspection gate like every other slice-provisional
 number this phase. Log for ratification.
 
-### JC-097 · 2026-07-16 · TKT-P2-08 (match-flow.md / AD-048; "wire the full A-vs-B match") · `MatchTickHost` built as its OWN class mirroring `TickHost`, rather than generalizing `TickHost` to carry either `SimState` or `MatchState` — provisional
+### JC-097 · 2026-07-16 · TKT-P2-08 (match-flow.md / AD-048; "wire the full A-vs-B match") · `MatchTickHost` built as its OWN class mirroring `TickHost`, rather than generalizing `TickHost` to carry either `SimState` or `MatchState` — **ratified** (2026-07-16; latitude — host structure is implementation. Tenet 3 reasoning is right: a narrow twin leaves the landed `TickHost` seam untouched and gives a future MatchState-shaped harness a clean home)
 **Decision.** Added `game/sim/match_tick_host.gd` — a small, self-contained twin of `TickHost`
 (same fixed-tick discipline: `_physics_process`, no `delta`, tick read from state, exactly one
 `_advance` per call) that walks `MatchState.match_step` instead of `SimState.step`. `TickHost`
@@ -318,7 +318,7 @@ QA/other roles already verified it to be.
 **Scope.** `game/sim/match_tick_host.gd` (new), `game/tests/test_match_tick_host.gd` (new,
 mirrors `test_tick_host.gd`'s own assertions one level up). Log for ratification.
 
-### JC-098 · 2026-07-16 · TKT-P2-08 (match-flow.md / AD-048; "wire the full A-vs-B match end to end") · Match mode as an opt-in `start_in_match_mode` export on `TrainingMode`, fixed A-vs-B roster, reset/snapshot control-surface trimmed for match mode — provisional
+### JC-098 · 2026-07-16 · TKT-P2-08 (match-flow.md / AD-048; "wire the full A-vs-B match end to end") · Match mode as an opt-in `start_in_match_mode` export on `TrainingMode`, fixed A-vs-B roster, reset/snapshot control-surface trimmed for match mode — **ratified; trim accepted and documented in `match-flow.md`** (2026-07-16; **the trim is acceptable — no flag.** Checked against the match brief and this spec: neither asks for an interactive match reset; capture/reset is training-mode (sandbox) scope, and the match layer's determinism bar is proven headlessly where it belongs. Now a stated scope line so QA does not audit it as a gap. The opt-in export over a default flip is also the right call — no silent behavior change to existing callers)
 **Decision.** Extended `TrainingMode` (rather than a new scene/script) with an opt-in
 `@export var start_in_match_mode: bool = false`. False (the existing sandbox single-`SimState`/
 single-character path, `_ready_sandbox_mode`) is the default for EVERY existing caller
@@ -359,7 +359,7 @@ shell to avoid one export flag would be needless drift risk for zero benefit.
 mounts the new `MatchPanel`), `game/tests/test_training_mode_shell.gd` (match-mode smoke test +
 the sandbox-mode-unaffected regression test). Log for ratification.
 
-### JC-099 · 2026-07-16 · TKT-P2-08 (integration correctness; AD-048) · `MatchState.fresh_round_sim` now resolves each side's `state_id` through `MoveRegistry` (a real defect found wiring the actual A-vs-B match) — provisional
+### JC-099 · 2026-07-16 · TKT-P2-08 (integration correctness; AD-048) · `MatchState.fresh_round_sim` now resolves each side's `state_id` through `MoveRegistry` (a real defect found wiring the actual A-vs-B match) — **ratified, folded into AD-048 as a contract clarification** (2026-07-16; a real latent defect and the right fix — `idle_state_id` through `MoveRegistry` is the one lookup this codebase uses, and adding caller parameters would have widened `MatchState`'s surface for nothing. AD-048 now states that "fresh symmetric start" includes per-character idle `state_id`, so the P0-character masking cannot recur)
 **Decision.** `fresh_round_sim` built a bare `PlayerState` and set `character_id` but never
 `state_id`, leaving it at the struct default (`0`). This is silently correct for
 `TestSupport.CHAR_ID` (the P0 test character's own idle state IS id `0`, by convention) — every
