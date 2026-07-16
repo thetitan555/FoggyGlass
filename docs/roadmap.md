@@ -210,16 +210,23 @@ existing engine; the only code touched was adding one motion token (`214`) to th
 no format-generality flag was raised — the P2 thesis, met. Suite: **42/42**
 headless green, determinism/round-trip included.
 
-**Remaining to close P2:**
+**Remaining to close P2 — ONLY THE USER'S GATE.**
 
-1. **Architect ratification** of JC-087..099 (the last provisional calls).
-2. **QA objective audit** against acceptance criteria, the tenets
-   (determinism/serialization across a full match), and the audit criterion, plus
-   a judgment-log drift read. QA also **seeds the golden-file regression net** and
-   verifies **cross-system consistency** (one move format, one advantage
-   computation across A and B) — both are P2 done-conditions.
-3. **The user's human-inspection gate** — the stopping point. QA's objective pass
-   is necessary but *not* sufficient; only the user closes this.
+1. ~~Architect ratification~~ — **DONE (2026-07-16).** JC-087..099 all ratified,
+   none overturned, no flags; contract folds landed in AD-043/047/048,
+   `move-format.md`, `character-b.md`, `match-flow.md`. All P2 calls (JC-068..099)
+   are ratified and archived; both live ledgers are flat.
+2. ~~QA objective audit~~ — **PASS (2026-07-16, `audits/audit-p2-feature.md`).**
+   `character-b.md` 1–6 + B-1..B-6, `match-flow.md` 1–8, and Tenet 1 all pass —
+   determinism/serialization verified at the hard cases (mid-match, mid-divekick,
+   mid-slide-active, mid-projectile-arc round-trips). **Cross-system consistency
+   passes**: an exhaustive grep of `game/sim/*.gd` finds **zero character-specific
+   branches** — the content-seam proof, verified structurally. No drift, no flags.
+   The **golden-file regression net was absent and is now seeded** (A movement, B
+   frame-data + geometry, full-match hash trace); **43/43** headless green.
+3. **The user's human-inspection gate — OPEN. This is the only thing left.** QA's
+   objective pass is necessary but *not* sufficient, and QA correctly declined to
+   issue a done verdict while this stands. Only the user closes it.
 
 **How to run the gate:** open the project in Godot 4.3 and run
 `game/scenes/training_mode.tscn` (F6) — it boots the real A-vs-B match. P1
