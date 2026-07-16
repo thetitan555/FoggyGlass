@@ -53,6 +53,8 @@ func _run() -> void:
 	await _test_dummy_recording_captures_live_input_and_playback_loops_it()
 	await _test_fresh_record_on_recording_entry_replaces_not_concatenates()
 	await _test_fresh_record_resets_the_playback_cursor()
+	await _test_match_mode_wires_a_vs_b_and_ticks()
+	await _test_match_mode_leaves_sandbox_default_unaffected()
 
 
 ## Static seam check (criterion 10: "verifiable by inspection of the
@@ -71,6 +73,8 @@ func _test_seam_discipline_static() -> void:
 		"res://scenes/overlays/frame_data_panel.gd",
 		"res://scenes/overlays/frame_data_panel_model.gd",
 		"res://scenes/overlays/live_state_panel_model.gd",
+		"res://scenes/overlays/match_panel.gd",
+		"res://scenes/overlays/match_panel_model.gd",
 	]
 	for path in files:
 		var f := FileAccess.open(path, FileAccess.READ)
@@ -352,3 +356,66 @@ func _make_shell() -> TrainingMode:
 	get_root().add_child(root)
 	await process_frame
 	return tm
+
+
+# ---------------------------------------------------------------------------
+# TKT-P2-08: match mode (the full A-vs-B match wired end to end, AD-048).
+# ---------------------------------------------------------------------------
+
+## Mirrors _make_shell() exactly, but flips start_in_match_mode BEFORE the
+## node enters the tree (so _ready() takes the match-mode path). Still needs
+## the same TickHost child present (it is left paused/unused in match mode —
+## see training_mode.gd's _ready_match_mode note) since @onready always
+## resolves it regardless of mode.
+func _make_match_shell() -> TrainingMode:
+	var tm := TrainingMode.new()
+	tm.start_in_match_mode = true
+	var host := TickHost.new()
+	host.name = "TickHost"
+	tm.add_child(host)
+	var root := Node.new()
+	root.add_child(tm)
+	get_root().add_child(root)
+	await process_frame
+	return tm
+
+
+func _test_match_mode_wires_a_vs_b_and_ticks() -> void:
+	var tm := await _make_match_shell()
+	_true(tm.is_match_mode(), "start_in_match_mode routes _ready() into match mode")
+
+	var view: InspectionView = tm.inspection_view()
+	_eq(view.player(0).character_id, CharacterA.CHAR_ID, "P1 is character A (AD-048 fixed wiring)")
+	_eq(view.player(1).character_id, CharacterB.CHAR_ID, "P2 is character B (AD-048 fixed wiring)")
+	_eq(view.player(0).state_id, CharacterA.STATE_IDLE, "P1 resolves onto A's own idle state (not the generic 0 default)")
+	_eq(view.player(1).state_id, CharacterB.STATE_IDLE, "P2 resolves onto B's own idle state (not the generic 0 default)")
+
+	var mv: MatchView = tm.match_view()
+	_true(mv != null, "match_view() is non-null in match mode")
+	_eq(mv.health[0], MatchState.FULL_HEALTH, "P1 starts at the tuned full health")
+	_eq(mv.health[1], MatchState.FULL_HEALTH, "P2 starts at the tuned full health")
+	_eq(mv.match_phase, MatchState.PHASE_ROUND_START, "a fresh match starts in ROUND_START")
+
+	# Drive the whole ROUND_START beat via the shell's own step_once() (never
+	# touching MatchTickHost/MatchState directly) so combat actually goes ACTIVE.
+	tm.set_paused(true)
+	for i in range(MatchState.ROUND_START_BEAT_TICKS):
+		tm.step_once()
+	var mv2: MatchView = tm.match_view()
+	_eq(mv2.match_phase, MatchState.PHASE_ACTIVE, "stepping through the shell alone reaches ACTIVE")
+	var tick_after_beat: int = tm.inspection_view().tick()
+	tm.step_once()
+	_eq(tm.inspection_view().tick(), tick_after_beat + 1, "an ACTIVE step_once() through the shell advances combat by one tick")
+	tm.get_parent().queue_free()
+
+
+## The sandbox-mode default (no export flag flipped) must be COMPLETELY
+## unaffected by match mode's existence — is_match_mode() false, match_view()
+## null, sandbox's own single-character behavior unchanged.
+func _test_match_mode_leaves_sandbox_default_unaffected() -> void:
+	var tm := await _make_shell()
+	_true(not tm.is_match_mode(), "a plain TrainingMode.new() defaults to sandbox mode")
+	_eq(tm.match_view(), null, "match_view() is null outside match mode")
+	var view: InspectionView = tm.inspection_view()
+	_eq(view.player(0).character_id, CharacterA.CHAR_ID, "sandbox mode's own default (character A) is unchanged")
+	tm.get_parent().queue_free()

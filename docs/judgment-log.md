@@ -261,3 +261,126 @@ placeholder the mechanism can be judged through, not a pre-guessed final balance
 is trivially adjustable without touching the mechanism they ride on (AD-008's live-advantage
 formula, AD-043's velocity-set model, AD-047's gravity field) — that mechanism, not these values,
 is the contract. Log for ratification alongside the human-gate tuning pass.
+
+### JC-096 · 2026-07-16 · TKT-P2-08 (match-flow.md "Health") · `MatchState.FULL_HEALTH` tuned 1000 -> 500 against A's and B's authored damage — provisional
+**Decision.** Set `MatchState.FULL_HEALTH = 500`, replacing the prior 1000 placeholder (which
+only mirrored `SimState.new_initial()`'s own untuned P0 scaffold default — "data, not feel,"
+per that constructor's own comment — not a real tuning pass). Chosen by hand-summing both
+characters' AUTHORED `hb.damage` values (`game/content/character_{a,b}.gd`) through the one
+`DamageScaling` definition (100% hit 1, -10%/hit floored at 10%), against match-flow.md's own
+stated target: "a couple of good touches decide a round, not thirty pokes."
+- **A's best realistic hit-confirmed combos** land 180-270: `2M(70) xx DP-M(130*.9≈117) ≈ 187`;
+  a deep jump-in `jH(80) -> 2M(70*.9≈63) xx DP-H(160*.8≈128) ≈ 271`. At 500 health, ONE such
+  combo is roughly half the bar — two plausibly close a round.
+- **B has no comparable single-move payoff** (2H's launch has no juggle follow-up, matching A's
+  own 2H) — B's damage lives in the LADDER. The spec's own worked example,
+  `5L 2L 2L 5M 2M 2H 5H` (character-b.md "Cancel model"), scaled hit-by-hit, totals ~155-160 (a
+  full hand-sum: 20+16+14+31+24+27+26≈158). At 500, that's ~30% — B's own "couple of good
+  touches" is 2-3 such landed strings, not one, which is consistent with the brief (B's identity
+  is pressure/mixup volume, not one-touch payoff) rather than a balance defect.
+- **A single UNCOMBOED poke** (B's `5L`=20, A's `5L`=30) alone still needs ~15-25 hits to kill —
+  deliberately NOT a fast poke-race, so it is combo/confirm play, not raw poke attrition, that
+  actually decides a round, matching the brief's explicit contrast ("not thirty pokes").
+- 500 is also a clean, round number a health BAR reads cleanly against (quarter/half marks),
+  which the prior 1000 also had going for it, so switching costs nothing on that axis.
+**Alternatives considered.** Backing directly off A's single highest-damage 2-hit DP combo alone
+(e.g. tuning so exactly 2 max-optimal combos kill) — rejected: over-indexes on A's execution
+ceiling (character-a.md's own "the ceiling is real and high" framing) rather than the more
+representative BREAD-AND-BUTTER numbers used above, and would make ordinary (non-optimal) play
+feel like it never threatens a KO. A per-character health split (asymmetric totals) — rejected
+outright: match-flow.md's own contract is explicit ("one conventional total"), not per-character
+values; a split would be a contract change, not tuning latitude.
+**Scope.** `game/sim/match_state.gd` (`FULL_HEALTH` + the reasoning comment on it),
+`game/tests/test_match_state.gd` (the full-match-determinism script's injected health value,
+previously hardcoded against the old 1000 placeholder — updated to a value still below the new
+500 so the intended "p0 wins on higher current health" timeout scenario still holds). A pure
+feel value per match-flow.md's own "Open items" note ("tuned after B's damage lands... the
+mechanism is done") — settles at the human-inspection gate like every other slice-provisional
+number this phase. Log for ratification.
+
+### JC-097 · 2026-07-16 · TKT-P2-08 (match-flow.md / AD-048; "wire the full A-vs-B match") · `MatchTickHost` built as its OWN class mirroring `TickHost`, rather than generalizing `TickHost` to carry either `SimState` or `MatchState` — provisional
+**Decision.** Added `game/sim/match_tick_host.gd` — a small, self-contained twin of `TickHost`
+(same fixed-tick discipline: `_physics_process`, no `delta`, tick read from state, exactly one
+`_advance` per call) that walks `MatchState.match_step` instead of `SimState.step`. `TickHost`
+itself is untouched: still SimState-specific, exactly as every existing caller (the sandbox
+training-mode path, `TrainingHarness`, every pre-P2-08 overlay test's `_make_shell()`-style
+helper) already depends on it.
+**Alternatives considered.** Generalizing `TickHost` to hold either a `SimState` or a
+`MatchState` (a type union / duck-typed "advance" callable) — rejected: `TickHost` is a landed,
+tested contract several other roles' test helpers construct directly (`TickHost.new()` + manual
+`setup()`); broadening its shape for this ticket's scope (integration/tuning/readouts, "no new
+mechanics") would touch a stable seam for no benefit this ticket needs, and risks destabilizing
+tests this ticket does not own. A duplicated-but-narrow twin costs a small amount of repetition
+(documented in the new file's own header) in exchange for zero risk to the existing seam — the
+"leaves more doors open" reading (Tenet 3): a future MatchState-shaped harness/reset control (see
+JC-098) has a clean, uncoupled home to extend, and `TickHost`'s own contract stays exactly what
+QA/other roles already verified it to be.
+**Scope.** `game/sim/match_tick_host.gd` (new), `game/tests/test_match_tick_host.gd` (new,
+mirrors `test_tick_host.gd`'s own assertions one level up). Log for ratification.
+
+### JC-098 · 2026-07-16 · TKT-P2-08 (match-flow.md / AD-048; "wire the full A-vs-B match end to end") · Match mode as an opt-in `start_in_match_mode` export on `TrainingMode`, fixed A-vs-B roster, reset/snapshot control-surface trimmed for match mode — provisional
+**Decision.** Extended `TrainingMode` (rather than a new scene/script) with an opt-in
+`@export var start_in_match_mode: bool = false`. False (the existing sandbox single-`SimState`/
+single-character path, `_ready_sandbox_mode`) is the default for EVERY existing caller
+(`TrainingMode.new()` + a hand-added `TickHost` child, per every pre-P2-08 test helper) — a
+strict addition, not a default-behavior change. The actual `training_mode.tscn` (the scene a
+human opens for the P2 gate) sets it `true`, so opening that exact scene is what plays the real
+A-vs-B match. True routes to `_ready_match_mode`: installs BOTH `CharacterA`/`CharacterB` into
+one combined `MoveRegistry`/`ProjectileRegistry` (disjoint ids by construction), builds a fresh
+`MatchState` via `MatchState.new_match(CharacterA.CHAR_ID, CharacterB.CHAR_ID)` (AD-048's fixed
+wiring constant — hardcoded, not a configurable "pick your characters" API, exactly like
+`_configure_default_character_a` already hardcodes A for the sandbox path), and drives it through
+`MatchTickHost` (JC-097). The pre-existing `TickHost` child is left present (every `.tscn`/test
+helper already wires one, so `@onready var _tick_host: TickHost = $TickHost` must keep resolving)
+but explicitly PAUSED and never `setup()` in match mode, so it does not silently churn an
+orphan SimState nobody reads. `inspection_view()`/`set_paused`/`is_paused`/`step_once` all branch
+on `_match_mode` to route to the correct host; a new `match_view()` (returns null outside match
+mode) and `is_match_mode()` round out the surface.
+**Scope trim (same entry, closely related): `capture_reset`/`do_reset`/`has_reset_point` are a
+documented no-op / `false` in match mode.** `TrainingHarness` is built over
+`TickHost.get_state()`/`set_state()`, both SimState-specific — it has no MatchState-shaped twin.
+Building one is real, additive interactive-control-surface work outside this ticket's named scope
+("integration, tuning, and readout instruments only — no new mechanics"); the match layer's OWN
+determinism/round-trip bar is already proven headlessly by TKT-P2-07's `test_match_state.gd`,
+independent of any interactive reset control. Guarding these methods to no-op/false in match mode
+(rather than silently reaching into the wrong host, which would corrupt the SANDBOX state instead)
+is the safe, honest choice; a future ticket that wants an interactive match reset builds the
+MatchState-shaped harness twin then (the same "leaves doors open" reasoning as JC-097).
+**Alternatives considered.** Making match mode the training-mode shell's DEFAULT (flip
+`start_in_match_mode`'s default to `true`) — rejected: would silently change the behavior of
+every existing `TrainingMode.new()` caller (a wide swath of already-green P1/P2 overlay tests),
+for a ticket whose own constraint is "no new mechanics" — an opt-in export flag gets the SAME
+end-user-visible outcome (the actual `.tscn` a human opens plays the match) with zero risk to the
+existing test surface. A wholly separate `match_mode.gd`/`.tscn` scene (duplicating the shell) —
+rejected: `TrainingMode` already owns exactly the wiring/control-surface/overlay-mounting
+machinery a match session needs (sources, pause/step, overlay auto-wiring); duplicating that
+shell to avoid one export flag would be needless drift risk for zero benefit.
+**Scope.** `game/scenes/training_mode.gd`, `game/scenes/training_mode.tscn` (sets the export +
+mounts the new `MatchPanel`), `game/tests/test_training_mode_shell.gd` (match-mode smoke test +
+the sandbox-mode-unaffected regression test). Log for ratification.
+
+### JC-099 · 2026-07-16 · TKT-P2-08 (integration correctness; AD-048) · `MatchState.fresh_round_sim` now resolves each side's `state_id` through `MoveRegistry` (a real defect found wiring the actual A-vs-B match) — provisional
+**Decision.** `fresh_round_sim` built a bare `PlayerState` and set `character_id` but never
+`state_id`, leaving it at the struct default (`0`). This is silently correct for
+`TestSupport.CHAR_ID` (the P0 test character's own idle state IS id `0`, by convention) — every
+one of TKT-P2-07's own match-layer tests uses that character, so the gap was invisible until a
+REAL character (A's idle is `100`, B's is `300`) was actually plugged into the match layer this
+ticket (exactly the "P1 was falsely called done" class of integration gap this ticket's brief
+warns against, and the same class of defect TKT-P1.1-01 Part A already fixed once for the
+sandbox training-mode path). Fixed by resolving each side's idle state through `MoveRegistry` —
+the SAME single source of truth every other character-id -> state lookup in this codebase
+already uses (`Character.idle_state_id`) — with a `0` fallback when no roster is installed for
+that id (preserving the exact prior behavior for every already-green match-layer unit test that
+never calls `MoveRegistry.install()` first, so no existing hash changed).
+**Alternatives considered.** Requiring every `fresh_round_sim`/`new_match` caller to pass the
+idle state ids explicitly as extra parameters — rejected: `Character.idle_state_id` already
+exists precisely so a caller does NOT need to know/pass it (mirrors `character_id` itself being
+the only identity a caller supplies everywhere else in this codebase); adding redundant
+parameters here would be a needless, drift-prone widening of `MatchState`'s own public surface
+for something one `MoveRegistry.character()` call already resolves correctly.
+**Scope.** `game/sim/match_state.gd` (`fresh_round_sim` + the new `_idle_state_id` helper),
+`game/tests/test_match_state.gd` (a new test pinning the real-character resolution + a sanity
+note on the pre-existing no-roster-installed fallback). Verified: every pre-existing
+`test_match_state.gd` hash-sensitive test is unaffected (checked by full re-run, all green); the
+fix is exercised end-to-end by `test_training_mode_shell.gd`'s new match-mode smoke test (A/B
+each resolve onto their OWN idle state from tick 0). Log for ratification.

@@ -9,6 +9,13 @@ extends RefCounted
 ##
 ## Reads ONLY InspectionView.player(i) — no sim-internal type. Plain
 ## Dictionary output, headlessly testable (no Node/Control API here).
+##
+## AIR-ACTION ECONOMY READOUT (TKT-P2-08; AD-046; inspection-surface.md
+## `PlayerView.air_action_used`). A straight read-through of the ALREADY-
+## surfaced field (no new sim-side plumbing) — B's whole "one air dash OR one
+## double jump per jump" economy (character-b.md) is otherwise invisible on
+## screen, so this panel is where a session reads "has this player already
+## spent their air action this jump."
 
 const STUN_KIND_NAMES: PackedStringArray = ["none", "hit", "block"]
 
@@ -37,6 +44,7 @@ static func _for_player(view: InspectionView, i: int) -> Dictionary:
 		"hit_count": pv.combo["hit_count"],
 		"scaling_pct": pv.combo["scaling_pct"],
 		"damage_total": pv.combo["damage_total"],
+		"air_action_used": pv.air_action_used,
 	}
 
 
@@ -68,11 +76,12 @@ static func format_row(row: Dictionary) -> String:
 		if row["invuln_throw"]:
 			parts.append("throw")
 		invuln_str = "  invuln[%s]" % "+".join(parts)
-	return "P%d  state %d (%s) f%d/%d  hitstop %d  stun %d(%s)  actionable %s%s  hits %d scaling %d%% dmg %d" % [
+	var air_action_str: String = "  air-action: SPENT" if row["air_action_used"] else "  air-action: ready"
+	return "P%d  state %d (%s) f%d/%d  hitstop %d  stun %d(%s)  actionable %s%s%s  hits %d scaling %d%% dmg %d" % [
 		row["player"], row["state_id"], category_name(row["state_category"]),
 		row["frame_in_state"], row["state_duration"],
 		row["hitstop_remaining"],
 		row["stun_remaining"], stun_kind_name(row["stun_kind"]),
-		str(row["actionable"]), invuln_str,
+		str(row["actionable"]), invuln_str, air_action_str,
 		row["hit_count"], row["scaling_pct"], row["damage_total"],
 	]

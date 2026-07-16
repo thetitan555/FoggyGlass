@@ -78,8 +78,34 @@ var _character_id: int = 0
 var _character_builder: Callable = Callable()
 var _projectile_registry_builder: Callable = Callable()
 
+## MATCH MODE (TKT-P2-08 — "wire the full A-vs-B match end to end"). When true,
+## this shell drives a real `MatchState` (fixed A-vs-B wiring, AD-048) through
+## `MatchTickHost` instead of the plain-sandbox single-`SimState`/single-
+## character path above. Toggled via this export (set `true` on the actual
+## `training_mode.tscn` the human opens for the P2 gate) or, for a test, by
+## setting it directly before the node enters the tree. Defaults `false` so
+## EVERY existing sandbox-mode caller (`TrainingMode.new()` + a hand-added
+## TickHost child, per every pre-P2-08 overlay test's `_make_shell()`-style
+## helper) is completely unaffected — this is a strict addition, not a
+## default-behavior change (logged docs/judgment-log.md).
+@export var start_in_match_mode: bool = false
+
+var _match_mode: bool = false
+
+## The match-layer tick host (game/sim/match_tick_host.gd), built lazily ONLY
+## in match mode (see _ready_match_mode). Null in sandbox mode.
+var _match_tick_host: MatchTickHost = null
+
 
 func _ready() -> void:
+	_match_mode = start_in_match_mode
+	if _match_mode:
+		_ready_match_mode()
+	else:
+		_ready_sandbox_mode()
+
+
+func _ready_sandbox_mode() -> void:
 	if _character_builder.is_valid():
 		_install_roster()
 	else:
@@ -103,6 +129,54 @@ func _ready() -> void:
 	_harness = TrainingHarness.new(_tick_host)
 	_harness.register_source("p1", _source_p1)
 	_harness.register_source("p2", _source_p2)
+
+	_wire_overlays()
+
+
+## AD-048's FIXED A-vs-B wiring (no character select — match-flow.md): character
+## A on P1, character B on P2. Not a configurable "pick your characters" API —
+## the match layer names this a wiring constant, so this method hardcodes it,
+## exactly like `_configure_default_character_a` already hardcodes A for the
+## sandbox path.
+##
+## Installs BOTH rosters/registries into ONE combined MoveRegistry/
+## ProjectileRegistry (disjoint ids by construction — char ids 2/3, projectile
+## ids 201-203/220-222 — so no merge conflict), builds a fresh `MatchState` via
+## the SAME entry point (`MatchState.new_match`) QA's own match-layer tests
+## exercise, and drives it through `MatchTickHost` — a MatchState-shaped twin of
+## `TickHost`'s own fixed-tick discipline (Tenet 1: physics_process, no delta,
+## tick read from state). The pre-existing `TickHost` child (every .tscn/test
+## helper already wires one) is left present but PAUSED and never `setup()` —
+## it advances an orphan, nobody-reads-it SimState otherwise, so pausing it
+## keeps this mode from burning cycles on dead state.
+func _ready_match_mode() -> void:
+	_tick_host.set_paused(true)
+
+	var roster: Dictionary = {
+		CharacterA.CHAR_ID: CharacterA.build_character(),
+		CharacterB.CHAR_ID: CharacterB.build_character(),
+	}
+	_roster = roster
+	MoveRegistry.install(roster)
+
+	var reg_a: Dictionary = CharacterA.build_projectile_registry()
+	var reg_b: Dictionary = CharacterB.build_projectile_registry()
+	var proj_registry: Dictionary = {}
+	for k in reg_a:
+		proj_registry[k] = reg_a[k]
+	for k in reg_b:
+		proj_registry[k] = reg_b[k]
+	ProjectileRegistry.install(proj_registry)
+
+	_source_p1 = RecordPlaybackSource.new(Callable(self, "_sample_device_p1"))
+	_source_p2 = RecordPlaybackSource.new(Callable(self, "_sample_device_dummy"))
+
+	_match_tick_host = MatchTickHost.new()
+	_match_tick_host.name = "MatchTickHost"
+	add_child(_match_tick_host)
+	var match_state := MatchState.new_match(CharacterA.CHAR_ID, CharacterB.CHAR_ID)
+	_match_tick_host.setup(match_state, _source_p1, _source_p2)
+	_match_tick_host.ticked.connect(_on_ticked)
 
 	_wire_overlays()
 
@@ -177,7 +251,11 @@ func _physics_process(_delta: float) -> void:
 	# criterion 2: "a paused sim does not advance"), driven explicitly via
 	# step_once() below, which itself calls _harness.step_once() (produce +
 	# advance as one op) rather than relying on this per-frame hook.
-	if not _tick_host.running:
+	#
+	# MATCH MODE routes through _match_tick_host instead (same running-gate
+	# discipline, one level up over MatchState — see _ready_match_mode).
+	var host_running: bool = _match_tick_host.running if _match_mode else _tick_host.running
+	if not host_running:
 		return
 	_source_p1.produce_next()
 	_source_p2.produce_next()
@@ -303,7 +381,29 @@ func _cycle_dummy_mode() -> void:
 # ---------------------------------------------------------------------------
 
 func inspection_view() -> InspectionView:
+	if _match_mode:
+		return InspectionView.new(_match_tick_host.get_match_state().sim, _roster)
 	return InspectionView.new(_tick_host.get_state(), _roster)
+
+
+## Read-only MatchView over the current match (match-flow.md; inspection-
+## surface.md → MatchView, AD-048). Only meaningful in match mode — returns
+## null in sandbox mode (no MatchState exists there; sandbox mode is a plain
+## SimState, an intentional scope split logged in docs/judgment-log.md). A
+## match overlay reads this ALONGSIDE inspection_view() (the two seams
+## compose — MatchView.new documents this exact pattern), and must handle the
+## null return (rendering "no match" rather than erroring) so the SAME overlay
+## can be mounted in either mode without special-casing which mode it's in.
+func match_view() -> MatchView:
+	if not _match_mode or _match_tick_host == null:
+		return null
+	return MatchView.new(_match_tick_host.get_match_state())
+
+
+## Whether this shell is running the match-layer path (TKT-P2-08) rather than
+## the plain single-SimState sandbox path.
+func is_match_mode() -> bool:
+	return _match_mode
 
 
 # ---------------------------------------------------------------------------
@@ -313,13 +413,17 @@ func inspection_view() -> InspectionView:
 # driven from (mirrors the read-only rule on the inspection side).
 # ---------------------------------------------------------------------------
 
-## Frame control (TKT-P1-02).
+## Frame control (TKT-P1-02). Routes through _match_tick_host in match mode
+## (see _ready_match_mode) — the same pause/resume/step contract, one level up.
 func set_paused(paused: bool) -> void:
-	_tick_host.set_paused(paused)
+	if _match_mode:
+		_match_tick_host.set_paused(paused)
+	else:
+		_tick_host.set_paused(paused)
 
 
 func is_paused() -> bool:
-	return _tick_host.is_paused()
+	return _match_tick_host.is_paused() if _match_mode else _tick_host.is_paused()
 
 
 ## Advance exactly one tick. While paused this is a manual frame-step
@@ -327,20 +431,45 @@ func is_paused() -> bool:
 ## dummy always produces its frame first (produce-before-query), matching
 ## _physics_process's running-loop behavior exactly (same phase pipeline, same
 ## input sourcing — AD-010's "frame-step crosses hitstop one tick per call").
+## MATCH MODE inlines the identical produce-before-query discipline directly
+## (there is no MatchState-shaped TrainingHarness — see capture_reset's note
+## below on that scope trim) rather than through _harness, which is wired to
+## _tick_host's plain SimState, not the match wrapper.
 func step_once() -> void:
-	_harness.step_once()
+	if _match_mode:
+		_source_p1.produce_next()
+		_source_p2.produce_next()
+		_match_tick_host.step_once()
+	else:
+		_harness.step_once()
 
 
 ## Situation save/restore + the single reset slot (TKT-P1-03; AD-020).
+## MATCH MODE SCOPE TRIM (logged docs/judgment-log.md): `TrainingHarness` is
+## built over `TickHost.get_state()`/`set_state()`, both SimState-specific —
+## it has no MatchState-shaped twin. Building one is real, additive control-
+## surface work outside TKT-P2-08's named scope ("integration, tuning, and
+## readout instruments only — no new mechanics/control surface"; the match
+## layer's OWN determinism/round-trip bar is already proven headlessly by
+## TKT-P2-07's test_match_state.gd, independent of any interactive reset
+## control). So in match mode these are a documented no-op / false rather than
+## silently reaching into the wrong host — a future ticket that wants an
+## interactive match reset builds the MatchState-shaped harness twin then.
 func capture_reset() -> void:
+	if _match_mode:
+		return
 	_harness.capture_reset()
 
 
 func do_reset() -> void:
+	if _match_mode:
+		return
 	_harness.do_reset()
 
 
 func has_reset_point() -> bool:
+	if _match_mode:
+		return false
 	return _harness.has_reset_point()
 
 

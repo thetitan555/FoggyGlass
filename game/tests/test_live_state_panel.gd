@@ -45,6 +45,8 @@ func _run() -> void:
 	_test_invuln_true_on_covering_frame_false_off_it()
 	_test_two_rows_one_per_player()
 	_test_format_row_mentions_invuln_when_active()
+	_test_air_action_used_field()
+	_test_format_row_mentions_air_action_state()
 
 
 func _two_char_state(gap_x: int = 45) -> SimState:
@@ -147,4 +149,36 @@ func _test_format_row_mentions_invuln_when_active() -> void:
 
 	var line0: String = LiveStatePanelModel.format_row(rows[0])
 	_false(line0.contains("invuln"), "a non-invulnerable player's formatted row omits the invuln clause entirely")
+	MoveRegistry.clear()
+
+
+# --- TKT-P2-08: air-action economy readout (AD-046) --------------------------
+
+func _test_air_action_used_field() -> void:
+	var s := _two_char_state()
+	s.players[0].air_action_used = false
+	s.players[1].air_action_used = true
+	var roster: Dictionary = MoveRegistry.roster()
+	var view := InspectionView.new(s, roster)
+	var rows: Array = LiveStatePanelModel.build(view)
+	var pv0: PlayerView = view.player(0)
+	var pv1: PlayerView = view.player(1)
+	_eq(rows[0]["air_action_used"], pv0.air_action_used, "panel air_action_used == PlayerView.air_action_used (p0)")
+	_eq(rows[0]["air_action_used"], false, "p0's air action reads NOT spent")
+	_eq(rows[1]["air_action_used"], pv1.air_action_used, "panel air_action_used == PlayerView.air_action_used (p1)")
+	_eq(rows[1]["air_action_used"], true, "p1's air action reads SPENT")
+	MoveRegistry.clear()
+
+
+func _test_format_row_mentions_air_action_state() -> void:
+	var s := _two_char_state()
+	s.players[0].air_action_used = false
+	s.players[1].air_action_used = true
+	var roster: Dictionary = MoveRegistry.roster()
+	var view := InspectionView.new(s, roster)
+	var rows: Array = LiveStatePanelModel.build(view)
+	var line0: String = LiveStatePanelModel.format_row(rows[0])
+	var line1: String = LiveStatePanelModel.format_row(rows[1])
+	_true(line0.contains("ready"), "an unspent air action reads 'ready' in the formatted row")
+	_true(line1.contains("SPENT"), "a spent air action reads 'SPENT' in the formatted row")
 	MoveRegistry.clear()

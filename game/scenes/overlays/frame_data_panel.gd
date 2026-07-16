@@ -47,4 +47,7 @@ static func _format(model: Dictionary) -> String:
 	var why: String = FrameDataPanelModel.format_last_hit_why(model["last_hit_why"])
 	if why != "":
 		lines.append(why)
+	var guard_line: String = FrameDataPanelModel.format_last_hit_guard(model["last_hit_guard"])
+	if guard_line != "":
+		lines.append(guard_line)
 	return "\n".join(lines)

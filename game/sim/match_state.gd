@@ -58,11 +58,37 @@ const ROUND_LENGTH_TICKS: int = 5940
 const ROUND_START_BEAT_TICKS: int = 60
 const ROUND_END_BEAT_TICKS: int = 90
 
-## Placeholder full health (match-flow.md: "tuned by the Architect against B's
-## damage" — TKT-P2-08's job). Mirrors SimState.new_initial()'s existing P0
-## placeholder value so the match layer's fresh-round health matches the sim's
-## own until tuning lands.
-const FULL_HEALTH: int = 1000
+## Tuned full health (match-flow.md "Health"; TKT-P2-08; JC-096). Replaces the
+## prior 1000 placeholder (which only mirrored SimState.new_initial()'s OWN
+## untuned P0 scaffold value, "data, not feel" — that scaffold default is left
+## alone; it backs unrelated P0/P1 sandbox tests against the generic test
+## character, not this match layer's real health).
+##
+## TUNED AGAINST BOTH CHARACTERS' AUTHORED DAMAGE (character-a.md / character-
+## b.md's own `hb.damage` values, game/content/character_{a,b}.gd) so "a couple
+## of good touches decide a round" (match-flow.md's own stated target) holds for
+## BOTH sides of the matchup, not just whichever character hits harder:
+##   - A's real hit-confirmed combos land in the 180-270 range (e.g.
+##     2M(70) xx DP-M(130 scaled ~90% ~117) ~= 187; a deep jump-in
+##     jH(80) -> 2M(70*.9~63) xx DP-H(160*.8~128) ~= 271) — one or two such
+##     combos should plausibly close a round.
+##   - B has no comparable single-move payoff (2H's launch has no juggle
+##     follow-up, matching A's own 2H; B's damage lives in its LADDER): B's own
+##     spec-given worked example, the full ladder
+##     `5L 2L 2L 5M 2M 2H 5H` (character-b.md "Cancel model"), scaled hit-by-hit
+##     (DamageScaling, 10%-step/10%-floor) totals ~155-160 — B's own
+##     "couple of good touches" is 2-3 such landed strings, not one.
+## 500 is the value where BOTH readings land in "a couple" (2-3 real
+## hit-confirmed touches, not a long footsie/poke grind): A's best single combo
+## is ~half of 500 (two touches plausibly close it out); B's full-ladder BnB is
+## ~30% of 500 (three such strings close it out). A single uncomboed poke
+## (B's 5L=20, A's 5L=30) alone still needs ~15-25 hits to kill — deliberately
+## NOT a fast poke-race, so combo/confirm play (not thirty pokes) is what
+## actually decides a round, per the brief. A round, clean number (matches a
+## health BAR reading cleanly at quarter/half marks) rather than an arbitrary
+## back-solved value. Provisional — a feel value, tunable at the human gate
+## like every other slice-provisional number (character-b.md's own header).
+const FULL_HEALTH: int = 500
 
 ## Top-level format-version stamp for the WRAPPER shape (AD-034 "extends to the
 ## wrapper" — match-flow.md). Governs MatchState's own fields; the nested `sim`
@@ -133,6 +159,7 @@ static func fresh_round_sim(char_id_p1: int, char_id_p2: int, p_tick: int, p_rng
 	p1.facing = 1
 	p1.health = FULL_HEALTH
 	p1.character_id = char_id_p1
+	p1.state_id = _idle_state_id(char_id_p1)
 
 	var p2 := PlayerState.new()
 	p2.pos_x = FP.from_int(100)
@@ -140,6 +167,7 @@ static func fresh_round_sim(char_id_p1: int, char_id_p2: int, p_tick: int, p_rng
 	p2.facing = -1
 	p2.health = FULL_HEALTH
 	p2.character_id = char_id_p2
+	p2.state_id = _idle_state_id(char_id_p2)
 
 	var ps: Array[PlayerState] = [p1, p2]
 	s.players = ps
@@ -147,6 +175,28 @@ static func fresh_round_sim(char_id_p1: int, char_id_p2: int, p_tick: int, p_rng
 	s.last_hit = null
 	s.neutral_restored_this_tick = false
 	return s
+
+
+## TKT-P2-08 integration fix (found while wiring the real A-vs-B match; logged
+## docs/judgment-log.md). A bare `PlayerState` defaults `state_id = 0` — fine
+## for `TestSupport`'s own P0 test character (its idle state IS id 0, by
+## convention), but WRONG for a real character (A's idle is 100, B's is 300):
+## every ROUND_START would park both players on an unresolvable state_id, the
+## same class of defect TKT-P1.1-01 Part A already fixed once for the sandbox
+## training-mode path (`training_mode.gd._init_players_as_installed_character`).
+## Resolves through `MoveRegistry` — the SAME single source of truth every
+## other character-id -> state lookup in this codebase already uses — so a
+## round start lands the character on its OWN authored idle, whatever that id
+## is. Falls back to `0` when the roster has no entry for `char_id` (no
+## installed roster at all, e.g. many of this file's own unit tests that never
+## call `MoveRegistry.install()` first) — identical to the prior UNRESOLVED
+## behavior in that case, so every existing match-layer test's hash is
+## unaffected (TestSupport.CHAR_ID's idle IS 0 wherever a roster happens to be
+## installed too, so this is a strict no-op for every already-green test; only
+## a REAL, non-test character actually observes a different value).
+static func _idle_state_id(char_id: int) -> int:
+	var character: Character = MoveRegistry.character(char_id)
+	return character.idle_state_id if character != null else 0
 
 
 ## Deep copy (mirrors SimState.clone's non-mutation discipline, AD-004 applied

@@ -37,6 +37,10 @@ func _true(cond: bool, msg: String) -> void:
 	_eq(cond, true, msg)
 
 
+func _false(cond: bool, msg: String) -> void:
+	_eq(cond, false, msg)
+
+
 func _run() -> void:
 	_test_static_frame_data_matches_move_data()
 	_test_live_advantage_matches_sim_value()
@@ -45,6 +49,10 @@ func _run() -> void:
 	_test_height_why_populated_on_air_normal_hit()
 	_test_height_why_null_on_grounded_hit()
 	_test_deep_vs_high_jh_why_ordering()
+	_test_last_hit_guard_null_on_no_hit()
+	_test_last_hit_guard_reports_blocked_mid()
+	_test_last_hit_guard_reports_wrong_stance_low()
+	_test_last_hit_guard_reports_plain_connect()
 
 
 # --- static frame data (AD-008 static) ---------------------------------------
@@ -213,6 +221,126 @@ func _test_deep_vs_high_jh_why_ordering() -> void:
 		"the panel's 'why' shows the deep jump-in with a strictly larger hitstun delta than the high one")
 	_true(deep_why["contact_depth"] < high_why["contact_depth"],
 		"the panel's 'why' shows the deep jump-in with a strictly smaller contact_depth than the high one")
+
+
+## --- TKT-P2-08: high/low block attribution (AD-045; inspection-surface.md
+## criterion 8) ------------------------------------------------------------
+
+func _test_last_hit_guard_null_on_no_hit() -> void:
+	MoveRegistry.install({CharacterA.CHAR_ID: CharacterA.build_character()})
+	var s := SimState.new_initial()
+	s.players[0].character_id = CharacterA.CHAR_ID
+	s.players[0].state_id = CharacterA.STATE_IDLE
+	s.players[1].character_id = CharacterA.CHAR_ID
+	s.players[1].state_id = CharacterA.STATE_IDLE
+	var view := InspectionView.new(s, {CharacterA.CHAR_ID: CharacterA.build_character()})
+	var model: Dictionary = FrameDataPanelModel.build(view)
+	_eq(model["last_hit_guard"], null, "no last hit -> last_hit_guard is null")
+	_eq(FrameDataPanelModel.format_last_hit_guard(null), "", "format_last_hit_guard(null) is the empty string")
+	MoveRegistry.clear()
+
+
+## Character A's 5M is a MID (blockable either stance) — a defender holding
+## back (standing) the whole approach blocks it cleanly.
+func _test_last_hit_guard_reports_blocked_mid() -> void:
+	MoveRegistry.install({CharacterA.CHAR_ID: CharacterA.build_character()})
+	var s := SimState.new_initial()
+	s.stage = StageState.new_initial(FP.from_int(-400), FP.from_int(400), 0)
+	s.players[0].character_id = CharacterA.CHAR_ID
+	s.players[0].state_id = CharacterA.STATE_5M
+	s.players[0].pos_x = FP.from_int(0)
+	s.players[0].facing = 1
+	s.players[1].character_id = CharacterA.CHAR_ID
+	s.players[1].state_id = CharacterA.STATE_IDLE
+	s.players[1].pos_x = FP.from_int(20)
+	s.players[1].facing = -1
+	var roster: Dictionary = {CharacterA.CHAR_ID: CharacterA.build_character()}
+	for _k in range(20):
+		# P1 (facing -1) holds RIGHT = back the whole time (a held crouch-free
+		# back-hold, mirrors test_guard_height.gd's own technique).
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.RIGHT)
+		if s.last_hit != null:
+			break
+	_true(s.last_hit != null, "sanity: 5M connected")
+	_true(s.last_hit.was_block, "sanity: the standing back-hold blocked a MID")
+	var view := InspectionView.new(s, roster)
+	var guard = FrameDataPanelModel.build(view)["last_hit_guard"]
+	_true(guard != null, "a blocked hit populates last_hit_guard")
+	_eq(guard["guard_height"], HitBox.GUARD_MID, "guard.guard_height reads MID")
+	_true(guard["was_block"], "guard.was_block true")
+	_true(guard["block_valid"], "guard.block_valid true (correct stance)")
+	var line: String = FrameDataPanelModel.format_last_hit_guard(guard)
+	_true(line.contains("blocked"), "the formatted line names the block")
+	_true(line.contains("MID"), "the formatted line names the guard height")
+	MoveRegistry.clear()
+
+
+## Character A's 2L is an ENFORCED LOW (AD-045). A standing back-hold (no
+## DOWN, so NOT crouching) is the WRONG stance for a low — it resolves as a
+## HIT, not a block, and last_hit_guard must attribute WHY (no knowledge
+## checks: the defender held back and still got hit, because of stance).
+func _test_last_hit_guard_reports_wrong_stance_low() -> void:
+	MoveRegistry.install({CharacterA.CHAR_ID: CharacterA.build_character()})
+	var s := SimState.new_initial()
+	s.stage = StageState.new_initial(FP.from_int(-400), FP.from_int(400), 0)
+	s.players[0].character_id = CharacterA.CHAR_ID
+	s.players[0].state_id = CharacterA.STATE_2L
+	s.players[0].pos_x = FP.from_int(0)
+	s.players[0].facing = 1
+	s.players[1].character_id = CharacterA.CHAR_ID
+	s.players[1].state_id = CharacterA.STATE_IDLE
+	s.players[1].pos_x = FP.from_int(20)
+	s.players[1].facing = -1
+	var roster: Dictionary = {CharacterA.CHAR_ID: CharacterA.build_character()}
+	for _k in range(20):
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.RIGHT)   # standing back-hold, never DOWN
+		if s.last_hit != null:
+			break
+	_true(s.last_hit != null, "sanity: 2L connected")
+	_false(s.last_hit.was_block, "sanity: the standing back-hold did NOT block the low")
+	_false(s.last_hit.block_valid, "sanity: block_valid false (wrong stance)")
+	var view := InspectionView.new(s, roster)
+	var guard = FrameDataPanelModel.build(view)["last_hit_guard"]
+	_true(guard != null, "the mis-blocked low populates last_hit_guard")
+	_eq(guard["guard_height"], HitBox.GUARD_LOW, "guard.guard_height reads LOW")
+	_false(guard["was_block"], "guard.was_block false")
+	_false(guard["block_valid"], "guard.block_valid false")
+	var line: String = FrameDataPanelModel.format_last_hit_guard(guard)
+	_true(line.contains("LOW"), "the formatted line names the guard height")
+	_true(line.contains("wrong stance"), "the formatted line names WHY the hit landed (no knowledge checks)")
+	MoveRegistry.clear()
+
+
+## A grounded hit against a defender not attempting to block at all
+## (was_block == false, block_valid == true — "no attempt," not "wrong
+## stance") gets a plain connect line, no stance claim.
+func _test_last_hit_guard_reports_plain_connect() -> void:
+	MoveRegistry.install({CharacterA.CHAR_ID: CharacterA.build_character()})
+	var s := SimState.new_initial()
+	s.stage = StageState.new_initial(FP.from_int(-400), FP.from_int(400), 0)
+	s.players[0].character_id = CharacterA.CHAR_ID
+	s.players[0].state_id = CharacterA.STATE_5M
+	s.players[0].frame_in_state = 0
+	s.players[0].pos_x = FP.from_int(0)
+	s.players[0].facing = 1
+	s.players[1].character_id = CharacterA.CHAR_ID
+	s.players[1].state_id = CharacterA.STATE_IDLE
+	s.players[1].pos_x = FP.from_int(20)
+	s.players[1].facing = -1
+	var roster: Dictionary = {CharacterA.CHAR_ID: CharacterA.build_character()}
+	for _k in range(20):
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+		if s.last_hit != null:
+			break
+	_true(s.last_hit != null, "sanity: 5M connected")
+	_false(s.last_hit.was_block, "sanity: no block attempted")
+	_true(s.last_hit.block_valid, "sanity: block_valid true (no attempt, not wrong stance)")
+	var view := InspectionView.new(s, roster)
+	var guard = FrameDataPanelModel.build(view)["last_hit_guard"]
+	var line: String = FrameDataPanelModel.format_last_hit_guard(guard)
+	_true(line.contains("connected"), "a plain, unblocked connect reads as a connect, not a stance claim")
+	_false(line.contains("wrong stance"), "no stance claim is made when the defender never attempted a block")
+	MoveRegistry.clear()
 
 
 ## Mirrors test_air_height_scaling.gd's _jh_hit_state helper (Character A, j.H,

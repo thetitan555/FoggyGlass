@@ -35,6 +35,7 @@ static func build(view: InspectionView) -> Dictionary:
 	]
 	out["live"] = _live(view)
 	out["last_hit_why"] = _last_hit_why(view)
+	out["last_hit_guard"] = _last_hit_guard(view)
 	return out
 
 
@@ -95,3 +96,58 @@ static func format_last_hit_why(why) -> String:
 	var delta: int = why["air_height_hitstun_delta"]
 	var sign_str: String = "+" if delta >= 0 else ""
 	return "connected deep (depth %d) -> %s%d hitstun" % [depth, sign_str, delta]
+
+
+## HIGH/LOW BLOCK ATTRIBUTION (TKT-P2-08; AD-045; inspection-surface.md
+## criterion 8). The most recent hit's `guard_height`/`block_valid`
+## (HitEvent), so "was this an overhead, a low, or a mid — and did the
+## defender's stance actually cover it" is readable regardless of whether the
+## hit carries an air-height story (unlike `_last_hit_why` above, this is NOT
+## gated on contact_depth/air_height_hitstun_delta being nonzero — a grounded
+## overhead/low is exactly the case this readout exists for). Returns null
+## when there is no recorded hit at all (mirrors `_last_hit_why`'s null case).
+static func _last_hit_guard(view: InspectionView):
+	var hit: HitEvent = view.last_hit()
+	if hit == null:
+		return null
+	return {
+		"attacker": hit.attacker,
+		"defender": hit.defender,
+		"guard_height": hit.guard_height,
+		"was_block": hit.was_block,
+		"block_valid": hit.block_valid,
+	}
+
+
+## Human-readable name for a HitBox.GUARD_* value.
+static func guard_height_name(guard_height: int) -> String:
+	match guard_height:
+		HitBox.GUARD_HIGH: return "HIGH"
+		HitBox.GUARD_LOW: return "LOW"
+		HitBox.GUARD_MID: return "MID"
+		_: return "?"
+
+
+## A one-line human-readable rendering of the high/low attribution, for the
+## panel's text label. Returns "" if there is no last hit to report (mirrors
+## format_last_hit_why's null case). Three readable outcomes (character-b.md's
+## mixup layer / inspection-surface.md criterion 8):
+##   - the hit was BLOCKED -> "P_ blocked a HIGH/LOW/MID hit from P_"
+##   - the hit CONNECTED because the defender's stance did not cover it
+##     (was_block == false AND block_valid == false) -> names WHY it beat the
+##     guard ("wrong stance") rather than leaving it an unexplained non-block
+##     (charter: "find out what happened and why"; no knowledge checks).
+##   - the hit CONNECTED because the defender simply was not blocking at all
+##     (was_block == false AND block_valid == true — nothing to attribute to
+##     stance) -> a plain connect line, no stance claim.
+static func format_last_hit_guard(guard) -> String:
+	if guard == null:
+		return ""
+	var gh_name: String = guard_height_name(guard["guard_height"])
+	var attacker: int = guard["attacker"]
+	var defender: int = guard["defender"]
+	if guard["was_block"]:
+		return "P%d blocked a %s hit from P%d" % [defender, gh_name, attacker]
+	if not guard["block_valid"]:
+		return "P%d's %s hit beat P%d's guard (wrong stance -- no block)" % [attacker, gh_name, defender]
+	return "P%d's %s hit connected on P%d" % [attacker, gh_name, defender]

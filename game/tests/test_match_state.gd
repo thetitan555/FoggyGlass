@@ -65,6 +65,7 @@ func _true(cond: bool, msg: String) -> void:
 
 func _run() -> void:
 	_test_new_match_shape()
+	_test_fresh_round_resolves_real_character_idle_state()
 	_test_no_combat_advance_outside_active()
 	_test_round_start_transitions_to_active_after_beat()
 	_test_active_calls_step_and_decrements_timer()
@@ -138,6 +139,25 @@ func _test_new_match_shape() -> void:
 	_eq(ms.sim.players[0].health, MatchState.FULL_HEALTH, "p0 starts at full health")
 	_eq(ms.sim.players[1].health, MatchState.FULL_HEALTH, "p1 starts at full health")
 	_true(ms.sim.players[0].pos_x < ms.sim.players[1].pos_x, "p0 starts left of p1 (symmetric start)")
+	# state_id defaults to 0 with NO roster installed (TestSupport.CHAR_ID's own
+	# idle state IS 0 by convention, so this cannot distinguish "resolved" from
+	# "unresolved default" -- see the dedicated real-character test below).
+	_eq(ms.sim.players[0].state_id, 0, "with no roster installed, state_id falls back to the unresolved default")
+
+
+## TKT-P2-08 integration fix (found wiring the real A-vs-B match; see
+## MatchState._idle_state_id's own header note). A bare PlayerState defaults
+## state_id=0, which is WRONG for a real character (A's idle is 100, not 0) --
+## fresh_round_sim must resolve each side's OWN authored idle state through
+## MoveRegistry, not leave both players parked on an unresolvable default.
+func _test_fresh_round_resolves_real_character_idle_state() -> void:
+	MoveRegistry.install({CharacterA.CHAR_ID: CharacterA.build_character(), CharacterB.CHAR_ID: CharacterB.build_character()})
+	var ms := MatchState.new_match(CharacterA.CHAR_ID, CharacterB.CHAR_ID, 0)
+	_eq(ms.sim.players[0].state_id, CharacterA.STATE_IDLE, "p0 (character A) resolves onto A's OWN idle state, not the generic 0 default")
+	_eq(ms.sim.players[1].state_id, CharacterB.STATE_IDLE, "p1 (character B) resolves onto B's OWN idle state, not the generic 0 default")
+	_true(CharacterA.STATE_IDLE != 0, "sanity: A's idle id is NOT 0 -- this test would be a false-pass otherwise")
+	_true(CharacterB.STATE_IDLE != 0, "sanity: B's idle id is NOT 0 -- this test would be a false-pass otherwise")
+	MoveRegistry.clear()
 
 
 func _test_no_combat_advance_outside_active() -> void:
@@ -348,7 +368,7 @@ func _full_match_script() -> Array:
 		script.append(["step"])
 	for i in range(5):
 		script.append(["step"])
-	script.append(["inject_health", 1, 900])       # round 2: p1 takes some damage
+	script.append(["inject_health", 1, 200])       # round 2: p1 takes some damage (below FULL_HEALTH -- JC-096 tuning)
 	script.append(["inject_timer", 1])             # round 2: timer about to expire
 	script.append(["step"])                        # timer hits 0 -> TIMEOUT, p0 (full hp) wins
 	for i in range(MatchState.ROUND_END_BEAT_TICKS):
