@@ -159,7 +159,7 @@ the one recognizer.
 
 | Field | Meaning |
 |---|---|
-| `motion` | Optional motion id (`236`, `623`, …); `0` = none. Recognized in the 9-frame motion window. |
+| `motion` | Optional motion id (`236`, `623`, `214`, …); `0` = none. Recognized in the 9-frame motion window. **The motion set is open and data-populated** (ratified from JC-090): a motion id is an entry in the one recognizer's motion-id → ordered-direction-token table, so adding a motion a character spec names (B's `214` = `down, down-back, back`, with its symmetric `DIR_DOWN_BACK` token) is **populating an existing mechanism, not extending the format** — the same standing as AD-044's cancel-group resolution. Two things this does *not* license: a second recognizer or any bespoke per-character motion check (one recognizer, Tenet 2 — every consumer reads buffering identically), and a genuinely new **recognition shape** (a re-press, a charge, a chord), which is a format matter and an Architect call (`double_tap`/`chord_button_index` are the precedent — AD-032/AD-046). |
 | `button_index` | The primary generic button (`BUTTON_0…7`), or **`-1` = no button** (a pure-direction / motion-only command). |
 | `chord_button_index` | Optional **second** required button (AD-032); `-1` = none. When set, the command requires `button_index` **and** `chord_button_index` both held on the **same** frame within the command buffer — a two-button *chord* (e.g. throw `L+H`). |
 | `required_direction` | Optional direction gate (raw direction bits; the sim resolves forward/back by facing before matching). For a pure-direction command (`button_index == -1`, no `motion`) this is the *whole* command (e.g. jump = `UP`). |

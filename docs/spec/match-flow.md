@@ -64,9 +64,15 @@ deterministic `phase_timer`).
 - **Rounds:** best-of-3 — first to **2** round wins takes the match.
 - **Timer:** ~**99 in-game seconds** = ~**5940 frames** at 60 Hz, counted down on the
   tick. **Timeout → higher current health wins the round**; equal health → tie.
-- **Health:** one conventional total in `SimState.players[i].health`. **Value tuned by
-  the Architect against B's damage** (default target: a couple of good touches decide a
-  round — brief). Placeholder until B's damage lands; the *mechanism* is contract.
+- **Health:** one conventional total in `SimState.players[i].health` — **500** (ratified from JC-096;
+  slice-provisional, settles at the human-inspection gate like every other feel number this phase).
+  Tuned against both characters' *authored* damage through the one `DamageScaling` curve, to the
+  brief's target ("a couple of good touches decide a round, not thirty pokes"): A's bread-and-butter
+  confirms land ~180–270 (≈half a bar — two close a round); B's damage lives in the ladder, so its
+  worked string `5L 2L 2L 5M 2M 2H 5H` totals ~158 (≈30% — B's "couple of touches" is 2–3 strings,
+  consistent with B's pressure/volume identity rather than a balance defect); a single uncomboed poke
+  still needs ~15–25 hits, so rounds are decided by confirms, not poke attrition. **One total for both
+  characters** — a per-character split would be a contract change here, not tuning.
 - **KO:** `health <= 0` ends the round (`reason = KO`; loser is the KO'd player). Both
   KO'd on the same tick → `DOUBLE_KO`.
 - **Ties (brief):** `DOUBLE_KO` and equal-health `TIMEOUT` **award the round to both**
@@ -85,6 +91,17 @@ clear end-of-round/end-of-match result render *from* `MatchView`, following the 
 view/view-model split (JC-040). The end reason being **serialized truth** (not a render
 guess) is what makes the emotionally-loaded moment — a razor-close timeout, a clean
 double-KO — legible on its face.
+
+**Match-mode control surface (scope — ratified from JC-098).** Match mode is an opt-in mode of the
+training-mode shell (the `.tscn` a human opens for the gate runs the fixed A-vs-B match). Its P2
+interactive surface is **pause / frame-step / the readouts** — enough for the gate to see and judge
+match state. **Capture-reset / do-reset are training-mode (sandbox) scope, not match scope**: they are
+a documented no-op in match mode, because `TrainingHarness` is built over the SimState-shaped host and
+has no MatchState-shaped twin, and neither the match brief nor this spec asks for an interactive match
+reset. The match layer's own determinism/round-trip bar is proven **headlessly** (criterion 1), which
+is where it belongs — it does not depend on an interactive control. A future ticket wanting an
+interactive match reset builds the MatchState-shaped harness twin then. **This is a deliberate scope
+line, not an unbuilt requirement** — QA should not audit it as a gap.
 
 **Human-inspection gate.** The match layer is an experiential surface (health, pips,
 clock, result a human must *see and read correctly*). QA's headless audit (transitions,
@@ -127,7 +144,8 @@ round/match ended* are legible on screen (brief; roadmap P2 gate).
 
 ## Open items
 
-- **Health value** — tuned after B's damage numbers (a follow-up tuning ticket; the
-  mechanism is done).
+- ~~**Health value**~~ — **closed**: 500, tuned against both characters' damage (JC-096, ratified;
+  see Rules → Health). Slice-provisional like every feel number — the gate may move it; the mechanism
+  is done.
 - **Exact round length / transition-beat lengths** — provisional feel, adjustable; the
   frame-counted mechanism is contract.

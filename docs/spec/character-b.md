@@ -92,6 +92,14 @@ proof the format is not A-shaped.
 ## Specials
 
 ### Low slide (`236L/M/H` or a command — provisional input)
+**One canonical move, three inputs (ratified from JC-092).** Unlike the divekick and the arc
+projectile — which each enumerate three behaviourally distinct versions below — the slide is a
+**single** authored state that all of `236L`, `236M`, `236H` route to. `236L/M/H` names three ways to
+*reach* the same move, not three moves; no per-strength differentiation of the slide is intended, and
+B-1's spacing-variable advantage is fully carried by the one move's several active frames. (If a
+future revision wants three distinct slides, that is a contract addition here — specific per-strength
+values — not an authoring call.)
+
 A low-hitting slide. **`guard_height = LOW`** (must be crouch-blocked). Causes a
 **hard knockdown** (→ knockdown-into-ground reaction, AD-043) and is B's **most
 desirable combo ender** (→ oki). **Hard legibility constraint (brief):** its **block
@@ -112,6 +120,16 @@ Despawns on ground contact (AD-047). **Hard legibility constraint (brief):** the
 falls-in-front setup must resolve into a **readable mixup, never an unblockable** —
 see acceptance criterion B-2 (the AD-047 guard-height-compatibility invariant).
 
+**Pinned (ratified from JC-093):**
+- **`guard_height = MID` on all three strengths.** B-2 is satisfied **by construction** — a MID hit is
+  blockable from either stance, so the projectile can never be the opposite half of a guard-height
+  conflict with any simultaneous B strike, and B authors no untechable throw. See AD-047's
+  "Satisfied by construction" note for the full invariant and its standing condition (it holds only
+  while both facts do). The mixup's guess stays on the visible high/low or strike/throw axis.
+- **L is the falls-in-front (oki) version** — the shortest parabola of the three, landing closest to B;
+  M and H reach progressively further (the genre-conventional L = quick/close, H = long-reach read).
+  The spec previously named only "one version"; it is L.
+
 ### Divekick (aerial special — `2+attack` in air, provisional; three versions)
 An air special (does **not** spend the air action). Three versions, visually
 distinguishable in the air (brief hard constraint):
@@ -126,6 +144,15 @@ Authored via AD-043 velocity-sets: each version sets its dive velocity after its
 **long hang of H is the telegraph** that an overhead is coming. **Hard legibility
 constraint (brief):** the three must be **visually distinguishable in the air** so the
 defender can read whether the overhead (H) is coming — see acceptance criterion B-3.
+
+**Landing (ratified from JC-094).** A divekick lands like any other `AIRBORNE` state: the AD-043
+continuous clamp ends it into `idle_state_id`, hit/blocked/whiffed alike. **There is no bespoke
+landing-recovery tail** — the genre-conventional "a whiffed/blocked divekick eats extra recovery on
+landing" is *not* built, because `_land`'s idle target is engine behavior no `MoveState` can override
+by authoring. That is a deliberate deferral, not an oversight: adding it means a new landing-redirect
+field (a `knockdown_state_id`-style hook), which is a format/AD change, not a data fix. See Open items
+— it is a live human-gate question, since a divekick with no landing recovery is a strong,
+low-risk approach.
 
 ## Mixup layer
 
@@ -195,6 +222,10 @@ Format/mechanism criteria (frame numbers are provisional; these are the invarian
   The floor is a Strategist feel value (placeholder); the criterion is that the delay is
   **measurable via scripted-input trace** and audited at the human gate. If any sequence
   violates it, that is a spec/tuning correction, not a shipped knowledge check.
+  **Current placeholder: 12 ticks** (a stand-in pending the Strategist's feel value — see Open items).
+  **Measured against it:** H-divekick's entry-to-active-hitbox delay is **17 ticks** (16 hang + 1
+  dive-impulse frame), clearing the placeholder floor. The 17 is the number the human gate judges; the
+  12 is only a sanity bound and is not load-bearing design.
 - **B-5 · Air-dash crossup side is readable.** When an air dash crosses up, which side it
   lands on is readable as it happens (position/facing legible on screen). No ambiguous-
   side crossup you cannot tell the side of (principles). Human-gate item.
@@ -212,7 +243,12 @@ Format/mechanism criteria (frame numbers are provisional; these are the invarian
 ## Open items routed with this spec
 
 - **Reaction-window floor for overhead mixups (B-4)** — a feel number, Strategist's via
-  the spec (placeholder now). The mechanism is pinned.
+  the spec. **Placeholder 12 ticks; H-divekick currently measures 17.** The mechanism is pinned; the
+  floor settles at the human-inspection gate against the measured value.
+- **Divekick landing recovery (JC-094, ratified)** — divekicks currently land straight to idle with no
+  recovery tail. If the gate finds they need real landing punishment, that is an **Architect format
+  call** (a landing-redirect field on `Character`/`MoveState` parallel to `knockdown_state_id`, and an
+  AD-043 revision), routed as a flag — never a content workaround.
 - **Does B need a low-committal "get in" tool beyond air mobility + ground dash** (brief
   open question) — surfaced to the Strategist **only if** playtest/QA finds B cannot
   legibly approach a zoning A (a flag, not a silent addition).

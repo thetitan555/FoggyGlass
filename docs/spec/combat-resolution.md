@@ -30,7 +30,10 @@
    airborne character whose `pos_y >= ground_y` is clamped to `ground_y` and transitioned
    `AIRBORNE → GROUNDED` (landing) with velocity zeroed — clamp and landing are one mechanism;
    a **launched (airborne HITSTUN)** character instead transitions to the character's dedicated
-   grounded **`knockdown_state_id`** reaction (AD-043, ratified from JC-070), not idle. Landing
+   grounded **`knockdown_state_id`** reaction (AD-043, ratified from JC-070), not idle, **re-arming
+   `stun` to that state's `duration` on the landing tick** so wakeup counts from landing, not from the
+   original hit (ratified from JC-088 — note the intended `duration − 1` same-tick readout there).
+   Landing
    **resets `air_action_used`** to false (AD-046). Integrate live projectiles'
    positions too — applying each projectile's own `gravity` (AD-047) before its position — and
    process any `spawn` actions firing this tick (subject to the per-owner cap); an arc projectile

@@ -1811,8 +1811,23 @@ state, merely clamped to the floor. That is **overturned**; the contract is a ge
   launch-into-KD converge on **one** learnable wakeup timing (charter: oki is a learnable read, not a
   per-source guess). The knockdown state may author a grounded (downed) hurtbox distinct from the
   airborne launch hurtbox (which JC-070's stay-in-state model could not).
+- **The landing transition re-arms `stun` — the wakeup countdown restarts at landing (ratified from
+  JC-088).** "Counts from entry (landing)" is **not** delivered by transitioning `state_id` alone:
+  `p.stun` — the countdown that actually gates the return to actionable (`combat-resolution.md` →
+  "Stun & actionability") — is set once at the original hit and decrements every unfrozen tick
+  regardless of later state changes, so a bare transition would leave wakeup governed by whatever
+  stun survived the flight: exactly the air-time dependence this elaboration exists to remove. The
+  landing branch therefore **sets `stun = knockdown_state.duration`** (and `stun_kind = HIT`) on the
+  landing tick itself. **Pinned readout semantic:** this transition sets **no hitstop**, so the
+  ordinary phase-7 decrement runs on the same tick the re-arm happens — `stun_remaining` observed
+  after the landing tick's full `step()` is **`duration − 1`**, not `duration` (unlike a hit-connect,
+  which hitstop freezes for a tick — AD-010). The wakeup tick is nonetheless exactly `duration` ticks
+  from (and including) the landing tick, which *is* the contract; the one-tick readout difference is
+  an intended consequence of reusing the one decrement path, **not** an off-by-one to "fix." Changing
+  it would mean a new per-player freeze flag for a cosmetic parity nothing observable depends on.
 - **Consequence (Developer, engine + schema + A-authoring — dispatched separately).** Add
-  `knockdown_state_id` to `Character`; change `_land`'s launched-reaction branch to redirect to it;
+  `knockdown_state_id` to `Character`; change `_land`'s launched-reaction branch to redirect to it
+  and re-arm `stun` per the bullet above;
   author A's launched reactions (`STATE_HITSTUN_LAUNCH`/`STATE_AIR_RESET`) to land into A's knockdown
   state, and set A's throw/`623` `hit_reaction` accordingly. Update JC-070's
   `test_airborne_physics.gd` landing assertion (launched-land now enters `knockdown_state_id`, not the
@@ -1975,6 +1990,16 @@ defender reads live. Concretely — **no frame may exist where the projectile's 
 both connect while requiring mutually-incompatible defense** (opposite `guard_height`, or strike-block vs.
 an un-techable throw on the same frame). This is a **QA-checkable acceptance criterion** (scripted-input
 trace over the oki setup; `character-b.md`), audited at the human-inspection gate.
+**Satisfied by construction, not by timing (ratified from JC-093).** The invariant above is met
+structurally rather than by frame-window analysis: **B's arc projectile authors `guard_height = MID`
+at every strength**, so it is blockable from either stance and can never be the "opposite" half of a
+guard-height conflict with *any* simultaneous B strike, whatever that strike's own `guard_height` is;
+and B authors **no untechable throw** (it reuses the shared techable throw model, AD-016/029), so the
+block-vs-untechable-throw half cannot arise either. The real guess stays entirely on B's strike/throw
+and high/low layers — one visible axis. This is a proof, not a tuning argument, and it is the reason
+no per-patch re-litigation of active-window overlap is needed. **Standing condition:** it holds only
+while those two facts hold — an arc projectile authored non-`MID`, or an untechable throw added to any
+character, reopens B-2 and requires the frame-window analysis this construction replaces.
 **Why.** An arc is a projectile whose vertical velocity accelerates — the minimal expression is one
 `gravity` field on the existing projectile entity (which already carries `velocity`); no new system. The
 unblockable ban is the charter line (principles: "no knowledge checks — never an ambiguous
@@ -2046,3 +2071,14 @@ JC-073).**
   same tick, the round resolves as **KO / DOUBLE_KO**, never TIMEOUT — the health outcome that actually
   happened this tick is the more specific, more legible `last_round_end_reason` ("someone got KO'd," not
   "the clock also hit zero"). This shapes the serialized end-reason the brief cares most about.
+**Clarification — the fresh round places each side in its own idle state, resolved through
+`MoveRegistry` (2026-07-16, ratified from JC-099).** "Resets the `SimState` to fresh symmetric
+positions + full health" includes each player's **`state_id`**: the round-start sim sets it from that
+character's **`Character.idle_state_id`**, resolved through `MoveRegistry` by `character_id` — the one
+character-id → state lookup this project uses everywhere else (AD-024/AD-038). It is **not** the
+`PlayerState` struct default (`0`), which only *looked* correct because the P0 test character's idle
+happens to be id `0`; a real roster (A's idle is `100`, B's `300`) exposes it as a round-start defect.
+Callers supply `character_id` only — the idle id is never a parameter (`idle_state_id` exists so no
+caller has to know it). When no roster is installed for an id, the resolution falls back to `0`,
+preserving pre-existing no-roster test behavior. **"Fresh symmetric start" means idle-in-neutral, and
+that is per-character truth, not a constant.**
