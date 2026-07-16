@@ -181,6 +181,60 @@ cross-system consistency); the golden-file frame-data/hitbox regression net is
 seeded now that there are stable characters to snapshot. *The content seam is
 proven: a second character was content, not engineering.*
 
+**Status (2026-07-16) — BUILD COMPLETE; awaiting ratification → QA audit → the
+user's gate.** All P2 tickets are landed, committed, and pushed:
+
+- **01** airborne physics (AD-043, supersedes AD-036) — gravity, persistent
+  velocity, fused ground-clamp/landing, launch-into-knockdown; A's jump migrated
+  off its hand-baked arc and goldens re-baselined.
+- **02** double-tap dash + the one-air-action economy (AD-046); A's `66`/`44`
+  wired to its existing dash states (confirmed marginal, as briefed).
+- **03+04** combat capabilities — AD-044 cancel groups, AD-045 directional
+  block enforcement (A's `2L`/`2M` now enforced LOW), AD-047 arc gravity.
+- **05** character B ground content — 6 chainable normals, the gatling
+  strength-ladder, `6H` overhead, `2H` JC-launcher, throw.
+- **06** character B air toolkit + specials — three divekicks (H the sole
+  overhead), the low slide into knockdown-oki, the three-parabola arc
+  projectile, air normals that carry the fall, `2H`-JC→airdash pressure.
+- **07** match layer — `MatchState`/`match_step`/`MatchView`, best-of-3,
+  frame-counted timer, timeout/KO/double-KO/sudden-death.
+- **08** integrate + health tuning (`FULL_HEALTH = 500`) + training-mode
+  readouts for the new legibility truth.
+- Plus two engine corrections surfaced by the build and specced by the
+  ratification pass: the **dedicated knockdown state** (JC-070 overturned) and
+  the **AD-044 exact-self-repeat `CancelEval` fix**.
+
+**The content-seam proof held.** B's entire kit was authored as **data** over the
+existing engine; the only code touched was adding one motion token (`214`) to the
+*already-generic* recognizer table (JC-090). No engine primitive was invented and
+no format-generality flag was raised — the P2 thesis, met. Suite: **42/42**
+headless green, determinism/round-trip included.
+
+**Remaining to close P2:**
+
+1. **Architect ratification** of JC-087..099 (the last provisional calls).
+2. **QA objective audit** against acceptance criteria, the tenets
+   (determinism/serialization across a full match), and the audit criterion, plus
+   a judgment-log drift read. QA also **seeds the golden-file regression net** and
+   verifies **cross-system consistency** (one move format, one advantage
+   computation across A and B) — both are P2 done-conditions.
+3. **The user's human-inspection gate** — the stopping point. QA's objective pass
+   is necessary but *not* sufficient; only the user closes this.
+
+**How to run the gate:** open the project in Godot 4.3 and run
+`game/scenes/training_mode.tscn` (F6) — it boots the real A-vs-B match. P1
+(character A) = arrows + `J`/`K`/`L`; P2 (character B) = WASD + `U`/`I`/`O`, both
+directly controllable. `P` pause / `N` frame-step work; `C`/`R` are documented
+no-ops in match mode (JC-098).
+
+**What the gate must judge:** (a) B's mixups readable *as they happen* — the
+`6H`/H-divekick overhead tells, the airdash crossup side, the slide's advantage on
+the instrument, no unblockable off projectile oki (the no-knowledge-checks line);
+(b) the match result legible on its face (KO / TIMEOUT / DOUBLE_KO); (c) the
+**JC-095 provisional tuning** — divekick hang/dive profiles, projectile parabolas,
+slide numbers, and the **B-4 reaction-window floor (placeholder 12 ticks)** — keep
+or retune.
+
 ## P3 — Two-player tutorial
 
 The second seam-straddling feature: a scripted-input source plus authored
