@@ -63,9 +63,17 @@ player-facing side builds on them):
 4. **TKT-P2-07 (match layer — AD-048)** is **structurally independent of B content** (it
    wraps the sim). It may be dispatched **any time after 01** — a steerability lever the
    Strategist may place earlier or later. Its *health tuning* is deferred to 08.
-5. **TKT-P2-08 (integrate + tune + readouts) LAST**, after 06 and 07. Health tuned vs. B's
+5. **TKT-P2-08 (integrate + tune + readouts)**, after 06 and 07. Health tuned vs. B's
    damage, full A-vs-B match wired, training-mode readouts for the new legibility fields.
    Ends on the **human-inspection gate** + QA's golden-net seeding.
+6. **TKT-P2-09+10 (AD-049 repair — defender-resolved reactions + projectile-id uniqueness),
+   added 2026-07-16 after the human gate, and now the highest-priority P2 work.** The gate
+   exposed that **every cross-character hit is broken** (the reaction `state_id` crossed a
+   character boundary; see AD-049) — which means 08's integration was never actually
+   exercised and the human gate could not be judged. This is a **tight cluster, one session**
+   (see the ticket). **Dispatch before anything else in P2 resumes.** **Checkpoint:** A and B
+   hit each other correctly in both directions for every reaction kind. The human gate and
+   QA's cross-system consistency check both **re-run after it** — see the Cross-cutting note.
 
 **Cluster exception (the only one):** **03+04 run in one Developer session** — both are
 combat-resolution engine capabilities with high spec-read overlap (`combat-resolution.md`
@@ -197,6 +205,87 @@ inspection gate on B's air/mixup readability and the match result's legibility.
 
 ---
 
+### TKT-P2-09 + TKT-P2-10 · AD-049 repair: defender-resolved reactions + projectile-id uniqueness — TIGHT CLUSTER, one session
+**Serves:** **AD-049** (all three decisions); `move-format.md` → "The character-namespace
+rule" + "Reactions" + `Character.reaction_map` + `HitBox.hit_reaction`/`block_reaction` +
+`ProjectileData.id` + criteria **15–18**; `combat-resolution.md` → phase 5 (reaction state
+resolved on the defender) + the throw path. **Depends:** TKT-P2-01…08 (landed).
+**Resolves:** `flags.md` 2026-07-16 (Developer → Architect, `HitBox.hit_reaction`/
+`block_reaction`) and the box-vanish flag above it — the same defect from the symptom side.
+**Blocks:** P2's re-audit and the human-inspection gate. **Every A-vs-B hit is currently
+broken; nothing about P2 can be judged until this lands.**
+
+**TKT-P2-09 — the reaction model.**
+
+1. **`ReactionKind`** — the closed engine-level enum, exactly the six kinds in
+   `move-format.md` → "Reactions". Engine-side, alongside the existing `MoveState` category
+   constants.
+2. **`Character.reaction_map`** (`ReactionKind → own state_id`) + a `reaction_state(kind)`
+   accessor implementing the resolution floor (`kind → REACTION_HITSTUN → idle_state_id`).
+   The floor is a guardrail against the wedge, **not** an authoring fallback — see below.
+3. **`HitBox.hit_reaction`/`block_reaction` carry a `ReactionKind`, not a `state_id`.**
+4. **Resolution sites take the defender's map.** `StepPhases._resolve_one_hit` (~line 915/919
+   and the reaction-entry at ~958) and `_resolve_throw` (~line 1127) resolve
+   `defender_character.reaction_state(hb.hit_reaction)`. **The bug is precisely that these
+   used the attacker's authored id against `character_def` (the defender) — the id must not
+   cross at all now.**
+5. **Retire `Character.knockdown_state_id`** → `reaction_map[REACTION_KNOCKDOWN]`.
+   `StepPhases._land` (~line 494) resolves the kind. Remove the field and its `== 0`
+   no-transition fallback (AD-049; the reaction is required content now). Do **not** leave
+   both mechanisms live.
+6. **Re-author both characters' reaction data.** `character_a.gd` / `character_b.gd` (and
+   their baked `.tres`, and `test_character.tres` / `test_support.gd`): each `hit_reaction`/
+   `block_reaction` becomes a kind; each character declares a full `reaction_map`. The
+   existing states map straight across (A: 120/125/122/123/121/124; B: 320/323/**—**/324/321/322).
+7. **Character B must author an `AIR_RESET` state** — it has none, because it inflicts none.
+   **A's `2H` inflicts it and B receives it.** This is the content hole the old model hid;
+   it is the concrete proof the fix is doing work. Author it consistent with B (airborne
+   HITSTUN-category knock-away, no follow-up) — B's own reaction, not a copy of A's. *If the
+   right feel for B's air-reset is not obvious from `character-b.md`, that is a **feel**
+   question: flag it, don't invent it.*
+
+**TKT-P2-10 — projectile-id uniqueness.** `ProjectileRegistry.install` **rejects duplicate
+`data_id`s** (loud failure at wiring time) instead of silently overwriting; `training_mode.gd`'s
+A+B roster merge (~lines 160–169) goes through it. A/B install clean today — this is closing
+the hole before character C hits it, per AD-049 Decision 3. Commit as its own unit.
+
+**Acceptance criteria:**
+1. **`move-format.md` criteria 15–18 pass**, criterion 16 above all.
+2. **The regression test is ASYMMETRIC — A vs B, not a mirror.** For **each**
+   `ReactionKind`, an A-vs-B contact (both directions) leaves the defender in a state **from
+   its own roster**; `PlayerView.boxes` is **non-empty on every tick of the reaction**; and
+   the defender **becomes actionable when stun expires**, with no round reset. **A mirror
+   matchup cannot satisfy this** — a mirror is what let the bug ship, so a mirror test is not
+   evidence. Verify it **fails on the current code** before fixing (it must reproduce the
+   wedge), then passes.
+3. **The `AIR_RESET` case is covered explicitly**: A's `2H` hits B → B enters **B's own**
+   air-reset state, keeps its boxes, and recovers.
+4. **Knockdown convergence still holds (AD-043)**, now via the kind: a launched character
+   landing, a grounded hard-KD hit (B's slide), and a throw KD all reach **that character's
+   own** knockdown state, wakeup counted from landing.
+5. **No raw `state_id` crosses a character boundary** (criterion 17) — greppable.
+6. **Duplicate `data_id` install fails loudly**; A+B install clean.
+7. **Full headless suite green**, goldens re-baselined where the reaction re-author moves
+   resolved frame data (QA's P2 net). A golden diff here is *expected*; an unexplained one is
+   not — say which and why.
+
+**Judgment-log:** any latitude — notably B's air-reset framing (if it stays latitude and not
+a flag), and the `.tres` re-bake mechanics.
+
+**Checkpoint:** *A and B hit each other correctly, in both directions, for every reaction
+kind — the defender always keeps its boxes and always recovers — and no identifier crosses a
+character boundary unchecked.*
+
+**Why a cluster:** P2-10 is a single install-time guard plus a test, sharing P2-09's exact
+spec read (AD-049 + the namespace rule) and its one checkpoint. It is the only cluster in
+this repair; commit each ticket's work as its own unit within the session (protocol hard
+rule).
+
+**Note for the Developer:** you declined to patch this and escalated it — that was the right
+call and it is why the fix is a contract and not a workaround. AD-049 is now the contract;
+build against it and raise anything it still leaves ambiguous.
+
+---
 ## Cross-cutting (verified at feature audit / human gate / by QA, not separate build tickets)
 
 - **Golden-file regression net seeding (QA; roadmap P2 done-condition).** Once A
@@ -209,6 +298,17 @@ inspection gate on B's air/mixup readability and the match result's legibility.
   advantage computation** — QA verifies A and B resolve frame data / advantage through the
   same code path with no character-specific branch (`move-format.md` criterion 4;
   `character-b.md` criterion 1). This is the content-seam proof P2 is for.
+  **Re-scoped 2026-07-16 (AD-049) — this check passed while every A-vs-B hit was broken, and
+  must not be run the same way again.** The prior pass grepped `game/sim/*.gd` for
+  character-specific branches and found zero. That was **true and insufficient**: the defect
+  was not a branch but an *implicit coupling* — the engine worked only because both
+  characters happened to share a state-id namespace the format never required them to share.
+  **A structural grep cannot see an implicit coupling; only an asymmetric behavioural test
+  can.** So the check now additionally requires: **`move-format.md` criteria 15–18**, with
+  **criterion 16 (asymmetric A-vs-B reactions) as the load-bearing one** — the content-seam
+  thesis is proven by two *different* characters interacting correctly, never by a mirror
+  matchup or a code-shape grep. Where a check *could* be satisfied by both characters
+  agreeing on something by convention, it isn't evidence.
 - **Human-inspection gate (roadmap P2).** After 08, the user plays A vs B: confirms B's
   mixups are **readable as they happen** (the overhead looks like an overhead, the divekick
   version is tellable, the crossup side is readable, the slide's advantage is on-screen, no
