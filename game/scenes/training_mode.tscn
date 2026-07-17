@@ -65,22 +65,25 @@ offset_bottom = 100.0
 [node name="ControlsLegend" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 0
-offset_right = 386.0
-offset_bottom = 244.0
+offset_left = 750.0
+offset_top = 16.0
+offset_right = 1136.0
+offset_bottom = 460.0
 script = ExtResource("7_legend")
 
 [node name="Label" type="Label" parent="ControlsLegend"]
 layout_mode = 0
 offset_right = 386.0
-offset_bottom = 244.0
+offset_bottom = 444.0
+autowrap_mode = 3
 
 [node name="DummyModeIndicator" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 0
 offset_left = 750.0
-offset_top = 270.0
+offset_top = 470.0
 offset_right = 1136.0
-offset_bottom = 300.0
+offset_bottom = 494.0
 script = ExtResource("8_dummymode")
 
 [node name="Label" type="Label" parent="DummyModeIndicator"]
@@ -92,9 +95,9 @@ offset_bottom = 24.0
 layout_mode = 3
 anchors_preset = 0
 offset_left = 750.0
-offset_top = 310.0
+offset_top = 504.0
 offset_right = 1136.0
-offset_bottom = 430.0
+offset_bottom = 624.0
 script = ExtResource("9_matchpanel")
 
 [node name="Label" type="Label" parent="MatchPanel"]
