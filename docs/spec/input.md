@@ -89,6 +89,19 @@ is asked for is "current" or "future"; only the driver knows).
   current frame into each source, *then* advances the sim, which queries it. This is
   the same "harness above the sim coordinates the sources" ownership AD-020 already
   establishes for reset/rewind.
+- **The query index is the produced-frame count — not the sim tick** (pinned
+  2026-07-16, ratified from JC-100). A host may query `get_input(N)` using
+  `state.sim.tick` **only** while it advances the sim exactly once per `produce_next()`
+  call. Any host that wraps the sim in phases where the sim does **not** advance
+  (`MatchTickHost`'s non-`ACTIVE` `ROUND_START`/`ROUND_END` beats — `match-flow.md`:
+  "Combat is not advanced outside `ACTIVE`") **must track its own count of frames
+  queried** and use that. `state.sim.tick` and the produced-frame count silently
+  diverge by exactly the non-advancing beats, and the whole gap reappears as **input
+  lag** (the P2 gate's ~1s of it: 60 frozen `ROUND_START` ticks @ 60Hz, widening after
+  every round). This stays the **driver's** problem, per the ownership above: sources
+  remain dumb and phase-unaware (Tenet 2 — a source cannot know about match phases and
+  must never be made to), so the host that *creates* the discrepancy is the one that
+  reconciles it. Never fix this by making the driver or the sources match-phase-aware.
 - The invariant is **defended, not merely arranged.** A source treats a query for a
   frame it has not produced as a contract violation (fails loudly under a debug
   build, per criterion 7), so a mis-ordered driver breaks visibly rather than

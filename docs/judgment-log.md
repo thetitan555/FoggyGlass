@@ -19,7 +19,20 @@
 
 ## Provisional (awaiting ratification)
 
-### JC-100 · 2026-07-16 · flag "~1 second of input lag" · fix MatchTickHost's own frame-query counter, not the driver — provisional
+### JC-100 · 2026-07-16 · flag "~1 second of input lag" · fix MatchTickHost's own frame-query counter, not the driver — RATIFIED (Architect, 2026-07-16)
+**Ratified, and the reasoning promoted to contract.** The call is right and right for the
+stated reason: the driver polls devices, the match layer owns phases, and those two things
+have no business knowing about each other. Making `training_mode.gd` (and by extension every
+`InputSource` caller) phase-aware to keep a counter honest would have put match-layer state
+in the input path to fix a bug the *host* introduced — Tenet 2's separation and input.md's
+"sources are dumb/generic" posture both point the other way. Containing it in the host that
+creates the discrepancy is correct, and leaving `TickHost`'s `state.tick`-as-index alone
+(still provably correct there, since it advances 1:1) is the right restraint.
+**Folded into the spec:** `input.md` → "Produce-before-query ordering" now pins the general
+invariant — *the query index is the produced-frame count, not the sim tick*; any host with
+non-advancing phases tracks its own count; never fix it by making the driver or sources
+phase-aware. Your alternative is recorded there as explicitly forbidden, so nobody
+re-proposes it. This generalizes past `MatchTickHost` to any future wrapping host.
 Decided: fixed the input-frame desync (P2-gate flag 1: `MatchTickHost._advance`
 was querying `get_input(state.sim.tick)`, which freezes during `ROUND_START`/
 `ROUND_END`, while the real driver keeps calling `produce_next()` every real
@@ -44,7 +57,20 @@ correct — `state.tick`-as-query-index approach alone too, since that one still
 holds for the plain sandbox path.
 Serving: flag `docs/flags.md` (2026-07-16, "~1 second of input lag," resolved).
 
-### JC-101 · 2026-07-16 · flag "HUD text overlap" · training_mode.tscn right-column resize/restack — provisional
+### JC-101 · 2026-07-16 · flag "HUD text overlap" · training_mode.tscn right-column resize/restack — RATIFIED (Architect, 2026-07-16)
+**Ratified; no spec change needed.** Squarely latitude: the spec owns *what the instrument
+must show*, never the pixel geometry it shows it in, so box sizes and stacking are the
+Developer's to solve. Both restraint calls are also right — declining to re-column
+`controls_legend.gd`'s text builder (a flag about layout geometry doesn't license rewriting
+text layout), and declining to widen into `InputHistoryPanel`. Verifying by loading the real
+`.tscn` and reading back every `Control.rect` is the correct standard of proof for a claim
+about overlap; the diagnosis that the box was undersized from TKT-P1.1-02 (not a P2-08
+regression) is well-evidenced, and re-solving rather than preserving the user's gate-time
+workaround was the right handling of `7c88462`.
+One standing note, not a correction: the instrument is the surface we audit *through*
+(`audit-criterion.md`), so its legibility is contract-adjacent even though its layout isn't.
+If the right fix for the next overlap **is** the columnar text builder you passed over, that
+remains latitude — take it then; it was correctly out of scope for a geometry flag.
 Decided: re-solved the P2-gate HUD-overlap flag by (a) sizing `ControlsLegend`'s
 box to its actual ~18-line content (444px tall, up from 244px) with
 `autowrap_mode = 3` (WORD_SMART) added to its Label so its two long lines wrap
