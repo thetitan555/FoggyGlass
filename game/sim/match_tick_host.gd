@@ -41,6 +41,38 @@ var _match_state: MatchState = null
 var _source_p1: InputSource = null
 var _source_p2: InputSource = null
 
+## FLAG FIX (2026-07-16 P2-gate flag 1 — "~1 second of input lag"). How many
+## times THIS host has queried the sources for a frame (== how many times each
+## source's produce_next()/sample_next() has been called on its behalf — the
+## driver calls it once per real _physics_process tick, unconditionally, any
+## time the host is running, regardless of match_phase — training_mode.gd
+## _physics_process / main.gd's mirror pattern).
+##
+## ROOT CAUSE this replaces: `_advance` used to query `get_input(state.sim.
+## tick)`. That is only a safe stand-in for "how many frames have been
+## produced" in the PLAIN SimState case (TickHost), where `SimState.step` runs
+## every tick the host advances, so the two counts stay 1:1 by construction.
+## The match layer breaks that equivalence on purpose (match-flow.md: "Combat
+## is not advanced outside ACTIVE") — `state.sim.tick` is FROZEN through the
+## whole ROUND_START/ROUND_END phase_timer beats, while the driver keeps
+## calling produce_next() every real tick regardless (it has no notion of
+## match_phase — nor should it, Tenet 2: sources are dumb/generic). Every tick
+## of a non-ACTIVE beat silently produced a frame nobody ever consumed at that
+## index, so once ACTIVE resumed, `get_input(state.sim.tick)` kept reading an
+## index `phase_timer`-ticks stale — a FIXED offset (60 ROUND_START +
+## 90 ROUND_END each subsequent round) that read as persistent, growing input
+## lag for the whole match (reproduced directly: see judgment-log). Tracking
+## the query index HERE instead — a plain "how many times has this host asked"
+## counter, incremented once per _advance() call, matching produce_next()
+## 1:1 by construction regardless of match_phase — restores the input.md
+## invariant (`get_input(frame)` reads the frame just produced) without
+## touching state.sim.tick, the match state machine, or any contract.
+## Deliberately a host-local field, not serialized (mirrors how a source's own
+## produced-count is external to SimState/MatchState, Tenet 2) — match mode's
+## capture_reset/do_reset are already documented no-ops (training_mode.gd), so
+## there is no restore path this needs to hook.
+var _frames_queried: int = 0
+
 
 func _ready() -> void:
 	# Mirrors TickHost's own fallback: a host added to a tree with no explicit
@@ -67,15 +99,22 @@ func _physics_process(_delta: float) -> void:
 
 
 ## The single place one MATCH tick happens: source the current frame's input
-## for each player (the current frame is the WRAPPED sim's own tick counter,
-## `state.sim.tick` — a source is only ever asked for the frame the match is
-## about to run, input.md "no future reads"), then advance via the pure,
-## non-mutating `MatchState.match_step`. During non-ACTIVE match phases,
-## `match_step` itself does not advance combat (match-flow.md) — this host
-## does not special-case that; it always calls match_step exactly once,
-## and the match layer's own state machine decides what that tick means.
+## for each player, then advance via the pure, non-mutating `MatchState.
+## match_step`. During non-ACTIVE match phases, `match_step` itself does not
+## advance combat (match-flow.md) — this host does not special-case that; it
+## always calls match_step exactly once, and the match layer's own state
+## machine decides what that tick means.
+##
+## THE QUERY INDEX IS `_frames_queried` (see its field doc), NOT `state.sim.
+## tick` — the latter free-runs 1:1 with real ticks only during ACTIVE, and
+## would desync from how many frames the sources have actually produced across
+## a ROUND_START/ROUND_END beat (flag fix, 2026-07-16 P2 gate flag 1). This is
+## still exactly one query per source per real tick, for the frame the driver
+## just produced (input.md "no future reads": the driver produces before this
+## runs, so `_frames_queried` is always already-produced when read here).
 func _advance(state: MatchState) -> MatchState:
-	var frame: int = state.sim.tick
+	var frame: int = _frames_queried
+	_frames_queried += 1
 	var in_p1: int = _source_p1.get_input(frame) if _source_p1 != null else InputFrame.NEUTRAL
 	var in_p2: int = _source_p2.get_input(frame) if _source_p2 != null else InputFrame.NEUTRAL
 	return MatchState.match_step(state, in_p1, in_p2)

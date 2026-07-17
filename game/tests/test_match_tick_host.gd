@@ -98,6 +98,61 @@ func _run() -> void:
 
 	host.free()
 
+	_run_input_lag_regression()
+
+
+## REGRESSION (2026-07-16 P2-gate flag 1 — "~1 second of input lag," fixed in
+## `_advance`'s query-index bug). Drives the EXACT real-driver call pattern
+## (training_mode.gd's `_physics_process`: produce_next() on BOTH sources every
+## real tick, unconditionally, whenever the host is running — no notion of
+## match_phase) through a whole ROUND_START beat with NEUTRAL held, then flips
+## P1's live input to a held direction the instant ACTIVE begins, and asserts
+## the FIRST ACTIVE tick already reflects it. Before the fix this failed
+## (the first several ACTIVE ticks replayed stale ROUND_START-era NEUTRAL
+## frames — a fixed ROUND_START_BEAT_TICKS-tick-late echo of whatever the
+## player pressed, exactly the reported ~1-second lag). Exercises the real
+## bug with NO faked Godot layer: MatchTickHost + RecordPlaybackSource are the
+## actual driver/source classes the running game uses, called in the actual
+## per-tick order training_mode.gd uses.
+func _run_input_lag_regression() -> void:
+	var p1_live: int = InputFrame.NEUTRAL
+	var src1 := RecordPlaybackSource.new(Callable(self, "_lag_regression_sample").bind("p1"))
+	var src2 := RecordPlaybackSource.new()   # idle P2 — irrelevant to this check
+	_lag_regression_p1_frame = InputFrame.NEUTRAL
+
+	var host := MatchTickHost.new()
+	var match_state := MatchState.new_match(TestSupport.CHAR_ID, TestSupport.CHAR_ID, 0)
+	host.setup(match_state, src1, src2)
+
+	# Whole ROUND_START beat, NEUTRAL held — mirrors the driver's unconditional
+	# produce_next() every real tick regardless of match_phase.
+	for i in range(MatchState.ROUND_START_BEAT_TICKS):
+		src1.produce_next()
+		src2.produce_next()
+		host._match_state = host._advance(host._match_state)
+	_eq(host.get_match_state().match_phase, MatchState.PHASE_ACTIVE,
+		"[lag regression] ROUND_START beat elapsed -> ACTIVE")
+
+	# The instant ACTIVE begins, the player starts holding a direction.
+	_lag_regression_p1_frame = InputFrame.RIGHT
+	src1.produce_next()
+	src2.produce_next()
+	host._match_state = host._advance(host._match_state)
+	var view := InspectionView.new(host.get_match_state().sim, {})
+	_eq(view.player(0).input_current, InputFrame.RIGHT,
+		"[lag regression] the FIRST ACTIVE tick already reflects input pressed that same tick (no stale ROUND_START-era echo)")
+
+	host.free()
+
+
+## Bound live-sampler for the lag regression (RecordPlaybackSource's Callable
+## convention — see record_playback_source.gd header). The bound "p1" arg is
+## unused; kept only so a future P2-side sampler could reuse this one method.
+var _lag_regression_p1_frame: int = InputFrame.NEUTRAL
+
+func _lag_regression_sample(_who: String) -> int:
+	return _lag_regression_p1_frame
+
 
 func _true_check(cond: bool, msg: String) -> void:
 	_eq(cond, true, msg)
