@@ -92,7 +92,7 @@ bug — I have NOT patched around it. Flagged up to the Architect below**
 (`raised-by: Developer · owner: Architect`), per protocol's upstream-correction
 rule. No code change for this entry.
 
-### [open] 2026-07-16 · raised-by: Developer · owner: Architect · re: `docs/spec/move-format.md` (`HitBox.hit_reaction`/`block_reaction`)
+### [resolved] 2026-07-16 · raised-by: Developer · owner: Architect · re: `docs/spec/move-format.md` (`HitBox.hit_reaction`/`block_reaction`)
 Problem: **`HitBox.hit_reaction`/`block_reaction` is authored as a single `state_id`
 int on the ATTACKER's move data, but `StepPhases._resolve_one_hit` applies it by
 calling `character_def.get_state(reaction_state)` — i.e. it is resolved against the
@@ -123,7 +123,57 @@ character ids; (b) some other resolution scheme entirely). That decision affects
 feel/format and is squarely yours to make, not mine to invent or patch around
 (protocol.md upstream-correction). Flagging up rather than guessing.
 ---
-Resolution (owner fills): …
+Resolution: **Confirmed a contract gap, not intended, and fixed as a contract —
+`AD-049`, folded into `move-format.md` (new sections "The character-namespace rule"
+and "Reactions"; `HitBox`/`Character` schema; criteria 15–18) and
+`combat-resolution.md` phase 5. Your read was right and your option (a) is
+essentially the shape adopted, with the completeness obligation made explicit.
+Declining to patch this was correct: it is a contract decision.**
+**The fix.** `hit_reaction`/`block_reaction` become a **`ReactionKind`** — a closed
+engine-level enum naming the reaction *semantically* (`REACTION_HITSTUN` /
+`LAUNCH` / `AIR_RESET` / `KNOCKDOWN` / `BLOCKSTUN` / `CROUCH_BLOCKSTUN`) — resolved
+through the **defender's own** required `Character.reaction_map`. No id crosses the
+boundary at all. The framing that settles it: **reactions are defender-side
+content.** The attacker names *what happens*; the defender owns *what that looks
+like on itself* (it must, or it would wear the attacker's hurtbox). Consequently
+**every character must author every kind — not every kind it inflicts, every kind it
+can receive**, which is all of them: character C may never launch anyone, but A's
+`2H` launches C. That obligation is the thing that makes the format checkable
+(criterion 15) instead of dependent on two characters happening to agree.
+`knockdown_state_id` **folds in** as `REACTION_KNOCKDOWN` (it was the same concept
+under a second name — you correctly spotted the `idle_state_id`/`knockdown_state_id`
+precedent; the reaction map generalizes it); `idle_state_id` stays, since idle is
+not a reaction. A resolution floor (`kind → HITSTUN → idle_state_id`) exists purely
+so a content hole can never reproduce *your* failure mode (the boxless permanent
+wedge) — the static check catches it first; do not author against the floor.
+**Rejected:** a shared reserved id range (that is this bug wearing a convention —
+nothing would *require* a character to author the reserved ids, and C breaks on day
+one); open data-populated reaction *names* on the JC-090 motion-table precedent
+(tempting, but an open key set **cannot express completeness** — no check could tell
+"C is missing `AIR_RESET`" from "C has no such reaction," which is exactly the hole
+that let this ship; a motion is read by one side, a reaction must be agreed by two).
+**Generalized past the instance.** The stated invariant is now
+`move-format.md` → **the character-namespace rule**: *no field authored on character
+X may carry a `state_id` resolved against character Y; what crosses a boundary is
+engine-level semantics, never character-local ids.* This is the **third** instance of
+that class (TKT-P1.1-01's `character_id 0 / state_id 0` default; JC-099's round-start
+idle that "only looked correct because the P0 test character's idle happens to be id
+`0`"; now this) — so it is written as a checkable invariant rather than left as a
+habit. **A same-shape audit of the whole format found one more live case:** projectile
+`data_id` is a **flat global** registry key that A and B keep disjoint *by convention
+only*, and `training_mode.gd`'s roster merge **silently overwrites** on collision — C
+authoring `201` would quietly steal A's fireball. Declared global + `install` now
+rejects duplicates (AD-049 Decision 3). `id_group`, cancel groups/tags,
+`guard_height`×`is_crouch`, and `category` audited **clean** (they pass semantics, not
+ids). Full table in AD-049.
+**Build:** **TKT-P2-09+10** (`docs/tickets/p2-char-b-match.md`), a tight cluster,
+dispatched ahead of all other P2 work. Note two things it will surface: **character B
+has no `AIR_RESET` state** (it never inflicts one — but A's `2H` does, and B receives
+it), which is the content hole the old model hid; and the regression test must be
+**asymmetric A-vs-B, verified failing on current code first** — a mirror matchup
+cannot prove this, since a mirror is precisely what let it ship. If B's air-reset feel
+isn't derivable from `character-b.md`, that's a feel question — flag it, don't invent
+it. No code change this entry (Architect session; contract only).
 
 ### [resolved] 2026-07-16 · raised-by: User (P2 human gate) · owner: Developer · re: `spec/character-b.md` (divekick) / input path
 Problem: **the user could not perform a divekick at all** at the P2 gate. B's three
