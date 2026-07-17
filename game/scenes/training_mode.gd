@@ -149,6 +149,14 @@ func _ready_sandbox_mode() -> void:
 ## helper already wires one) is left present but PAUSED and never `setup()` —
 ## it advances an orphan, nobody-reads-it SimState otherwise, so pausing it
 ## keeps this mode from burning cycles on dead state.
+##
+## PROJECTILE `data_id` IS A GLOBAL NAMESPACE (AD-049) — A and B are disjoint by
+## AUTHORING CONVENTION only (201-203 / 220-222), not by anything the format
+## enforces, and this merge is exactly the site that would silently overwrite
+## on a collision (the third instance of the character-namespace bug class —
+## resolved by routing the merge through `ProjectileRegistry.install`'s Array
+## form, which rejects a duplicate loudly instead of the caller's own dict-
+## merge loop doing it silently).
 func _ready_match_mode() -> void:
 	_tick_host.set_paused(true)
 
@@ -161,12 +169,9 @@ func _ready_match_mode() -> void:
 
 	var reg_a: Dictionary = CharacterA.build_projectile_registry()
 	var reg_b: Dictionary = CharacterB.build_projectile_registry()
-	var proj_registry: Dictionary = {}
-	for k in reg_a:
-		proj_registry[k] = reg_a[k]
-	for k in reg_b:
-		proj_registry[k] = reg_b[k]
-	ProjectileRegistry.install(proj_registry)
+	var installed_clean: bool = ProjectileRegistry.install([reg_a, reg_b])
+	if not installed_clean:
+		push_error("TrainingMode._ready_match_mode: ProjectileRegistry rejected a duplicate data_id across A/B (AD-049) — projectiles will not resolve correctly this run.")
 
 	_source_p1 = RecordPlaybackSource.new(Callable(self, "_sample_device_p1"))
 	_source_p2 = RecordPlaybackSource.new(Callable(self, "_sample_device_dummy"))
