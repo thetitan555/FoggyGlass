@@ -192,6 +192,27 @@ the opponent won't know," it's out.
   The economy *is* the design: one approach-mixup option per jump, each with a
   clean, readable counter. (Overrides my earlier "air dash over double jump" call.)
 
+**What B-5 (airdash crossup) actually requires** *(added 2026-07-17, answering the
+user's re-gate question: the crossup works, but "nothing special shows up in the
+overlay — not sure if that's intended")*
+
+**Intended: yes — no crossup indicator, ever.** A readout that announces "you are
+being crossed up" hands the player the answer to the exact read the option exists to
+pose. That is buying legibility by making the game easier, which `audit-criterion.md`
+half 2 exists to reject. The crossup is *supposed* to be a live read.
+
+**But B-5 is not satisfied by silence either.** The charter's promise is not "always
+reactable," it's **always discoverable** (the legibility backstop). So the bar is:
+
+- **Live:** the player reads the side off the thing that actually determines it —
+  relative position and **facing** — not off a label. Nothing added.
+- **Discoverable:** the instrument must expose **facing / which side is blocking-side**
+  as ordinary state, the same way it exposes advantage and stun. Then "which way was I
+  supposed to block?" always has an answer on a frame-step, after the fact.
+
+If facing is already in the readouts, B-5 is met and this is closed. If it isn't, that
+is the gap — not the missing indicator. Flagged to check, not assumed either way.
+
 **What B looks like when it *receives*** *(added 2026-07-16 — AD-049)*
 
 AD-049 makes reactions **defender-side content**: the attacker names *what happens*
