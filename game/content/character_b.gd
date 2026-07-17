@@ -121,11 +121,20 @@ const STATE_KNOCKDOWN: int = 324   # shared grounded knockdown reaction (AD-043 
 const STATE_THROW: int = 350
 
 # --- Air toolkit + specials (TKT-P2-06) ---------------------------------------
-# Low slide (236 L/M/H -- character-b.md's own text gives three input strengths,
-# but describes exactly ONE move's behavior, no per-strength differentiation
-# unlike the divekick/projectile which explicitly enumerate three distinct
-# versions -- so all three inputs route to ONE canonical slide, logged latitude).
-const STATE_SLIDE: int = 365
+# Low slide (236 L/M/H). character-b.md's own text describes one move's
+# BEHAVIOR (the spacing-dependent-advantage mechanism, B-1) under three input
+# strengths, not three distinct move shapes -- so L/M/H share EVERY frame-data
+# property (startup/active/recovery/damage/hitstun/blockstun/hitstop/
+# hit_reaction) and only their forward SLIDE SPEED (hence total travel
+# distance) differs, per docs/flags.md 2026-07-17 "re: JC-095 provisional
+## tuning — settled" ("the slides' distances should vary much more between
+# strengths" -- JC-112). STATE_SLIDE (365) is kept as the M-strength id
+# (unchanged; every pre-existing test referencing it keeps testing the SAME
+# state); L and H are new sibling states with the SAME timeline shape, a
+# different `motion_vel_x`.
+const STATE_SLIDE_L: int = 363
+const STATE_SLIDE: int = 365   # M strength (id unchanged from before this session)
+const STATE_SLIDE_H: int = 369
 
 # Arc projectile (214 L/M/H; AD-047) -- three genuinely distinct parabolas.
 const STATE_ARC_L: int = 366
@@ -151,7 +160,7 @@ const IDG_5H: int = 5
 const IDG_2H: int = 6
 const IDG_6H: int = 7
 const IDG_THROW: int = 8
-const IDG_SLIDE: int = 9
+const IDG_SLIDE: int = 9   # M strength (id unchanged from before this session)
 const IDG_JL: int = 10
 const IDG_JM: int = 11
 const IDG_JH: int = 12
@@ -161,6 +170,8 @@ const IDG_DIVEKICK_H: int = 15
 const IDG_ARC_L: int = 16
 const IDG_ARC_M: int = 17
 const IDG_ARC_H: int = 18
+const IDG_SLIDE_L: int = 19
+const IDG_SLIDE_H: int = 20
 
 # --- ProjectileData registry ids (distinct from character A's 201-203) -------
 const PROJ_ARC_L: int = 220
@@ -247,7 +258,7 @@ static func build_character() -> Character:
 	c.states.append_array(_build_normals())
 	c.states.append_array(_build_reactions())
 	c.states.append_array(_build_throw())
-	c.states.append_array(_build_slide())
+	c.states.append_array(_build_slides())
 	c.states.append_array(_build_arc_projectiles())
 	c.states.append_array(_build_divekicks())
 	c.states.append_array(_build_air_normals())
@@ -262,10 +273,11 @@ static func build_character() -> Character:
 ## a caller that spawns/restores B's projectiles must ProjectileRegistry.
 ## install() this).
 static func build_projectile_registry() -> Dictionary:
-	var l := _arc_projectile_data(PROJ_ARC_L, IDG_ARC_L, FP.from_units(0.5), 30, 14, 10, 6)
-	var m := _arc_projectile_data(PROJ_ARC_M, IDG_ARC_M, FP.from_units(0.4), 38, 16, 11, 7)
-	var h := _arc_projectile_data(PROJ_ARC_H, IDG_ARC_H, FP.from_units(0.3), 46, 18, 12, 8)
-	return {l.id: l, m.id: m, h.id: h}
+	var reg: Dictionary = {}
+	for p in _arc_params():
+		var data: ProjectileData = _arc_projectile_data(p[1], p[2], FP.from_units(p[5]), p[6], p[7], p[8], p[9])
+		reg[data.id] = data
+	return reg
 
 
 # =============================================================================
@@ -335,13 +347,13 @@ static func _build_button_map() -> Array[ButtonMapEntry]:
 	# character_a.gd's own discipline ("motion commands before their prefix's
 	# plain-button fallbacks") so a completed 236/214 motion is never shadowed by
 	# a bare-button or DOWN+button entry recognizing a PARTIAL match against the
-	# motion's own intermediate frames. All three buttons route the slide to the
-	# SAME canonical STATE_SLIDE (character-b.md describes one move's behavior,
-	# not three distinct ones -- logged latitude, docs/judgment-log.md); the
-	# projectile routes to three genuinely distinct strengths (AD-047).
-	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_0, STATE_SLIDE))
+	# motion's own intermediate frames. Each button routes the slide to its OWN
+	# strength state (L/M/H distances now vary -- docs/flags.md 2026-07-17 "re:
+	# JC-095 provisional tuning — settled," JC-112); the projectile routes to
+	# three genuinely distinct strengths too (AD-047).
+	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_0, STATE_SLIDE_L))
 	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_1, STATE_SLIDE))
-	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_2, STATE_SLIDE))
+	map.append(_map_motion(InputBuffer.MOTION_236, InputFrame.BUTTON_2, STATE_SLIDE_H))
 	map.append(_map_motion(InputBuffer.MOTION_214, InputFrame.BUTTON_0, STATE_ARC_L))
 	map.append(_map_motion(InputBuffer.MOTION_214, InputFrame.BUTTON_1, STATE_ARC_M))
 	map.append(_map_motion(InputBuffer.MOTION_214, InputFrame.BUTTON_2, STATE_ARC_H))
@@ -973,6 +985,15 @@ static func _build_6h() -> MoveState:
 	kf_start.frame_start = 1
 	kf_start.frame_end = 22
 	kf_start.hurtboxes = [_hurt_stand()]
+	# JC-115 (docs/flags.md 2026-07-17 "re: JC-095 provisional tuning — settled"):
+	# 6H creeps forward slightly during its 22f startup -- a visible wind-up that
+	# clarifies the overhead tell (the user's own improvement over "startup and a
+	# high hit both read correctly"). Same has_motion/motion_vel_x mechanism the
+	# slide/divekick already use (AD-043 keyframe-motion convention); modest
+	# (1.0/f * 22f = 22 units over the whole startup, about half the character's
+	# own pushbox width) so it reads as a creep, not a dash-in.
+	kf_start.has_motion = true
+	kf_start.motion_vel_x = FP.from_units(1.0)
 	var hb := HitBox.new()
 	hb.box = Box.make(FP.from_int(20), FP.from_int(-85), FP.from_int(30), FP.from_int(20))
 	hb.guard_height = HitBox.GUARD_HIGH
@@ -1176,32 +1197,37 @@ static func _build_throw() -> Array[MoveState]:
 
 # =============================================================================
 # Low slide (character-b.md -> Specials -> Low slide; TKT-P2-06). 236 + L/M/H
-# all route to this ONE canonical move (logged latitude: the spec describes
-# exactly one move's behavior under three input strengths, unlike the
-# divekick/projectile which explicitly enumerate three distinct versions).
+# each route to their OWN state (STATE_SLIDE_L/STATE_SLIDE(M)/STATE_SLIDE_H) --
+# character-b.md describes one move's BEHAVIOR (the mechanism below) under
+# three input strengths, not three distinct move shapes, so L/M/H share EVERY
+# frame-data property and differ ONLY in forward speed/total distance
+# (docs/flags.md 2026-07-17 "re: JC-095 provisional tuning — settled": "the
+# slides' distances should vary much more between strengths" -- JC-112).
 #
 # B-1's hard legibility constraint ("spacing-variable, instrument-readable
 # advantage") falls out of AD-008's LIVE advantage formula for free, with NO
-# new mechanism: the slide is a single moving hitbox authored on ONE keyframe
-# spanning the WHOLE active window (SLIDE_ACTIVE frames) with a constant
-# forward `has_motion` velocity -- so the character's WORLD position (and
-# therefore the hitbox's world rect) advances every active frame even though
-# the keyframe's LOCAL box coordinates never change. A closer defender is
-# reached (and connects) on an EARLIER active frame; a farther defender is
+# new mechanism: EACH strength's slide is a single moving hitbox authored on
+# ONE keyframe spanning the WHOLE active window (SLIDE_ACTIVE frames) with a
+# constant forward `has_motion` velocity -- so the character's WORLD position
+# (and therefore the hitbox's world rect) advances every active frame even
+# though the keyframe's LOCAL box coordinates never change. A closer defender
+# is reached (and connects) on an EARLIER active frame; a farther defender is
 # reached on a LATER one -- different frame_in_state at the moment of
 # contact, hence different attacker-remaining-recovery, hence different live
 # block advantage (Advantage.live), exactly the mechanism character-b.md
-# names. The CAUSING spacing is separately visible on screen (the geometry
-# overlay already renders both players' positions/boxes every frame; no new
-# field is needed for that half of B-1 -- only the training mode's existing
+# names. This holds independently for each strength's own (now-varied) speed.
+# The CAUSING spacing is separately visible on screen (the geometry overlay
+# already renders both players' positions/boxes every frame; no new field is
+# needed for that half of B-1 -- only the training mode's existing
 # live-advantage readout + the existing geometry overlay, both already built).
 # =============================================================================
 const SLIDE_STARTUP: int = 12
-const SLIDE_ACTIVE: int = 8      # several active frames -- the spacing-variable window (B-1)
+const SLIDE_ACTIVE: int = 8      # several active frames -- the spacing-variable window (B-1);
+								  # SHARED across L/M/H (frame data parity -- only speed varies)
 const SLIDE_RECOVERY: int = 10
-const SLIDE_SPEED: float = 5.0   # forward px/f during the active window (constant, AD-043
-								  # keyframe-motion convention -- re-set identically every
-								  # covered tick, not an impulse-then-inherit arc)
+const SLIDE_SPEED_L: float = 2.5   # short, close-range poke (JC-112)
+const SLIDE_SPEED: float = 5.0     # M strength -- unchanged from before this session
+const SLIDE_SPEED_H: float = 9.0   # long-reaching, near-full-screen-poke slide (JC-112)
 const SLIDE_DAMAGE: int = 50
 const SLIDE_HITSTUN: int = 28    # matches STATE_KNOCKDOWN's authored duration exactly (the
 								  # "one learnable wakeup" convergence -- see this file's
@@ -1210,9 +1236,20 @@ const SLIDE_BLOCKSTUN: int = 14
 const SLIDE_HITSTOP: int = 8
 
 
-static func _build_slide() -> Array[MoveState]:
+## Build the three slide states (L/M/H): SAME startup/active/recovery/damage/
+## hitstun/blockstun/hitstop/hit_reaction/geometry, differing ONLY in
+## `motion_vel_x` (and therefore total travel distance) -- JC-112.
+static func _build_slides() -> Array[MoveState]:
+	return [
+		_build_slide(STATE_SLIDE_L, IDG_SLIDE_L, SLIDE_SPEED_L),
+		_build_slide(STATE_SLIDE, IDG_SLIDE, SLIDE_SPEED),
+		_build_slide(STATE_SLIDE_H, IDG_SLIDE_H, SLIDE_SPEED_H),
+	]
+
+
+static func _build_slide(state_id: int, id_group: int, speed: float) -> MoveState:
 	var m := MoveState.new()
-	m.id = STATE_SLIDE
+	m.id = state_id
 	m.category = MoveState.CATEGORY_GROUNDED
 	m.duration = SLIDE_STARTUP + SLIDE_ACTIVE + SLIDE_RECOVERY
 	m.loop = false
@@ -1237,7 +1274,7 @@ static func _build_slide() -> Array[MoveState]:
 													   # (character-b.md: "via hit_reaction");
 													   # a ReactionKind (AD-049).
 	hb.block_reaction = MoveState.REACTION_CROUCH_BLOCKSTUN
-	hb.id_group = IDG_SLIDE
+	hb.id_group = id_group
 
 	var first_active: int = SLIDE_STARTUP + 1
 	var last_active: int = SLIDE_STARTUP + SLIDE_ACTIVE
@@ -1247,8 +1284,9 @@ static func _build_slide() -> Array[MoveState]:
 	kf_active.hurtboxes = [_hurt_crouch()]
 	kf_active.hitboxes = [hb]
 	kf_active.has_motion = true
-	kf_active.motion_vel_x = FP.from_units(SLIDE_SPEED)   # constant forward slide (B-1's
-															# spacing-variable mechanism)
+	kf_active.motion_vel_x = FP.from_units(speed)   # constant forward slide (B-1's
+													  # spacing-variable mechanism); THE
+													  # per-strength distance variable (JC-112)
 
 	var kf_rec := Keyframe.new()
 	kf_rec.frame_start = last_active + 1
@@ -1257,7 +1295,7 @@ static func _build_slide() -> Array[MoveState]:
 
 	m.timeline = [kf_start, kf_active, kf_rec]
 	m.cancels = []   # B's most desirable combo ENDER (character-b.md) -- no further cancel authored
-	return [m]
+	return m
 
 
 # =============================================================================
@@ -1285,16 +1323,49 @@ const ARC_LIFETIME: int = 200     # generous safety bound; ground-contact despaw
 const ARC_MAX_PER_OWNER: int = 1
 
 
+## THE ONE source of truth for the three arc-projectile strengths' spawn
+## parameters -- read by BOTH `_build_arc_projectiles()` (embeds a
+## `ProjectileData` in each state's own spawn keyframe) and
+## `build_projectile_registry()` (the roster a caller installs into
+## `ProjectileRegistry`, which `step_phases.gd`'s ONGOING gravity integration
+## actually reads from every tick). Consolidated (JC-113): these were
+## previously TWO independently-authored literal copies that had silently
+## drifted apart -- this session's own L/H retune landed in
+## `_build_arc_projectiles()`'s copy and NOT `build_projectile_registry()`'s,
+## which would have left the retuned gravity cosmetic-only (the embedded
+## MoveState data seeds the initial spawn, but the REGISTRY's copy governs
+## every subsequent tick's actual fall) -- exactly the kind of silent-drift
+## bug this project's own single-source-of-truth discipline exists to
+## prevent. One array, both call sites read it; no second place to update.
+## Tuple: [state_id, proj_id, id_group, spawn_vel_x, spawn_vel_y (negative =
+## up), gravity (friendly units), damage, hitstun, blockstun, hitstop].
+static func _arc_params() -> Array:
+	return [
+		# JC-113 (docs/flags.md 2026-07-17 "re: JC-095 provisional tuning —
+		# settled"): L's apex MUCH higher, H's a LITTLE lower. Both changes
+		# scale spawn_vel_y and gravity by the SAME factor (not spawn_vel_x
+		# or either alone), which leaves time-to-apex/total-airtime/total-
+		# horizontal-distance UNCHANGED (apex ∝ vel_y², airtime ∝
+		# vel_y/gravity -- scaling both by k scales apex by k while airtime
+		# cancels back to its original value) -- confirmed against
+		# `_test_arc_l_falls_closest_to_b_the_oki_version` (real landing
+		# distance measured through the actual sim, not just the formula).
+		[STATE_ARC_L, PROJ_ARC_L, IDG_ARC_L, 2.0, -24.0, 2.0, 30, 14, 10, 6],
+			# MUCH higher apex (JC-113: x4, 36->144) -- "falls in front" (oki)
+			# landing spot/timing preserved
+		[STATE_ARC_M, PROJ_ARC_M, IDG_ARC_M, 4.0, -9.0, 0.4, 38, 16, 11, 7],
+			# medium arc (unchanged)
+		[STATE_ARC_H, PROJ_ARC_H, IDG_ARC_H, 6.0, -11.0, 0.25, 46, 18, 12, 8],
+			# a LITTLE lower apex (JC-113: ~282->242) -- reach/hangtime
+			# essentially unchanged (86.67f -> 88f)
+	]
+
+
 static func _build_arc_projectiles() -> Array[MoveState]:
 	var out: Array[MoveState] = []
-	# (state_id, proj_id, id_group, spawn_vel_x, spawn_vel_y (negative = up), gravity,
-	#  damage, hitstun, blockstun, hitstop)
-	out.append(_build_arc_projectile(STATE_ARC_L, PROJ_ARC_L, IDG_ARC_L,
-		2.0, -6.0, FP.from_units(0.5), 30, 14, 10, 6))     # shortest travel -> "falls in front" (oki)
-	out.append(_build_arc_projectile(STATE_ARC_M, PROJ_ARC_M, IDG_ARC_M,
-		4.0, -9.0, FP.from_units(0.4), 38, 16, 11, 7))     # medium arc
-	out.append(_build_arc_projectile(STATE_ARC_H, PROJ_ARC_H, IDG_ARC_H,
-		6.0, -13.0, FP.from_units(0.3), 46, 18, 12, 8))    # longest hangtime/reach -- air-space control
+	for p in _arc_params():
+		out.append(_build_arc_projectile(p[0], p[1], p[2], p[3], p[4], FP.from_units(p[5]),
+			p[6], p[7], p[8], p[9]))
 	return out
 
 
@@ -1394,11 +1465,18 @@ const DIVEKICK_L_HANG: int = 4
 const DIVEKICK_M_HANG: int = 9
 const DIVEKICK_H_HANG: int = 16   # longest -- the readable overhead tell (character-b.md)
 
-const DIVEKICK_L_DIVE_VX: float = 1.0
-const DIVEKICK_L_DIVE_VY: float = 9.0    # brief hang, FAST dive (mostly vertical)
-const DIVEKICK_M_DIVE_VX: float = 4.5    # more horizontal travel
+const DIVEKICK_L_DIVE_VX: float = 2.0    # more horizontal (JC-114, up from 1.0) -- brief hang,
+										   # fast dive, but now reads distinct from H's
+										   # near-vertical plummet (docs/flags.md 2026-07-17
+										   # "re: JC-095 provisional tuning — settled")
+const DIVEKICK_L_DIVE_VY: float = 9.0
+const DIVEKICK_M_DIVE_VX: float = 7.0    # more horizontal travel (JC-114, up from 4.5) -- same
+										   # direction the brief already called out for M, pushed
+										   # further so L/M both read clearly apart from H's dive
 const DIVEKICK_M_DIVE_VY: float = 6.0
-const DIVEKICK_H_DIVE_VX: float = 0.0    # near-vertical plummet (character-b.md)
+const DIVEKICK_H_DIVE_VX: float = 0.0    # near-vertical plummet (character-b.md) -- UNCHANGED,
+										   # the hang profiles and H's own trajectory are fine
+										   # (docs/flags.md 2026-07-17)
 const DIVEKICK_H_DIVE_VY: float = 10.0
 
 # Blockstun (JC-095 tuning). Named constants, not inline literals, because

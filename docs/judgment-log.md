@@ -468,3 +468,111 @@ less physically sensible box than a torso-centered one at the SAME "roughly a te
 area the user asked for.
 Serving: `docs/flags.md` (2026-07-17, "re: throw hitbox geometry"); AD-016/AD-029's throw
 model (unchanged — geometry-only tuning, no new throw rule).
+
+### JC-112 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · slide distances now vary by strength via THREE sibling states (STATE_SLIDE_L/M/H), not one number bumped — provisional
+**Decided:** to satisfy "the slides' distances should vary much more between strengths," first
+had to establish there was ANY variation to widen — there wasn't. `236`+L/M/H previously all
+routed to the SAME canonical `STATE_SLIDE` (a prior logged latitude call: "the spec describes
+exactly one move's behavior under three input strengths"), so button strength had ZERO effect
+on distance, not merely a small one. Added `STATE_SLIDE_L` (363) and `STATE_SLIDE_H` (369) as
+new sibling states — `STATE_SLIDE` (365) kept as the M-strength id, UNCHANGED, so every
+pre-existing test referencing it (`test_character_b_air.gd`'s B-1 spacing tests) keeps testing
+the exact same state. All three share EVERY frame-data property (startup/active/recovery/
+damage/hitstun/blockstun/hitstop/hit_reaction/hitbox geometry) via one parameterized
+`_build_slide(state_id, id_group, speed)`, differing ONLY in `motion_vel_x` (hence total travel
+during the active window): `SLIDE_SPEED_L=2.5`, `SLIDE_SPEED` (M)=5.0 (unchanged),
+`SLIDE_SPEED_H=9.0` — H now travels 3.6x L's distance (was 1x, i.e. identical). The button_map's
+three `MOTION_236` entries now each target their own strength's state instead of all three
+collapsing onto one.
+**Why this doesn't reopen the prior "one canonical move" call, just extends it:** that call's
+own stated reasoning was "the spec describes ONE MOVE'S BEHAVIOR under three strengths, not
+three distinct move shapes" — B-1's spacing-dependent-advantage mechanism. Three sibling states
+sharing identical frame data and differing only in speed keep that behavior IDENTICAL and
+IDENTICALLY-MECHANISMED per strength (each state still has ITS OWN single moving hitbox on one
+keyframe spanning the whole active window) — this is "one move's behavior, three speeds," not
+three distinct move shapes. The earlier call is about SHAPE (frame data / hit properties), which
+is still shared; only DISTANCE (a single scalar) now varies, per this flag's explicit direction.
+**New regression coverage** (there was none before — B-1's tests only ever drove
+`STATE_SLIDE` directly, never checked strength varied anything): `_test_slide_l_m_h_are_
+distinct_with_varying_distance` (three distinct states, shared frame data, H >= 2x L's total
+distance) and `_test_slide_button_map_routes_each_strength_to_its_own_state` (236+L/M/H each
+resolve their own state, not all three collapsing onto one — the literal pre-fix defect).
+**Alternative passed over:** keep one canonical `STATE_SLIDE` and vary distance by reading the
+triggering BUTTON strength at resolve time. Rejected: `move-format.md`/AD-018 keep the input
+layer semantically blank once resolved to a `state_id` — a `MoveState` has no way to know which
+button reached it (by design, so state behavior never depends on input-layer trivia); the only
+way to vary behavior by strength in this format is authoring three states, exactly how the
+divekick/arc projectile already do it.
+Serving: `docs/flags.md` (2026-07-17, "re: JC-095 provisional tuning — settled"); `character-b.md`
+"Low slide."
+
+### JC-113 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · arc projectile L/H height retune via scaled (vel_y, gravity) — and a real duplication bug it uncovered — provisional
+**Decided (the tuning):** B's `H` arc projectile's apex retuned "a little lower," `L`'s "much
+higher," per the settled direction. Both changes scale `spawn_vel_y` and `gravity` by the SAME
+factor rather than touching either alone or `spawn_vel_x`: apex ∝ vel_y², time-to-apex ∝
+vel_y/gravity — scaling BOTH by k scales apex by k while the ratio (hence time-to-apex/total-
+airtime/total-horizontal-distance) is unchanged. `L`: `vy -6.0→-24.0`, `gravity 0.5→2.0` (k=4,
+apex ~4x, landing spot/timing UNTOUCHED — still the "falls right in front" oki version). `H`:
+`vy -13.0→-11.0`, `gravity 0.3→0.25` (a modest, non-uniform-k reduction picked for round numbers
+— apex ~282→~242, ~14% lower — reach/hangtime shift by <2%, negligible). `M` untouched (the flag
+named only H and L). Real landing distances (not the idealized continuous-physics formula, which
+doesn't hold exactly against the discrete sim once the projectile's authored spawn HEIGHT offset
+(`-55`, nonzero) is accounted for) verified via `_test_arc_l_falls_closest_to_b_the_oki_version`
+run through the actual sim: L now lands ~70 units from B (well under the test's 150-unit "falls
+in front" bar), same L<M<H ordering intact.
+**A real bug this tuning pass uncovered and fixed:** `character_b.gd` authored EACH arc
+projectile's `gravity`/damage/hitstun/etc. in TWO INDEPENDENT PLACES — once embedded in
+`_build_arc_projectiles()`'s `kf_spawn.spawn_projectile` (seeds the initial spawn) and again in
+`build_projectile_registry()` (the roster a caller installs into `ProjectileRegistry`, which
+`step_phases.gd`'s phase-3 integration reads from EVERY TICK for the projectile's ongoing
+gravity — NOT the embedded copy). My first tuning pass edited only the first copy, which
+silently left the SECOND (the one that actually governs live physics) at the OLD `gravity=0.5`
+— `_test_arc_l_falls_closest_to_b_the_oki_version` caught it immediately (measured L landing
+214 units out, not ~70). Consolidated both onto ONE source, `_arc_params()` (a plain array of
+per-strength tuples), with `_build_arc_projectiles()` and `build_projectile_registry()` both
+reading it — this class of drift (two independently-authored copies of the same fact) is exactly
+what the project's own single-source-of-truth discipline exists to prevent, and it is now
+structurally impossible for these two to disagree again. Added
+`_test_arc_projectile_registry_matches_embedded_spawn_data`, a direct field-for-field pin
+between the two paths, so a future edit to only one of them (if the consolidation is ever
+undone) fails immediately rather than via a downstream landing-distance symptom.
+**Not a flag:** the duplication was a pre-existing latent defect (present since AD-047 first
+authored these, unrelated to this session's numbers), not a design/contract question — fixing it
+is squarely "the authored data was wrong in a way that broke a passing test," Developer-owned.
+Serving: `docs/flags.md` (2026-07-17, "re: JC-095 provisional tuning — settled"); AD-047.
+
+### JC-114 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · divekick L/M dive_vx increased, capped below the point where a straight-up jump-in whiffs — provisional
+**Decided:** `DIVEKICK_L_DIVE_VX` 1.0→2.0, `DIVEKICK_M_DIVE_VX` 4.5→7.0 (H's `0.0` untouched, per
+the flag's own "H and the hang profiles are fine"). Not scaled to a larger, rounder-looking
+jump (e.g. L→3.0) because `_test_divekick_connects_on_hit` — a straight-up jump then immediate
+L divekick onto a defender directly below the TAKEOFF point (the classic "jump up, divekick the
+person under you" use) — started failing at `vx=3.0`: the horizontal drift during L's short
+hang+dive carries B measurably past a stationary defender's ~15-unit hurtbox half-width before
+the active window's hit resolves. `2.0` is the largest value (of the round numbers tried) that
+still passes that connect test — a real functional floor, not an arbitrary compromise: a
+divekick whose basic straight-down jump-in application whiffs against a stationary target is a
+regression, not a legibility improvement. Added a floor assertion to the existing pairwise-
+distinct test (`vx[0] >= 2.0`, `vx[1] >= 6.0`) so a future edit can't silently drift the
+horizontal component back toward zero without failing a test that says why not to.
+**Alternative passed over:** `vx=3.0` for L (a rounder-looking 3x the original). Rejected per
+the above — verified failing against `_test_divekick_connects_on_hit`, not assumed.
+Serving: `docs/flags.md` (2026-07-17, "re: JC-095 provisional tuning — settled"); `character-b.md`
+"Divekick" / B-3.
+
+### JC-115 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · 6H forward creep via the same has_motion keyframe mechanism the slide/divekick already use — provisional
+**Decided:** 6H's startup keyframe (frames 1-22) now authors `has_motion=true`/
+`motion_vel_x=FP.from_units(1.0)` — a modest creep (22 units total over the full startup, about
+half the character's own pushbox width) rather than a dash-in, per the flag's own "move forward
+SLIGHTLY." Reuses the EXACT mechanism the slide/divekick already exercise (AD-043's keyframe-
+motion convention: a fixed velocity re-imposed every covered tick) — no new engine primitive.
+Verified through the real engine, not just the authored keyframe flag: a new
+`_test_6h_creeps_forward_during_startup` steps 6H for 21 ticks and asserts `pos_x` actually
+moved forward, since an authored `has_motion=true` alone doesn't prove the engine applies it
+every tick (the class of gap `docs/audit-criterion.md` names — a check that reads authored data
+back proves nothing about behavior).
+**Why 1.0, not a bigger number:** no test forced a specific ceiling here (unlike the divekick's
+connect-test floor above) — 1.0 is a plain judgment call sized to read as a "creep" per the
+flag's own wording, not derived from a constraint. If the human gate wants it more pronounced,
+that is exactly the kind of numeric follow-up this same flag mechanism handles.
+Serving: `docs/flags.md` (2026-07-17, "re: JC-095 provisional tuning — settled"); `character-b.md`
+"6H."

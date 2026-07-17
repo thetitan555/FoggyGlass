@@ -77,6 +77,7 @@ func _run() -> void:
 	_test_5h_whiff_is_severely_punishable_vs_block_cancels_early()
 	_test_2h_launches_and_jump_cancels_on_block()
 	_test_6h_is_reachable_and_not_shadowed_by_5h()
+	_test_6h_creeps_forward_during_startup()
 
 	_test_throw_connects_through_block()
 	_test_throw_connects_through_crouch_block_downback()
@@ -454,6 +455,26 @@ func _test_6h_is_reachable_and_not_shadowed_by_5h() -> void:
 			if hb.guard_height == HitBox.GUARD_HIGH:
 				found_high = true
 	_true(found_high, "6H is authored guard_height = HIGH (the dedicated overhead)")
+
+
+## docs/flags.md 2026-07-17 "re: JC-095 provisional tuning — settled": 6H
+## "could move forward slightly during startup to make the overhead tell
+## clearer." Drives 6H through the REAL engine and confirms B's world position
+## actually advances during the startup window (frames 1-22) — not just that a
+## keyframe claims `has_motion` (the authored data alone doesn't prove the
+## engine actually applies it every tick).
+func _test_6h_creeps_forward_during_startup() -> void:
+	var s := _two_char_state(60)
+	s.players[0].state_id = CharacterB.STATE_6H
+	s.players[0].frame_in_state = 0
+	var pos_before: int = s.players[0].pos_x
+	for _k in range(21):   # stay inside the 22f startup window (frame_in_state 1..21)
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+		_true(s.players[0].frame_in_state <= 22, "sanity: still within 6H's startup window")
+	var pos_during_startup: int = s.players[0].pos_x
+	_true(pos_during_startup != pos_before, "B's world position actually moves during 6H's startup (the real engine, not just authored data)")
+	_true(pos_during_startup > pos_before, "B moves FORWARD (facing +1) during 6H's startup, clarifying the overhead tell")
+	_cleanup()
 
 
 # --- Throw (character-b.md: existing AD-016/029 model, no new throw rules) ---

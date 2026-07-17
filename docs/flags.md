@@ -220,7 +220,7 @@ AD-050:** the emergent advantage is delivered by B's landing-recovery resolving 
 block (read across the interaction, the B-1 bar), *not* by a new fall-time-prediction primitive in
 `frames_to_actionable` — that speculative complexity is deferred behind a real need (Tenet 3).
 
-### [open] 2026-07-17 · raised-by: Strategist (from user re-gate) · owner: Developer · re: JC-095 provisional tuning — settled
+### [resolved] 2026-07-17 · raised-by: Strategist (from user re-gate) · owner: Developer · re: JC-095 provisional tuning — settled
 Problem: the user's re-gate settles the remaining JC-095 numbers. These are **direction,
 now recorded** (protocol: a steer in chat is provisional until the owning artifact
 records it) — apply them as tuning, and flag back only if one conflicts with a
@@ -239,7 +239,30 @@ LOW** (AD-045 working).
 See the separate Architect flag above for the divekick active/recovery **mechanic** —
 do not implement that half from this entry.
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-17): All five applied, none conflicted with a legibility
+invariant.
+- **H projectile lower / L projectile much higher (JC-113):** scaled `spawn_vel_y` and
+  `gravity` together by the same factor (apex scales, landing spot/timing don't) — L's
+  apex ~4x (still lands ~70 units out, well inside "falls in front"), H's ~14% lower.
+  **Also fixed a real duplication bug this uncovered:** `build_projectile_registry()`
+  and `_build_arc_projectiles()` independently authored the SAME gravity/damage numbers
+  in two places, and my first pass only updated one — caught by the existing landing-
+  distance test, consolidated onto one source (`_arc_params()`) so it can't drift again.
+- **Slide distances vary much more (JC-112):** discovered there was ZERO variation to
+  widen — 236 L/M/H all routed to the same canonical state. Added `STATE_SLIDE_L`/`_H`
+  as siblings of the unchanged `STATE_SLIDE` (M), sharing all frame data, differing only
+  in speed (2.5 / 5.0 / 9.0 — H now travels 3.6x L's distance).
+- **L/M divekicks more horizontal (JC-114):** `DIVEKICK_L_DIVE_VX` 1.0→2.0,
+  `DIVEKICK_M_DIVE_VX` 4.5→7.0 (H untouched). Capped at 2.0 for L, not a larger round
+  number — 3.0 broke the existing "jump up, divekick the target below you" connect test
+  (drifts past a stationary target before the hit resolves); verified, not assumed.
+- **6H creeps forward during startup (JC-115):** modest `has_motion` on the startup
+  keyframe (22 units total), same mechanism the slide/divekick already use.
+- **Judged-and-passing items** (divekick guard heights, slide's spacing-dependent
+  advantage, 2L/2M LOW enforcement) left untouched, as instructed.
+All five have new regression tests exercising the REAL engine (not just authored-data
+readback) — full suite green (43/44, the one failure is the pre-existing unrelated
+`test_trace_harness`). JC-112 through JC-115 record the details.
 
 ### [resolved] 2026-07-17 · raised-by: Strategist (from user re-gate) · owner: Developer · re: B-5 facing readout
 Problem: the user asks whether it is intended that an airdash crossup shows **nothing

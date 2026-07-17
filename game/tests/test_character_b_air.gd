@@ -71,11 +71,14 @@ func _run() -> void:
 
 	# B-1: low slide spacing-variable, instrument-readable, formula-correct advantage.
 	_test_slide_is_a_low_hard_knockdown()
+	_test_slide_l_m_h_are_distinct_with_varying_distance()
+	_test_slide_button_map_routes_each_strength_to_its_own_state()
 	_test_slide_spacing_variable_advantage_is_instrument_readable()
 
 	# B-2: falls-in-front arc projectile oki — no unblockable frame.
 	_test_arc_projectiles_are_guard_mid_by_construction()
 	_test_arc_l_falls_closest_to_b_the_oki_version()
+	_test_arc_projectile_registry_matches_embedded_spawn_data()
 	_test_arc_and_strike_never_require_incompatible_defense()
 
 	# Air normals carry the fall (criterion 4).
@@ -238,6 +241,15 @@ func _test_divekick_dive_vectors_differ_pairwise() -> void:
 	_true(vx[0] != vx[1] and vx[1] != vx[2] and vx[0] != vx[2], "dive horizontal speeds are pairwise distinct across L/M/H")
 	_true(vy[0] != vy[1] and vy[1] != vy[2] and vy[0] != vy[2], "dive vertical speeds are pairwise distinct across L/M/H")
 	_true(vx[2] == 0.0, "H's dive is near-vertical (zero authored horizontal component) -- character-b.md's own phrase")
+
+	# JC-114 (docs/flags.md 2026-07-17 "re: JC-095 provisional tuning — settled"):
+	# "L and M divekicks should travel more horizontally... to read distinct
+	# from H's near-vertical plummet." Pins a real floor under L/M's horizontal
+	# component (not just "nonzero," which the pairwise-distinct checks above
+	# already covered before this session) so a future edit can't silently
+	# drift back toward H's near-vertical shape.
+	_true(vx[0] >= 2.0, "L's dive horizontal speed clears a real floor (>= 2.0), not a token nonzero nudge")
+	_true(vx[1] >= 6.0, "M's dive horizontal speed clears a real floor (>= 6.0), not a token nonzero nudge")
 
 
 func _test_divekick_h_is_the_only_overhead() -> void:
@@ -407,6 +419,80 @@ func _test_slide_is_a_low_hard_knockdown() -> void:
 	_true(m.is_crouch, "the slide is authored crouched throughout (matches the LOW's animation, AD-045)")
 
 
+## docs/flags.md 2026-07-17 "re: JC-095 provisional tuning — settled": "the
+## slides' distances should vary much more between strengths" (JC-112). Before
+## this session, 236L/236M/236H ALL routed to the SAME canonical STATE_SLIDE --
+## zero variation, not just "not enough." This is the regression test for the
+## fix: L/M/H are now three DISTINCT states, sharing every frame-data property
+## except `motion_vel_x` (hence total travel distance during the active
+## window), and the button_map routes each strength to its own state.
+func _test_slide_l_m_h_are_distinct_with_varying_distance() -> void:
+	var c := CharacterB.build_character()
+	var states: Dictionary = {
+		CharacterB.STATE_SLIDE_L: null, CharacterB.STATE_SLIDE: null, CharacterB.STATE_SLIDE_H: null,
+	}
+	for state_id in states.keys():
+		var m: MoveState = c.get_state(state_id)
+		_true(m != null, "state %d is authored" % state_id)
+		states[state_id] = m
+	_true(CharacterB.STATE_SLIDE_L != CharacterB.STATE_SLIDE and CharacterB.STATE_SLIDE != CharacterB.STATE_SLIDE_H
+		and CharacterB.STATE_SLIDE_L != CharacterB.STATE_SLIDE_H, "L/M/H are three genuinely distinct state ids")
+
+	# Frame data (startup/active/recovery/damage/hitstun/blockstun/hitstop) is
+	# SHARED across all three -- only speed/distance varies (per the flag's
+	# specific ask; nothing else about the move changes by strength).
+	for state_id in states.keys():
+		var m: MoveState = states[state_id]
+		_eq(m.duration, CharacterB.SLIDE_STARTUP + CharacterB.SLIDE_ACTIVE + CharacterB.SLIDE_RECOVERY,
+			"state %d shares the SAME total duration as the other two strengths" % state_id)
+
+	# The per-strength speed constants are pairwise distinct and, per the
+	# flag's direction, vary by a LARGE margin (not a token difference).
+	var speeds: Array = [CharacterB.SLIDE_SPEED_L, CharacterB.SLIDE_SPEED, CharacterB.SLIDE_SPEED_H]
+	_true(speeds[0] < speeds[1] and speeds[1] < speeds[2], "slide speed strictly increases L < M < H")
+	var total_distance_l: float = CharacterB.SLIDE_SPEED_L * CharacterB.SLIDE_ACTIVE
+	var total_distance_h: float = CharacterB.SLIDE_SPEED_H * CharacterB.SLIDE_ACTIVE
+	_true(total_distance_h >= total_distance_l * 2.0,
+		"H's total active-window travel distance is at least DOUBLE L's (%s vs %s) -- 'vary much more between strengths'" % [total_distance_h, total_distance_l])
+
+	# Each strength's own active keyframe actually carries motion (the B-1
+	# mechanism), at its OWN speed.
+	var expected_speed: Dictionary = {
+		CharacterB.STATE_SLIDE_L: CharacterB.SLIDE_SPEED_L,
+		CharacterB.STATE_SLIDE: CharacterB.SLIDE_SPEED,
+		CharacterB.STATE_SLIDE_H: CharacterB.SLIDE_SPEED_H,
+	}
+	for state_id in states.keys():
+		var m: MoveState = states[state_id]
+		var found_motion: bool = false
+		for kf in m.timeline:
+			if kf.has_motion:
+				found_motion = true
+				_eq(kf.motion_vel_x, FP.from_units(expected_speed[state_id]),
+					"state %d's active keyframe carries ITS OWN authored speed" % state_id)
+		_true(found_motion, "state %d authors a moving (has_motion) active keyframe" % state_id)
+
+
+## docs/flags.md 2026-07-17 "re: JC-095 provisional tuning — settled" (JC-112):
+## the button_map wiring itself -- 236+L/M/H each resolve their OWN strength's
+## state (not all three collapsing onto one, the pre-fix behavior).
+func _test_slide_button_map_routes_each_strength_to_its_own_state() -> void:
+	var c := CharacterB.build_character()
+	var expected: Dictionary = {
+		0: CharacterB.STATE_SLIDE_L,   # BUTTON_0 (L)
+		1: CharacterB.STATE_SLIDE,     # BUTTON_1 (M)
+		2: CharacterB.STATE_SLIDE_H,   # BUTTON_2 (H)
+	}
+	var found: Dictionary = {}
+	for entry in c.button_map:
+		if entry.motion == InputBuffer.MOTION_236:
+			found[entry.button_index] = entry.target_state_id
+	for button in expected.keys():
+		_true(found.has(button), "a MOTION_236 button_map entry exists for button %d" % button)
+		_eq(found.get(button, -1), expected[button],
+			"MOTION_236 + button %d resolves to state %d (its own strength)" % [button, expected[button]])
+
+
 ## Drive the slide against a defender at `gap`, holding crouch-block
 ## throughout; returns {contact_frame, adv_value} once it connects (or
 ## contact_frame == -1 if it never does within the budget).
@@ -493,6 +579,38 @@ func _test_arc_l_falls_closest_to_b_the_oki_version() -> void:
 		"M's arc lands closer to B than H's (H is the longest-reach air-space-control version)")
 	_true(landing_x[CharacterB.STATE_ARC_L] < FP.from_int(150),
 		"L's arc lands close enough to B to be a genuine 'falls right in front' setup (< 150 units)")
+	_cleanup()
+
+
+## JC-113 regression: `_build_arc_projectiles()`'s EMBEDDED `ProjectileData`
+## (seeds the initial spawn) and `build_projectile_registry()`'s INSTALLED
+## roster (what `step_phases.gd`'s ONGOING gravity integration actually reads
+## every tick) used to be two independently-authored literal copies -- this
+## session's own L/H gravity retune landed in one and silently NOT the other,
+## which `_test_arc_l_falls_closest_to_b_the_oki_version` caught (L's real
+## landing distance was 214 units, not the ~70 the retuned numbers intended)
+## before the two were consolidated onto one `_arc_params()` source. This test
+## pins field-for-field equality directly so a future edit to either call site
+## alone (rather than `_arc_params()`) fails immediately, not just via a
+## downstream physics symptom.
+func _test_arc_projectile_registry_matches_embedded_spawn_data() -> void:
+	var c := CharacterB.build_character()
+	var registry: Dictionary = CharacterB.build_projectile_registry()
+	for state_id in [CharacterB.STATE_ARC_L, CharacterB.STATE_ARC_M, CharacterB.STATE_ARC_H]:
+		var m: MoveState = c.get_state(state_id)
+		var embedded: ProjectileData = null
+		for kf in m.timeline:
+			if kf.has_spawn:
+				embedded = kf.spawn_projectile
+		_true(embedded != null, "state %d authors a spawn keyframe" % state_id)
+		var installed: ProjectileData = registry.get(embedded.id, null)
+		_true(installed != null, "state %d's spawned proj_id is present in build_projectile_registry()" % state_id)
+		_eq(installed.gravity, embedded.gravity, "state %d: registry gravity matches the embedded spawn's gravity" % state_id)
+		_eq(installed.lifetime, embedded.lifetime, "state %d: registry lifetime matches the embedded spawn's lifetime" % state_id)
+		_eq(installed.hitbox.damage, embedded.hitbox.damage, "state %d: registry hitbox damage matches the embedded spawn's" % state_id)
+		_eq(installed.hitbox.hitstun, embedded.hitbox.hitstun, "state %d: registry hitbox hitstun matches the embedded spawn's" % state_id)
+		_eq(installed.hitbox.blockstun, embedded.hitbox.blockstun, "state %d: registry hitbox blockstun matches the embedded spawn's" % state_id)
+		_eq(installed.hitbox.hitstop, embedded.hitbox.hitstop, "state %d: registry hitbox hitstop matches the embedded spawn's" % state_id)
 	_cleanup()
 
 
