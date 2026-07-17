@@ -233,3 +233,56 @@ the return value as a bare statement (GDScript permits this), so this is source-
 on `false`, per JC-048's push_error-is-the-reliable-fail-fast convention — GDScript has no
 exceptions).
 Serving: `TKT-P2-10`; move-format.md criterion 18; AD-049 Decision 3.
+
+### JC-106 · 2026-07-17 · TKT-P2-11 (AD-050) · divekick landing-recovery authored per-strength, not shared — provisional
+**Decided:** each of B's three divekicks (L/M/H) gets its OWN landing-recovery `MoveState`
+(`STATE_DIVEKICK_L_LANDING` / `_M_LANDING` / `_H_LANDING`), rather than one shared recovery
+state. AD-050 explicitly leaves this call open ("author separate recovery states, or share
+where they coincide").
+**Why:** L/M/H's currently-authored `HitBox.blockstun` values (9/11/13 — JC-095's own tuning)
+are all pairwise distinct, so the AD-050 pinned equality (`recovery.duration ==
+that divekick's own blockstun`) requires three different `duration`s — sharing one state
+would force one of the three numbers to be wrong. To keep the equality holding **by
+construction** rather than by three call sites happening to agree, `_build_divekicks()` and
+`_build_divekick_landing_states()` both read the SAME named constant
+(`DIVEKICK_{L,M,H}_BLOCKSTUN`) for a given strength, instead of duplicating the blockstun
+value as an inline literal in two places.
+**Alternative passed over:** one shared `STATE_DIVEKICK_LANDING` state whose `duration` is
+authored to the largest of the three blockstun values (13, H's). Rejected: it would make L's
+and M's recovery LONGER than their own blockstun, silently breaking the pinned equality for
+two of the three divekicks and flattening the height-dependent-advantage shape further behind
+a constant offset — the ticket's `combat-resolution.md` criterion 18 language ("recovery ==
+blockstun") reads as a per-move invariant, not a character-wide one.
+**If JC-095's tuning pass later makes two strengths' blockstun coincide,** the two divekicks
+MAY share a landing-recovery state at that point (nothing here blocks it) — not forced now.
+Serving: `TKT-P2-11`; `AD-050`; `combat-resolution.md` criterion 18.
+
+### JC-107 · 2026-07-17 · TKT-P2-11 (AD-050) · B-7 regression test drives contact height via direct `PlayerState` injection, not scripted jump timing — provisional
+**Decided:** `_test_divekick_height_dependent_block_advantage_b7` (test_character_b_air.gd)
+forces B directly into the M divekick's active window at a chosen `pos_y` (mirrors this
+file's own established hand-driven-state convention, e.g. the knockdown-landing test), rather
+than discovering two jump-altitude/spacing combinations that happen to produce a low vs. high
+contact (the technique B-1's own slide test uses for spacing).
+**Why:** the divekick's contact height is a function of WHEN during a long, mostly-uniform
+descent the hitbox happens to overlap a grounded defender's fixed-height hurtbox — spacing
+alone doesn't cleanly select a height the way it selects an active *frame* for the slide
+(a single moving hitbox against a stationary defender on the same ground plane). Direct
+`pos_y`/`vel_y` injection isolates the CONTACT-HEIGHT variable precisely and deterministically,
+without an empirical search over jump-altitude/spacing pairs. A short headless probe (see the
+divekick's own trajectory-model header comment for the established practice of discovering
+frame numbers this way) found the geometrically valid contact-height band for a standing
+defender's hurtbox against this hitbox's box geometry runs roughly `pos_y ∈ (-80, 0)`
+(friendly units); heights very close to either edge either land the SAME tick as contact
+(pos_y ≈ 0, no room to observe a landing-time difference) or land past the reachable band a
+tick or two after the injected position (pos_y ≈ -80, the actual contact height ends up lower
+than injected). `-15` (low) and `-60` (high) were chosen from that probe as comfortably inside
+the reliable band while maximizing the resulting gap difference (empirically ~5 ticks).
+**Also decided:** the test measures relative advantage as `attacker_actionable_tick -
+defender_actionable_tick`, driven to BOTH sides actually reaching `Actionability.
+is_actionable`, rather than reading `Advantage.live`'s value at the contact tick. AD-050's own
+"Observability / `frames_to_actionable`" scope note explains why: read at the exact contact
+tick, `frames_to_actionable` uses the divekick's still-generous safety-tail `duration` (not a
+fall-time prediction), so a single live-advantage snapshot taken while B is still airborne
+would not honestly reflect the eventual outcome — the height-dependent minus is a property of
+the interaction RESOLVING, not of the contact-tick instant.
+Serving: `TKT-P2-11`; `AD-050`; `character-b.md` criterion B-7.

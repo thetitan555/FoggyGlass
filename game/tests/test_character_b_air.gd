@@ -62,8 +62,12 @@ func _run() -> void:
 	_test_divekick_hang_durations_strictly_increase()
 	_test_divekick_dive_vectors_differ_pairwise()
 	_test_divekick_h_is_the_only_overhead()
-	_test_divekick_reachable_in_air_and_lands_to_idle()
+	_test_divekick_reachable_in_air_and_lands_into_recovery()
 	_test_divekick_connects_on_hit()
+
+	# B-7 (AD-050, TKT-P2-11): active-until-ground + recovery==blockstun ->
+	# height-dependent block advantage, emergent, instrument-readable.
+	_test_divekick_height_dependent_block_advantage_b7()
 
 	# B-1: low slide spacing-variable, instrument-readable, formula-correct advantage.
 	_test_slide_is_a_low_hard_knockdown()
@@ -249,16 +253,35 @@ func _test_divekick_h_is_the_only_overhead() -> void:
 		_true(found, "divekick state %d is authored guard_height=%d" % [pair[0], pair[1]])
 
 
-func _test_divekick_reachable_in_air_and_lands_to_idle() -> void:
+## UPDATED 2026-07-17 for AD-050 (TKT-P2-11): a divekick's landing NO LONGER
+## goes flush to idle -- it redirects into a landing-recovery state
+## (`MoveState.landing_state_id`) whose `duration` equals the divekick's own
+## blockstun, and ONLY THEN (once that recovery runs its course) returns to
+## idle. Renamed from `_test_divekick_reachable_in_air_and_lands_to_idle`
+## (whose old assertion, "lands flush back to idle... no bespoke landing
+## state," is now the exact behavior AD-050 replaces).
+func _test_divekick_reachable_in_air_and_lands_into_recovery() -> void:
 	var s := _jump_then_divekick(CharacterB.STATE_DIVEKICK_L, InputFrame.BUTTON_0)
 	_eq(s.players[0].state_id, CharacterB.STATE_DIVEKICK_L, "the L divekick is reachable from a neutral jump via DOWN+L (2+attack in air)")
-	var landed: bool = false
-	for _k in range(60):
+	var reached_recovery: bool = false
+	var landed_directly_to_idle: bool = false
+	var settled_to_idle: bool = false
+	for _k in range(80):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
-		if s.players[0].state_id == CharacterB.STATE_IDLE:
-			landed = true
+		if not reached_recovery and s.players[0].state_id == CharacterB.STATE_IDLE:
+			landed_directly_to_idle = true
 			break
-	_true(landed, "the divekick lands flush back to idle under the continuous ground clamp (AD-043) -- no bespoke landing state")
+		if s.players[0].state_id == CharacterB.STATE_DIVEKICK_L_LANDING:
+			reached_recovery = true
+		if reached_recovery and s.players[0].state_id == CharacterB.STATE_IDLE:
+			settled_to_idle = true
+			break
+	_true(reached_recovery, "the L divekick's landing redirects into STATE_DIVEKICK_L_LANDING (AD-050), not idle")
+	_false(landed_directly_to_idle, "the divekick NEVER lands directly to idle -- every landing goes through the recovery redirect first")
+	_true(settled_to_idle, "the landing-recovery state, once its own duration elapses, returns to idle like any other once-through move")
+	var recovery_move: MoveState = MoveRegistry.character(CharacterB.CHAR_ID).get_state(CharacterB.STATE_DIVEKICK_L_LANDING)
+	_eq(recovery_move.duration, CharacterB.DIVEKICK_L_BLOCKSTUN,
+		"the L divekick's landing-recovery duration EQUALS its own blockstun -- the AD-050 pinned equality invariant")
 	_cleanup()
 
 
@@ -282,6 +305,88 @@ func _test_divekick_connects_on_hit() -> void:
 		if s.players[0].state_id == CharacterB.STATE_IDLE:
 			break
 	_true(connected, "the L divekick's active hitbox actually connects during its plummet")
+	_cleanup()
+
+
+# --- B-7: height-dependent block advantage (AD-050, TKT-P2-11) ----------------
+
+## Force B directly into the M divekick's active window at a CHOSEN height
+## above the ground (`contact_pos_y`, friendly units; negative = above
+## ground_y=0) -- isolates the CONTACT-HEIGHT variable from divekick
+## reachability/timing (already covered above), mirroring this file's own
+## established hand-driven-state convention (e.g. the knockdown-landing test).
+## Drives the interaction all the way to BOTH sides becoming actionable (not a
+## single live-advantage snapshot at the contact tick — AD-050's own scope note:
+## the height-dependent minus is delivered by the actual state resolving OVER
+## THE INTERACTION, since the divekick's own `duration` is a generous safety-
+## tail upper bound, not a live fall-time prediction).
+func _divekick_block_at_height(contact_pos_y: int) -> Dictionary:
+	var s := _two_char_state(30)
+	s.players[0].state_id = CharacterB.STATE_DIVEKICK_M
+	s.players[0].frame_in_state = CharacterB.DIVEKICK_M_HANG + 3   # a couple ticks into the active window
+	s.players[0].pos_y = FP.from_int(contact_pos_y)
+	s.players[0].vel_y = FP.from_units(CharacterB.DIVEKICK_M_DIVE_VY)
+	s.players[0].vel_x = 0
+	s.players[1].state_id = CharacterB.STATE_CROUCH   # crouch-block (M is GUARD_MID -- blockable either stance)
+	s.players[1].pos_x = s.players[0].pos_x + FP.from_int(20)
+
+	var character: Character = MoveRegistry.character(CharacterB.CHAR_ID)
+	var contact_tick: int = -1
+	var attacker_actionable_tick: int = -1
+	var defender_actionable_tick: int = -1
+	for k in range(1, 201):
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.DOWN | InputFrame.RIGHT)   # P1 faces -1; back = RIGHT
+		if contact_tick == -1 and s.players[0].move_contact == PlayerState.CONTACT_BLOCK:
+			contact_tick = k
+		if contact_tick != -1:
+			var atk_move: MoveState = character.get_state(s.players[0].state_id)
+			var def_move: MoveState = character.get_state(s.players[1].state_id)
+			if attacker_actionable_tick == -1 and Actionability.is_actionable(s.players[0], atk_move):
+				attacker_actionable_tick = k
+			if defender_actionable_tick == -1 and Actionability.is_actionable(s.players[1], def_move):
+				defender_actionable_tick = k
+			if attacker_actionable_tick != -1 and defender_actionable_tick != -1:
+				break
+	return {
+		"contact_tick": contact_tick,
+		"attacker_actionable_tick": attacker_actionable_tick,
+		"defender_actionable_tick": defender_actionable_tick,
+	}
+
+
+func _test_divekick_height_dependent_block_advantage_b7() -> void:
+	# B-7 (AD-050): a divekick blocked LOW (near the ground, little left to
+	# fall) resolves close to neutral; blocked HIGH (early in the descent, a
+	# long way left to fall) resolves markedly minus for B — an EMERGENT
+	# property of "active until ground" + "recovery == blockstun," never a
+	# per-height authored number. Mirrors B-1's own scripted-input-trace
+	# verification technique (two blocks compared), per this ticket's
+	# acceptance criterion.
+	var low := _divekick_block_at_height(-15)    # near the floor: little further to fall
+	var high := _divekick_block_at_height(-60)   # high in the descent: much further to fall
+	_true(low["contact_tick"] != -1, "the low-height block connects (setup)")
+	_true(high["contact_tick"] != -1, "the high-height block connects (setup)")
+	_true(low["attacker_actionable_tick"] != -1 and low["defender_actionable_tick"] != -1,
+		"the low-height interaction fully resolves -- both sides eventually actionable (setup)")
+	_true(high["attacker_actionable_tick"] != -1 and high["defender_actionable_tick"] != -1,
+		"the high-height interaction fully resolves -- both sides eventually actionable (setup)")
+
+	# Relative advantage in frames: how much LATER the attacker (B) becomes
+	# actionable than the defender. The recovery==blockstun equality (AD-050)
+	# makes this gap track the REMAINING DESCENT at contact directly (B's own
+	# derivation: advantage ~= -remaining_descent).
+	var low_gap: int = low["attacker_actionable_tick"] - low["defender_actionable_tick"]
+	var high_gap: int = high["attacker_actionable_tick"] - high["defender_actionable_tick"]
+
+	_true(high_gap > low_gap,
+		("the HIGH-contact block leaves B markedly MORE minus than the LOW-contact block " +
+			"(gap %d vs %d ticks) -- height-dependent block advantage, falling out of " +
+			"active-until-ground + recovery==blockstun exactly as AD-050 specifies, not a " +
+			"per-height authored number") % [high_gap, low_gap])
+	_true(abs(low_gap) <= 3,
+		"a LOW-height block resolves close to NEUTRAL (B becomes actionable within a few ticks of the defender either way, gap=%d)" % low_gap)
+	_true(high_gap >= low_gap + 5,
+		"a HIGH-height block resolves MEANINGFULLY more minus than the low one (gap difference >= 5 ticks, got %d vs %d) -- not a marginal wobble" % [high_gap, low_gap])
 	_cleanup()
 
 

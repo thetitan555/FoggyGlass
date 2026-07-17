@@ -510,13 +510,29 @@ static func _apply_air_action(p: PlayerState, character: Character) -> void:
 ##     height / juggle length). So THIS transition explicitly re-arms `p.stun`
 ##     to the knockdown state's own authored `duration`, fixing the wakeup
 ##     timer to the landing moment itself, exactly as AD-043 specifies.
+##
+##   - AIRBORNE category, `landing_state_id != 0` (AD-050, TKT-P2-11 — a
+##     divekick): transitions to that authored landing-recovery state instead of
+##     idle. NOT a stun re-arm (unlike the knockdown branch above) — the recovery
+##     is the mover's OWN commitment, governed by ordinary duration/actionability,
+##     not a countdown inflicted by an opponent.
+##
+##   PRECEDENCE (AD-050, pinned): (1) a launched HITSTUN reaction (non-AIRBORNE
+##   category reaching here) ALWAYS lands into knockdown, highest priority,
+##   unaffected by `landing_state_id`; (2) else an AIRBORNE state with
+##   `landing_state_id != 0` lands into it; (3) else `idle_state_id`. Jumps and
+##   air normals (field unset, `0`) land to idle exactly as before AD-050 —
+##   purely additive, no existing airborne state's landing changes.
 static func _land(next: SimState, p: PlayerState, character: Character, move: MoveState) -> void:
 	p.pos_y = next.stage.ground_y
 	p.vel_x = 0
 	p.vel_y = 0
 	p.air_action_used = false
 	if move != null and move.category == MoveState.CATEGORY_AIRBORNE:
-		_enter_state(next, p, character, character.idle_state_id)
+		if move.landing_state_id != 0:
+			_enter_state(next, p, character, move.landing_state_id)
+		else:
+			_enter_state(next, p, character, character.idle_state_id)
 	else:
 		var kd_state_id: int = character.reaction_state(MoveState.REACTION_KNOCKDOWN)
 		_enter_state(next, p, character, kd_state_id)

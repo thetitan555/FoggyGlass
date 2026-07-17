@@ -1397,35 +1397,60 @@ const DIVEKICK_M_DIVE_VY: float = 6.0
 const DIVEKICK_H_DIVE_VX: float = 0.0    # near-vertical plummet (character-b.md)
 const DIVEKICK_H_DIVE_VY: float = 10.0
 
-const DIVEKICK_ACTIVE: int = 5
+# Blockstun (JC-095 tuning). Named constants, not inline literals, because
+# AD-050 pins an EQUALITY between each divekick's own blockstun and its
+# landing-recovery `duration` -- referencing the SAME constant from both
+# `_build_divekicks()` and `_build_divekick_landing_states()` below makes the
+# invariant hold BY CONSTRUCTION rather than by two call sites happening to
+# agree on a literal.
+const DIVEKICK_L_BLOCKSTUN: int = 9
+const DIVEKICK_M_BLOCKSTUN: int = 11
+const DIVEKICK_H_BLOCKSTUN: int = 13
+
 const DIVEKICK_SAFETY_TAIL: int = 30   # safety bound above physical fall time (mirrors the
 										 # jump arc's own JUMP_DURATION convention) -- the
 										 # continuous ground clamp, not this duration, is what
-										 # actually ends the move (AD-043)
+										 # actually ends the move (AD-043). AD-050 (TKT-P2-11):
+										 # the active hitbox now runs ALL THE WAY to `duration`
+										 # (through the whole descent) instead of stopping after
+										 # a fixed DIVEKICK_ACTIVE window -- `active_hit_ids`
+										 # still guarantees one hit per contact (AD-026), so the
+										 # long window is one hit available anywhere in the fall,
+										 # never a machine-gun.
+
+# Landing-recovery state ids (AD-050, TKT-P2-11) -- one per divekick strength,
+# since L/M/H each author a DIFFERENT blockstun (the AD-050 equality invariant
+# is per-move: recovery `duration` == THAT divekick's own `HitBox.blockstun`).
+const STATE_DIVEKICK_L_LANDING: int = 378
+const STATE_DIVEKICK_M_LANDING: int = 379
+const STATE_DIVEKICK_H_LANDING: int = 380
 
 
 static func _build_divekicks() -> Array[MoveState]:
 	var out: Array[MoveState] = []
-	out.append(_build_divekick(STATE_DIVEKICK_L, IDG_DIVEKICK_L, DIVEKICK_L_HANG,
-		DIVEKICK_L_DIVE_VX, DIVEKICK_L_DIVE_VY, HitBox.GUARD_MID, 35, 14, 9, 7))
-	out.append(_build_divekick(STATE_DIVEKICK_M, IDG_DIVEKICK_M, DIVEKICK_M_HANG,
-		DIVEKICK_M_DIVE_VX, DIVEKICK_M_DIVE_VY, HitBox.GUARD_MID, 45, 16, 11, 8))
-	out.append(_build_divekick(STATE_DIVEKICK_H, IDG_DIVEKICK_H, DIVEKICK_H_HANG,
-		DIVEKICK_H_DIVE_VX, DIVEKICK_H_DIVE_VY, HitBox.GUARD_HIGH, 55, 18, 13, 9))   # the ONLY overhead
+	out.append(_build_divekick(STATE_DIVEKICK_L, STATE_DIVEKICK_L_LANDING, IDG_DIVEKICK_L,
+		DIVEKICK_L_HANG, DIVEKICK_L_DIVE_VX, DIVEKICK_L_DIVE_VY, HitBox.GUARD_MID, 35, 14, DIVEKICK_L_BLOCKSTUN, 7))
+	out.append(_build_divekick(STATE_DIVEKICK_M, STATE_DIVEKICK_M_LANDING, IDG_DIVEKICK_M,
+		DIVEKICK_M_HANG, DIVEKICK_M_DIVE_VX, DIVEKICK_M_DIVE_VY, HitBox.GUARD_MID, 45, 16, DIVEKICK_M_BLOCKSTUN, 8))
+	out.append(_build_divekick(STATE_DIVEKICK_H, STATE_DIVEKICK_H_LANDING, IDG_DIVEKICK_H,
+		DIVEKICK_H_HANG, DIVEKICK_H_DIVE_VX, DIVEKICK_H_DIVE_VY, HitBox.GUARD_HIGH, 55, 18, DIVEKICK_H_BLOCKSTUN, 9))   # the ONLY overhead
+	out.append_array(_build_divekick_landing_states())
 	return out
 
 
-static func _build_divekick(state_id: int, id_group: int, hang_frames: int,
+static func _build_divekick(state_id: int, landing_state_id: int, id_group: int, hang_frames: int,
 		dive_vx: float, dive_vy: float, guard_height: int,
 		damage: int, hitstun: int, blockstun: int, hitstop: int) -> MoveState:
 	var m := MoveState.new()
 	m.id = state_id
-	m.category = MoveState.CATEGORY_AIRBORNE   # lands like an ordinary jump/air normal (the
-												 # continuous ground clamp -> idle, AD-043) --
-												 # no bespoke landing-recovery state authored
-												 # (would need a NEW engine hook the ticket
-												 # forbids; logged judgment call)
-	m.duration = hang_frames + 1 + DIVEKICK_ACTIVE + DIVEKICK_SAFETY_TAIL
+	m.category = MoveState.CATEGORY_AIRBORNE
+	# AD-050 (TKT-P2-11): landing redirects into a grounded, non-actionable,
+	# once-through recovery state (authored below, `_build_divekick_landing_states`)
+	# instead of idle -- `StepPhases._land`'s pinned precedence. This is the
+	# format call JC-094's deferral named ("an Architect format call... routed
+	# as a flag -- never a content workaround"), now resolved.
+	m.landing_state_id = landing_state_id
+	m.duration = hang_frames + 1 + DIVEKICK_SAFETY_TAIL
 
 	var kf_hang := Keyframe.new()
 	kf_hang.frame_start = 1
@@ -1444,8 +1469,15 @@ static func _build_divekick(state_id: int, id_group: int, hang_frames: int,
 	kf_dive.motion_vel_x = FP.from_units(dive_vx)
 	kf_dive.motion_vel_y = FP.from_units(dive_vy)   # positive = down (AD-037)
 
+	# --- Active-until-ground (AD-050) -----------------------------------------
+	# The active hitbox is authored to persist through the WHOLE descent -- from
+	# the frame right after the dive impulse all the way to `duration` (the
+	# safety-tail upper bound) -- so the state's own end (the AD-043 continuous
+	# ground clamp landing it) is what stops the hitbox, not a fixed active
+	# window. `active_hit_ids` (AD-026, cleared on state entry) still enforces
+	# ONE hit per `id_group` per contact, so this long window is one hit
+	# available anywhere in the fall, never repeated damage.
 	var active_start: int = dive_frame + 1
-	var active_end: int = active_start + DIVEKICK_ACTIVE - 1
 	var hb := HitBox.new()
 	hb.box = Box.make(FP.from_int(10), FP.from_int(-30), FP.from_int(30), FP.from_int(30))
 	hb.guard_height = guard_height
@@ -1460,20 +1492,47 @@ static func _build_divekick(state_id: int, id_group: int, hang_frames: int,
 	hb.id_group = id_group
 	var kf_active := Keyframe.new()
 	kf_active.frame_start = active_start
-	kf_active.frame_end = active_end
+	kf_active.frame_end = m.duration
 	kf_active.hurtboxes = [_hurt_air()]
 	kf_active.hitboxes = [hb]
-	# NO motion authored on/after the active window -- gravity + the dive's
+	# NO motion authored on/after the dive impulse -- gravity + the dive's
 	# inherited velocity carry the accelerating plummet (AD-043), exactly like
 	# the ordinary jump arc's post-takeoff flight keyframe.
 
-	var kf_tail := Keyframe.new()
-	kf_tail.frame_start = active_end + 1
-	kf_tail.frame_end = m.duration
-	kf_tail.hurtboxes = [_hurt_air()]
-
-	m.timeline = [kf_hang, kf_dive, kf_active, kf_tail]
+	m.timeline = [kf_hang, kf_dive, kf_active]
 	m.cancels = []
+	return m
+
+
+## Landing-recovery states (AD-050, TKT-P2-11): a grounded, non-actionable,
+## once-through recovery entered on landing INSTEAD of idle (via
+## `MoveState.landing_state_id`, resolved by `StepPhases._land`). `duration` is
+## the AD-050 pinned equality -- EXACTLY the corresponding divekick's own
+## `HitBox.blockstun` (the JC-095 tuning flag owns the blockstun VALUES; this
+## ticket owns the equality). No hitboxes, no cancels: a real commitment
+## whether the divekick hit, was blocked, or whiffed entirely (AD-050 -- "a
+## single authored value applied on landing regardless of outcome"). One state
+## per strength since L/M/H author different blockstun.
+static func _build_divekick_landing_states() -> Array[MoveState]:
+	var out: Array[MoveState] = []
+	out.append(_build_divekick_landing(STATE_DIVEKICK_L_LANDING, DIVEKICK_L_BLOCKSTUN))
+	out.append(_build_divekick_landing(STATE_DIVEKICK_M_LANDING, DIVEKICK_M_BLOCKSTUN))
+	out.append(_build_divekick_landing(STATE_DIVEKICK_H_LANDING, DIVEKICK_H_BLOCKSTUN))
+	return out
+
+
+static func _build_divekick_landing(state_id: int, blockstun: int) -> MoveState:
+	var m := MoveState.new()
+	m.id = state_id
+	m.category = MoveState.CATEGORY_GROUNDED
+	m.duration = blockstun   # the AD-050 pinned equality: recovery == this divekick's blockstun
+	m.loop = false
+	var kf := Keyframe.new()
+	kf.frame_start = 1
+	kf.frame_end = m.duration
+	kf.hurtboxes = [_hurt_stand()]
+	m.timeline = [kf]
+	m.cancels = []   # a real commitment on every landing -- hit, block, or whiff (AD-050)
 	return m
 
 

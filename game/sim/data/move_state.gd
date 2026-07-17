@@ -43,6 +43,21 @@ extends Resource
 ## a null pushbox uses the character's default (Character.default_pushbox).
 @export var pushbox: Box = null
 
+## Landing-recovery redirect (AD-050, TKT-P2-11). Default `0` = unset. When THIS
+## airborne state reaches the ground via the AD-043 continuous clamp and is NOT a
+## launched HITSTUN reaction (that always lands into `reaction_map[REACTION_KNOCKDOWN]`,
+## unaffected by this field — see `StepPhases._land`'s pinned precedence), a nonzero
+## `landing_state_id` redirects the landing transition to THAT state instead of
+## `idle_state_id`. The target is expected to be a grounded, non-actionable, once-
+## through recovery state (a divekick's landing lag, authored with `duration` equal to
+## the divekick's own `HitBox.blockstun` — the AD-050 equality invariant). Unlike a
+## reaction kind, this is NOT a stun countdown re-armed by an opponent's hit — it is
+## the mover's OWN committed recovery, governed by ordinary duration/actionability
+## (`Actionability.is_actionable`), so landing into it does not touch `p.stun`. Jumps
+## and air normals leave this `0` (unset) and land to `idle_state_id` exactly as
+## before AD-050 — purely additive.
+@export var landing_state_id: int = 0
+
 # --- Engine-level state categories (move-format.md; AD-007 slice set) --------
 const CATEGORY_GROUNDED: int = 0
 const CATEGORY_AIRBORNE: int = 1
