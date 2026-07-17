@@ -192,6 +192,29 @@ the opponent won't know," it's out.
   The economy *is* the design: one approach-mixup option per jump, each with a
   clean, readable counter. (Overrides my earlier "air dash over double jump" call.)
 
+**What B looks like when it *receives*** *(added 2026-07-16 — AD-049)*
+
+AD-049 makes reactions **defender-side content**: the attacker names *what happens*
+semantically, the defender owns *what that looks like on itself*. So B must author
+every reaction kind it can **receive**, including ones it never inflicts — and the
+build surfaced that **B has no `AIR_RESET`**, because B doesn't air-reset anyone.
+A does, to B. Answering here rather than sending it up, because the brief already
+implies it: *"You get anti-aired out of a sloppy approach and eat A's full punish —
+and you can see why"* (success-feels-like, above) briefs B **being** launched and
+air-reset as intended play, and the brief never gave B a reason to be exempt.
+
+The **only constraint that is mine**, and it is a legibility one, not a feel one:
+**B's three airborne reactions must be tellable apart on sight** — `AIR_RESET`
+(neutral fall, B recovers, nothing follows), `LAUNCH` (B is juggle-able, A's combo
+continues), and `KNOCKDOWN` (B is down, oki incoming). These three demand
+*different responses* from B's player and arrive in the same airborne moment, so a
+player who can't distinguish them can't know whether to expect a juggle, a wakeup
+mixup, or nothing — the no-knowledge-checks line, exactly. Everything past that —
+poses, durations, momentum profiles — is **latitude within the spec**, not a call I
+need to make and not one worth spending the user's attention on. If the Developer
+finds a case where legible distinctness and B's feel genuinely conflict, that's a
+flag back to me.
+
 **Specials**
 
 - **Low slide** — a low-hitting slide whose **block advantage varies by which
