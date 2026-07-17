@@ -6,7 +6,7 @@
 
 ---
 
-### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: reaction legibility — THE HEADLINE DEFECT
+### [resolved] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: reaction legibility — THE HEADLINE DEFECT
 Problem, as reported: **"the slide doesn't cause a knockdown on A. I can't get a
 knockdown by any means, and I can't test an oki setup without a knockdown"** — the
 slide read as **state 123, hitstun**; B's `2H` read as **125 then 123**, both
@@ -54,7 +54,25 @@ readouts for the same collapse and report what you find.
 **Gate consequence to relay back:** gate item 9 (oki / B-2) is **testable after all** —
 it was never blocked by a missing knockdown.
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-17): Fixed. Added `PlayerView.reaction_kind` — a derived
+field (mirrors `invuln`'s pattern) that reverse-resolves the current `state_id` through
+the roster character's own `reaction_map` (the same map AD-049's `reaction_state(kind)`
+already reads forward) to the state's own `ReactionKind`, or `-1` for an ordinary
+non-reaction state. `LiveStatePanelModel.identity_name()` reads it and leads each row
+with the specific word — "knockdown" / "launch" / "air reset" / "hitstun" / "blockstun" /
+"crouch blockstun" — with `category_name()` kept alongside (`cat:%s`), never dropped, per
+the requirement that category "is real information and may stay." No answer-key added —
+the fix names WHAT STATE a player is in, never what the opponent should do about it.
+Regression test (`test_live_state_panel.gd`) drives character A's actual
+`STATE_HITSTUN`/`STATE_HITSTUN_LAUNCH`/`STATE_AIR_RESET`/`STATE_KNOCKDOWN` through the
+real readout path and asserts the 4 rendered lines are distinct AND each contains its
+correct word — fails against the pre-fix code (all 4 rendered identically). **Audited the
+other readouts for the same collapse shape** (frame-data, input-history, match,
+dummy-mode indicator) — none found; a repo-wide grep for `category_name`/
+`CATEGORY_HITSTUN` usage outside `live_state_panel_model.gd` returns nothing, so the
+defect was isolated to this one panel, not a repeated pattern. JC-108 records the field
+design. Spec note: `inspection-surface.md`'s `PlayerView` table doesn't yet list
+`reaction_kind` — for the Architect to fold in on ratification.
 
 ### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: AD-043 air-move semantics (`combat-resolution.md` criterion 15)
 Problem: **performing an aerial as either character snaps it to the ground** (divekicks
@@ -197,7 +215,7 @@ do not implement that half from this entry.
 ---
 Resolution (owner fills): …
 
-### [open] 2026-07-17 · raised-by: Strategist (from user re-gate) · owner: Developer · re: B-5 facing readout
+### [resolved] 2026-07-17 · raised-by: Strategist (from user re-gate) · owner: Developer · re: B-5 facing readout
 Problem: the user asks whether it is intended that an airdash crossup shows **nothing
 special in the overlay**. **Answered on `briefs/character-b.md`** (new section, "What
 B-5 actually requires") — read it; the short version is that no crossup *indicator* is
@@ -208,7 +226,16 @@ shown in the training-mode readouts?** If yes, B-5 is met and this closes as "in
 already satisfied." If no, expose it as ordinary state alongside advantage and stun —
 not as a crossup callout.
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-17): **Not previously satisfied — the gap, not the missing
+indicator.** `PlayerView.facing` existed (sim truth) but no training-mode panel displayed
+it; it was used only internally by `InputHistoryPanelModel`'s command recognizer. Fixed
+by adding `facing` to `LiveStatePanelModel`'s existing per-player row (`"facing
+right"`/`"facing left"` in `format_row`) — the same panel that already shows
+state/stun/actionable, per the brief's own "the same way it exposes advantage and stun."
+No crossup indicator, no comparison to the opponent, no "you got crossed up" language —
+the raw fact only, discoverable on a frame-step after the fact. Regression test drives a
+facing flip (the crossup shape) through the real readout path and asserts the rendered
+line reflects the new facing. JC-109 records the surfacing choice.
 
 ### [open] 2026-07-17 · raised-by: Strategist · owner: Developer · re: instrument ergonomics — match reset
 Problem: at match end the game stops until the window is closed, and `R` (`do_reset`) is

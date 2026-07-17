@@ -25,6 +25,14 @@ extends RefCounted
 ## (the state's own `ReactionKind`, AD-049) and leads the row with THAT —
 ## "knockdown"/"launch"/"air reset" read apart on sight — with category kept
 ## alongside, never dropped.
+##
+## FACING (B-5, `briefs/character-b.md` "What B-5 actually requires";
+## `docs/flags.md` 2026-07-17 "re: B-5 facing readout"). No crossup *indicator* —
+## that would answer the live read the option exists to pose. But facing (and
+## therefore which side is blocking-side) must be **discoverable after the
+## fact**, exposed as ordinary state alongside advantage/stun, exactly like
+## every other field here — never a callout. `PlayerView.facing` was already
+## surfaced sim-side and unused by any readout; this panel is where it reads.
 
 const STUN_KIND_NAMES: PackedStringArray = ["none", "hit", "block"]
 
@@ -40,6 +48,7 @@ static func _for_player(view: InspectionView, i: int) -> Dictionary:
 	var pv: PlayerView = view.player(i)
 	return {
 		"player": i,
+		"facing": pv.facing,
 		"state_id": pv.state_id,
 		"state_category": pv.state_category,
 		"frame_in_state": pv.frame_in_state,
@@ -112,6 +121,16 @@ static func stun_kind_name(stun_kind: int) -> String:
 	return "?"
 
 
+## Human-readable facing (B-5; `PlayerView.facing`: `+1` == right, `-1` == left,
+## `player_state.gd`/`step_phases.gd`'s convention).
+static func facing_name(facing: int) -> String:
+	if facing > 0:
+		return "right"
+	if facing < 0:
+		return "left"
+	return "?"
+
+
 ## A one-line human-readable rendering for one player's row.
 static func format_row(row: Dictionary) -> String:
 	var invuln_str: String = ""
@@ -127,8 +146,8 @@ static func format_row(row: Dictionary) -> String:
 	# always present but never the only label (docs/flags.md 2026-07-17,
 	# "re: reaction legibility" — category alone collapsed four distinct states
 	# into one word).
-	return "P%d  state %d %s (cat:%s) f%d/%d  hitstop %d  stun %d(%s)  actionable %s%s%s  hits %d scaling %d%% dmg %d" % [
-		row["player"], row["state_id"], identity_name(row), category_name(row["state_category"]),
+	return "P%d  facing %s  state %d %s (cat:%s) f%d/%d  hitstop %d  stun %d(%s)  actionable %s%s%s  hits %d scaling %d%% dmg %d" % [
+		row["player"], facing_name(row["facing"]), row["state_id"], identity_name(row), category_name(row["state_category"]),
 		row["frame_in_state"], row["state_duration"],
 		row["hitstop_remaining"],
 		row["stun_remaining"], stun_kind_name(row["stun_kind"]),

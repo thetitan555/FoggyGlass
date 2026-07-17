@@ -50,6 +50,7 @@ func _run() -> void:
 	_test_reaction_kind_resolves_from_reaction_map()
 	_test_reaction_kind_minus_one_for_non_reaction_state()
 	_test_format_row_distinguishes_the_four_hitstun_category_states()
+	_test_facing_field_and_format_row()
 
 
 func _two_char_state(gap_x: int = 45) -> SimState:
@@ -244,3 +245,33 @@ func _test_format_row_distinguishes_the_four_hitstun_category_states() -> void:
 		MoveRegistry.clear()
 	_eq(seen_lines.size(), 4,
 		"all four CATEGORY_HITSTUN states render 4 DISTINCT lines (pre-fix, all 4 rendered identically as 'hitstun')")
+
+
+# --- docs/flags.md 2026-07-17 "re: B-5 facing readout" -----------------------
+# B-5 (airdash crossup) requires facing be DISCOVERABLE-after-the-fact, as
+# ordinary state alongside advantage/stun (no crossup indicator) --
+# `briefs/character-b.md` "What B-5 actually requires."
+
+func _test_facing_field_and_format_row() -> void:
+	var s := _two_char_state()
+	s.players[0].facing = 1
+	s.players[1].facing = -1
+	var roster: Dictionary = MoveRegistry.roster()
+	var view := InspectionView.new(s, roster)
+	var rows: Array = LiveStatePanelModel.build(view)
+	_eq(rows[0]["facing"], 1, "panel row facing == PlayerView.facing (p0, facing right)")
+	_eq(rows[1]["facing"], -1, "panel row facing == PlayerView.facing (p1, facing left)")
+
+	var line0: String = LiveStatePanelModel.format_row(rows[0])
+	var line1: String = LiveStatePanelModel.format_row(rows[1])
+	_true(line0.contains("facing right"), "p0's formatted row reads 'facing right'")
+	_true(line1.contains("facing left"), "p1's formatted row reads 'facing left'")
+
+	# Crossup regression shape: after a crossup, the SAME player's facing flips
+	# (this is the exact fact B-5 requires be discoverable after the fact).
+	s.players[0].facing = -1
+	var view2 := InspectionView.new(s, roster)
+	var rows2: Array = LiveStatePanelModel.build(view2)
+	var line0_after: String = LiveStatePanelModel.format_row(rows2[0])
+	_true(line0_after.contains("facing left"), "after a facing flip (crossup), the readout reflects the NEW facing")
+	MoveRegistry.clear()

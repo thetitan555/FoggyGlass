@@ -336,3 +336,26 @@ three dummy modes already has its own label). A repo-wide grep for `category_nam
 nothing — the collapse was isolated to this one panel, not a repeated pattern.
 Serving: `docs/flags.md` (2026-07-17, "re: reaction legibility"); `inspection-surface.md`
 `PlayerView`; `training-mode.md` "Live-state panel."
+
+### JC-109 · 2026-07-17 · flag "re: B-5 facing readout" · facing surfaced in the live-state row, not a new panel — provisional
+**Finding (the flag's concrete question):** facing was **not** exposed in any training-
+mode readout before this session. `PlayerView.facing` existed (sim truth, used
+internally by `InputHistoryPanelModel.recognized_commands` for command recognition) but
+no panel ever displayed it — B-5 was NOT satisfied.
+**Decided:** add `facing` to `LiveStatePanelModel`'s existing per-player row/`format_row`
+(`"facing right"`/`"facing left"`), rather than a new dedicated panel/overlay. This is
+exactly the brief's own instruction — "expose it as ordinary state alongside advantage
+and stun" — and the live-state panel is where `state_id`/`stun`/`actionable` already
+live; a second panel for one int would fragment the "ordinary state" reading the brief
+asks for. No crossup callout, no comparison to the opponent's position, no "you got
+crossed up" language — just the raw fact, discoverable on a frame-step after the fact,
+exactly like every other field in this row.
+**Alternative passed over:** a small dedicated "facing" indicator (mirrors
+`DummyModeIndicator`'s own always-on-top single-fact pattern). Rejected: that pattern
+exists for state living OUTSIDE `SimState` (dummy mode) that has no natural home in the
+`InspectionView`-backed panels; facing IS ordinary `PlayerView` sim truth with an
+obvious home already, so a second overlay would be an unnecessary new surface for a
+one-field addition the brief explicitly frames as "the same way it exposes advantage and
+stun" (i.e., IN that panel).
+Serving: `docs/flags.md` (2026-07-17, "re: B-5 facing readout"); `briefs/character-b.md`
+"What B-5 actually requires."
