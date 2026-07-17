@@ -204,24 +204,45 @@ user's gate.** All P2 tickets are landed, committed, and pushed:
   ratification pass: the **dedicated knockdown state** (JC-070 overturned) and
   the **AD-044 exact-self-repeat `CancelEval` fix**.
 
-**The content-seam proof held.** B's entire kit was authored as **data** over the
-existing engine; the only code touched was adding one motion token (`214`) to the
-*already-generic* recognizer table (JC-090). No engine primitive was invented and
-no format-generality flag was raised — the P2 thesis, met. Suite: **42/42**
-headless green, determinism/round-trip included.
+**The content-seam claim — WITHDRAWN 2026-07-16, pending genuine re-proof.** This
+section previously read "the content-seam proof held … the P2 thesis, met." That
+declaration was **premature and is retracted**. It rested on B's kit being authored
+as data (true), no engine primitive invented (true), and QA's grep of `game/sim/*.gd`
+finding zero character-specific branches (also true) — and it was *still* wrong,
+because the first real A-vs-B hit at the human gate had **never worked**. Every hit
+across characters left the defender boxless, unhittable and permanently stuck
+(AD-049). A structural grep cannot see an **implicit** coupling — an identifier
+crossing a namespace the format never declared — and every test before the gate
+matched a character **against itself**, where the coupling silently holds. The claim
+was true of the evidence and the evidence didn't test the claim.
 
-**Remaining to close P2 — ONLY THE USER'S GATE.**
+The thesis is still *plausible* and probably right — the fix is a contract change,
+not an engine rewrite, and B's content genuinely was data. But it is not **proven**,
+and P2 exists to prove it. Re-proof = AD-049 landed + `combat-resolution.md` criteria
+15–18, which mandate asymmetric A-vs-B behavioural verification in **both directions**
+and state explicitly that a mirror matchup cannot satisfy them. That is cheaper than a
+full re-audit and is real evidence rather than a proxy for it (Architect's read,
+which I accept). **P2 does not close until it re-proves.**
+
+**Remaining to close P2.**
 
 1. ~~Architect ratification~~ — **DONE (2026-07-16).** JC-087..099 all ratified,
    none overturned, no flags; contract folds landed in AD-043/047/048,
    `move-format.md`, `character-b.md`, `match-flow.md`. All P2 calls (JC-068..099)
    are ratified and archived; both live ledgers are flat.
-2. ~~QA objective audit~~ — **PASS (2026-07-16, `audits/audit-p2-feature.md`).**
-   `character-b.md` 1–6 + B-1..B-6, `match-flow.md` 1–8, and Tenet 1 all pass —
-   determinism/serialization verified at the hard cases (mid-match, mid-divekick,
-   mid-slide-active, mid-projectile-arc round-trips). **Cross-system consistency
-   passes**: an exhaustive grep of `game/sim/*.gd` finds **zero character-specific
-   branches** — the content-seam proof, verified structurally. No drift, no flags.
+2. **QA objective audit — PASSED 2026-07-16 (`audits/audit-p2-feature.md`), but
+   its cross-system-consistency finding is SUPERSEDED and must be re-run.**
+   Determinism/serialization at the hard cases (mid-match, mid-divekick,
+   mid-slide-active, mid-projectile-arc round-trips) stands. What does **not**
+   stand: "cross-system consistency passes — an exhaustive grep of `game/sim/*.gd`
+   finds zero character-specific branches — the content-seam proof, **verified
+   structurally**." The grep was correct; the inference from it was not (see the
+   withdrawal above). QA is not at fault for the method — **my** cross-cutting
+   check asked for exactly that grep ("no character-specific branch"), so the
+   structural reading was the one I invited. Re-run against
+   `combat-resolution.md` 15–18 (behavioural, asymmetric, both directions) once
+   AD-049 lands. Criterion sharpened in `audit-criterion.md` → "Exercise the
+   thing, not a proxy for it."
    The **golden-file regression net was absent and is now seeded** (A movement, B
    frame-data + geometry, full-match hash trace); **43/43** headless green.
 3. **The user's human-inspection gate — RUN 2026-07-16. NOT CLEARED.** QA's
@@ -244,8 +265,42 @@ headless green, determinism/round-trip included.
    re-gate. The user's one substantive tuning observation: **the slide's advantage
    does change live with spacing** (B-1's intent, holding).
 
-   **Re-gate when the four flags resolve**, against the brief-derived checklist
-   below — not against a fresh improvisation.
+   **Same-day disposition of the four (Developer + Architect, 2026-07-16):**
+   - **Input lag — FIXED.** `MatchTickHost` queried input sources by
+     `state.sim.tick`, which freezes during the non-`ACTIVE` `ROUND_START` beat
+     while the driver keeps producing frames — a permanent 60-tick (exactly 1s)
+     query offset once `ACTIVE` began. `P`/`N` were unaffected because they never
+     touch the `InputSource` path, which is precisely what the user's own
+     observation pointed at. Ratified to contract in `input.md` (JC-100).
+   - **Divekick — FIXED, no separate defect.** Downstream of the lag exactly as
+     suspected: B's jump lasts 50 ticks and the input echoed 60 ticks stale, so
+     the airborne window closed before any air command could land.
+   - **HUD overlap — FIXED.** `ControlsLegend` renders ~18 lines in a box sized
+     for fewer, since it was first authored — not a TKT-P2-08 regression. Resized
+     and the right column restacked; the user's gate-time workaround is superseded.
+   - **Boxes vanish on hit — NOT a render defect. The severe reading was the true
+     one**, and it opened AD-049 (above). Fix pending TKT-P2-09+10.
+
+4. **Build AD-049 (TKT-P2-09+10) — OPEN.** Reactions become defender-side content:
+   `HitBox.hit_reaction`/`block_reaction` carry a semantic `ReactionKind`, resolved
+   through the defender's own required `reaction_map`. No id crosses the boundary.
+   Also declares projectile `data_id` global and rejects duplicate installs — the
+   one other live instance of the same class (A: 201–203, B: 220–222 were disjoint
+   **by convention only**, and roster merge silently overwrote). Carries a known
+   content hole: **B has no `AIR_RESET` state** — it inflicts none, but A's `2H`
+   launches it. That is a **feel question on `briefs/character-b.md`, which is
+   mine** — see below.
+5. **QA re-audit — OPEN.** Cross-system consistency re-run behaviourally per item 2.
+6. **The user's re-gate — OPEN**, against the checklist below, not a fresh
+   improvisation.
+
+**The through-line worth keeping.** Ids crossing an undeclared namespace is now the
+**third** instance of one class (TKT-P1.1-01's `character_id 0`/`state_id 0` defaults;
+JC-099's round-start idle, which "only looked correct because the P0 test character's
+idle happens to be id `0`"; now reactions). The Architect's response was to write the
+**character-namespace rule** as a stated invariant rather than fix the instance —
+which is the right altitude, and the reason I'm recording it here too: three
+same-shaped bugs is a design signal, not bad luck.
 
 ### P2 human-gate checklist (Strategist-attached, per `audit-criterion.md`)
 

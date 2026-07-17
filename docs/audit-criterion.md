@@ -102,6 +102,41 @@ coverage of *intended* behavior — the absence-check the presence-based test su
 structurally can't perform. Free exploration on top is still welcome; the checklist
 just guarantees the floor.
 
+## Exercise the thing, not a proxy for it
+
+A check that is **true but doesn't test the claim** is worse than no check, because
+it retires the question. This is now the project's most-repeated failure, four times
+in three phases, and always the same shape — *we confirmed what we thought to look
+at, and the thing itself was never exercised*:
+
+- **P1:** 24/24 headless green while the geometry overlay drew nothing and no
+  control was operable. The tests exercised the sim; the claim was about the screen.
+- **P1.1:** character A's missing walk-stop, crouch, and directional jumps — all
+  enumerable from its brief, none exercised (`pipeline-analysis-completeness-gap.md`).
+- **P2:** every cross-character hit was broken while 43/43 passed and QA's grep
+  correctly found zero character-specific branches. The suite only ever matched a
+  character **against itself**; the grep saw explicit coupling and was structurally
+  blind to implicit coupling (AD-049).
+- **P2:** ~1s of input lag reached the user, because the harness steps the sim
+  directly and **nothing tests the driver that feeds it in the real app.**
+
+So, when a check is claimed to satisfy a criterion, both must hold:
+
+1. **It exercises the real thing along the real path** — not a stand-in, not the
+   layer beneath it. A sim test does not prove a driver. A structural grep does not
+   prove a behaviour. A mirror matchup does not prove two characters interoperate.
+2. **It could fail.** If no realistic defect in the thing under test would turn this
+   check red, it is measuring something else. *State what would have failed it.*
+
+QA owns *how* verification is performed and this does not take that back — it's the
+bar the how must clear, and it's **mine to state because it's the charter's
+discoverability promise turned on our own instruments**: a green check we can't trust
+is opacity aimed at the team instead of the player. The human-gate checklist rule
+below is this same rule applied to the experiential half; this is its objective twin.
+Where a check genuinely cannot exercise the real thing (a Godot layer, a human eye),
+the honest move is to **say so and route it to the gate** — never to write the proxy
+and let it read as proof.
+
 ## Objective vs. subjective (QA's handling, per its role)
 
 - **Objective — QA verifies, pass/fail, owns the call:** Is the information
