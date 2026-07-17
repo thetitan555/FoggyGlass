@@ -197,12 +197,16 @@ func _test_world_framing_centers_stage_and_seats_ground_low() -> void:
 
 
 func _test_world_framing_puts_symmetric_start_boxes_on_screen_and_clear_of_panels() -> void:
-	# training_mode.tscn's screen-anchored HUD panels (FrameDataPanel/
-	# LiveStatePanel/InputHistoryPanel) occupy roughly screen y 16..380.
-	# AD-035's acceptance bar: both characters at their SYMMETRIC START
-	# positions (pos_x = +-100, pos_y = ground_y) are fully on-screen and not
-	# occluded by that panel region.
-	const PANEL_MAX_Y: float = 380.0
+	# training_mode.tscn's screen-anchored LEFT-COLUMN HUD panels (FrameDataPanel/
+	# LiveStatePanel/InputHistoryPanel) occupy screen y 16..442 (docs/flags.md
+	# 2026-07-17 "re: HUD (round 2)" resized them to fit REAL rendered text —
+	# see test_hud_layout.gd). AD-035's acceptance bar: both characters at
+	# their SYMMETRIC START positions (pos_x = +-100, pos_y = ground_y) are
+	# fully on-screen and not occluded by that panel region.
+	# Reads the ONE shared constant (TrainingMode.HUD_LEFT_COLUMN_SAFE_MAX_Y)
+	# test_hud_layout.gd's own panel-sizing is designed against, so this test
+	# and the HUD layout can never silently drift apart again.
+	var PANEL_MAX_Y: float = TrainingMode.HUD_LEFT_COLUMN_SAFE_MAX_Y
 	var viewport_size := Vector2(1152.0, 648.0)
 	var framing: Dictionary = GeometryOverlay.compute_world_framing(viewport_size)
 	var pos: Vector2 = framing["position"]

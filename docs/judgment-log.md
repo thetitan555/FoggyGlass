@@ -359,3 +359,74 @@ one-field addition the brief explicitly frames as "the same way it exposes advan
 stun" (i.e., IN that panel).
 Serving: `docs/flags.md` (2026-07-17, "re: B-5 facing readout"); `briefs/character-b.md`
 "What B-5 actually requires."
+
+### JC-110 · 2026-07-17 · flag "re: HUD (round 2)" · training_mode.tscn layout resized against REAL font-measured worst-case text, not box math — provisional
+**Decided:** replaced the prior box-only fix (JC-101, which asserted no two `Control.rect`s
+overlap) with a layout resized against the ACTUAL rendered glyph extents Godot's own
+`Font.get_multiline_string_size()` produces for each panel's real formatter output under a
+realistic worst-case content model, verified in a new `test_hud_layout.gd`:
+1. **Enabled `autowrap_mode = 3` (WORD_SMART)** on `FrameDataPanel`/`LiveStatePanel`/
+   `InputHistoryPanel`'s Labels (mirrors `ControlsLegend`'s existing convention) — none of
+   the three previously wrapped, so a single Live-State row rendered ~1360px wide
+   unwrapped from a 16px margin, sailing past every panel to its right regardless of box
+   size. This was the root cause the box-rect proxy could never see.
+2. **Widened the left column** (`FrameDataPanel`/`LiveStatePanel`/`InputHistoryPanel`)
+   from 504px to 720px and **restacked their heights** (154/115/161px content) to fit the
+   REAL measured wrapped text — narrower wrapping needs MORE height, so width and height
+   trade off; 720px was chosen as the widest the left column can go before the 14px gap
+   before the right column (which starts x=750, unchanged).
+3. **Lowered `InputHistoryPanel.max_rows` from 16 to 8** (a pre-existing, documented
+   display-only cap — "so a long history doesn't have to fully render every tick") — at 16
+   rows the panel's real wrapped content needed ~207px, which didn't fit the left column's
+   available vertical budget alongside the other two panels; 8 rows is still a materially
+   useful recent-input window and fits with real margin.
+4. **Reduced `ControlsLegend`'s Label font size from 16 to 14** (a `theme_override_font_
+   sizes/font_size` on that one Label only) — its real wrapped content needed 483px height
+   at the original 16px size, more than the right column's available room once
+   `DummyModeIndicator`/`MatchPanel` are stacked below it; at 14px it needs 400px, which
+   fits with margin. Scoped to the legend specifically (a static keybinding reference, not
+   a live numeric readout) — every other panel keeps its original font size.
+5. **Added `TrainingMode.HUD_LEFT_COLUMN_SAFE_MAX_Y = 442.0`**, a single named constant
+   derived from `GeometryOverlay.compute_world_framing(Vector2(1152,648))` applied to the
+   idle pushbox height every roster character authors (40 world units) — the symmetric-
+   start characters' box top lands at screen y≈456.48 (computed directly, not guessed).
+   442 is the actual bottom edge my new left-column layout reaches, with ~14px real margin
+   below the true character-occlusion ceiling. `test_geometry_overlay.gd`'s own AD-035
+   `PANEL_MAX_Y` (previously a hardcoded, more-conservative `380.0` guess) now reads this
+   SAME constant, so the HUD layout and the AD-035 occlusion test can never silently drift
+   apart again.
+**Why a real-measurement test, not another box assertion:** `docs/flags.md`'s own framing
+of this flag names the prior fix's exact failure mode — "measured boxes as a proxy for
+text, and text overflows its box." `test_hud_layout.gd` loads the ACTUAL
+`training_mode.tscn` (not a hand-rebuilt node tree), drives each panel's REAL static
+formatter (`FrameDataPanel._format`, `LiveStatePanel._format`, `InputHistoryPanel._format`,
+`ControlsLegend.build_legend_text`, `DummyModeIndicator.build_indicator_text`,
+`MatchPanelModel.format` — the exact functions `_refresh()` calls in production) with a
+worst-case-but-REALISTIC content model (maxed digit counts a real match can actually
+produce simultaneously, not artificially inflated numbers), and measures the resulting
+text via the SAME font/TextServer measurement Godot itself uses to lay text out, respecting
+each Label's real `autowrap_mode`/width from the `.tscn`. Confirmed this test actually
+exercises the claim: run against the PRE-fix `.tscn` (git-stashed for the check, not
+committed), it fails with the EXACT shape the flag reports — `LiveStatePanel`'s rendered
+text overlapping `ControlsLegend`'s, `ControlsLegend`'s overlapping `DummyModeIndicator`'s,
+and `LiveStatePanel` overflowing the viewport horizontally.
+**Alternative passed over:** keep panels at their original 380px-and-under vertical
+footprint (matching JC-101's stated assumption) and solve the overlap purely by shrinking
+font size project-wide. Rejected: font-size reduction was reserved for `ControlsLegend`
+specifically (the one panel with no occlusion headroom AND the least need for large
+numerals, being a static keybinding reference) — shrinking the numeric readout panels
+(frame data / live state / stun / advantage) trades legibility of the actual gameplay
+numbers to solve a legend-text problem, which the audit criterion's half 2 ("did it dumb
+anything down") would flag; widening + real measurement solved it without touching those.
+**Alternative passed over:** a two-column text layout for `ControlsLegend` (JC-101
+explicitly declined this for being out of scope of a geometry-only flag). Not revisited
+here either — the font-size reduction alone closes the gap with real margin, so the larger
+text-layout change wasn't needed.
+**Spot-checked, not solved by this ticket:** whether the geometry overlay's own box
+rendering (not the readout panels) ever occludes/gets-occluded-by anything is
+`test_geometry_overlay.gd`'s existing, unmodified concern (AD-035) — this session only
+updated its one `PANEL_MAX_Y` constant to source from the same real-geometry-derived value
+my new layout is designed against, per point 5 above; the test's own logic/assertions are
+untouched.
+Serving: `docs/flags.md` (2026-07-17, "re: HUD (round 2)"); `training-mode.md` criterion
+14; AD-035.

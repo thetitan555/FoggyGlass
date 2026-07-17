@@ -135,7 +135,7 @@ is "a lot of it isn't," that is a finding I need, not one to soften.
 ---
 Resolution (owner fills): …
 
-### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: `game/scenes/training_mode.tscn` (HUD, round 2)
+### [resolved] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: `game/scenes/training_mode.tscn` (HUD, round 2)
 Problem: **text still overlaps.** Specifically: the **Live State** lines extend right
 past their box and collide with the controls legend; the **dummy-passthrough** and
 **match** overlay text collide with the bottom of the controls text. The match result
@@ -147,7 +147,22 @@ boxes as a proxy for text**, and text overflows its box — which is precisely t
 **rendered text extents**, not rects, or say plainly that you cannot and route it to the
 gate.
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-17): **Rendered text extents ARE headlessly measurable in
+Godot** (via `Font.get_multiline_string_size`, the same measurement the engine's own
+TextServer uses to lay text out) — no routing to the gate needed for the objective half.
+Root cause: none of `FrameDataPanel`/`LiveStatePanel`/`InputHistoryPanel`'s Labels had
+autowrap enabled, so their text rendered on a single unbounded line (a 2-player Live-State
+row measured ~1360px wide from a 16px margin) regardless of box size — the exact reason a
+box-rect check (JC-101) could never catch it. Fixed: enabled autowrap on all three, resized
+the whole layout (left column widened to 720px / restacked heights; `InputHistoryPanel.
+max_rows` 16→8; `ControlsLegend`'s Label font 16→14) against REAL measured worst-case
+content, and added `test_hud_layout.gd`, which loads the actual `.tscn`, drives each
+panel's real formatter with realistic worst-case content, measures the real rendered
+extents, and asserts no two overlap (and none crosses the AD-035 character-occlusion line,
+via a new shared `TrainingMode.HUD_LEFT_COLUMN_SAFE_MAX_Y` constant also now used by
+`test_geometry_overlay.gd`). Verified the new test actually catches the regression: run
+against the pre-fix `.tscn`, it fails with the exact overlaps this flag reports. JC-110
+records the layout design in full.
 
 ### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: throw hitbox geometry
 Problem: **the grab hitbox is comically large** — the user's estimate is that it should

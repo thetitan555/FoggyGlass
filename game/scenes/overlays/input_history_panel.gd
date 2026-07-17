@@ -16,8 +16,14 @@ var _source: TrainingMode = null
 @onready var _label: Label = $Label
 
 ## How many of the most recent history frames to render (display-only cap;
-## see InputHistoryPanelModel.build).
-var max_rows: int = 16
+## see InputHistoryPanelModel.build). Lowered from 16 (docs/flags.md
+## 2026-07-17 "re: HUD (round 2)") — at 16 rows this panel's REAL rendered
+## text (both players' full history, wrapped) needed ~207px in the left
+## column's available width, which didn't fit the safe vertical budget
+## (`TrainingMode.HUD_LEFT_COLUMN_SAFE_MAX_Y`) alongside FrameDataPanel/
+## LiveStatePanel. 8 rows is still a meaningful recent-input window for a
+## debug readout and fits with real margin (verified in test_hud_layout.gd).
+var max_rows: int = 8
 
 
 func set_source(source: TrainingMode) -> void:

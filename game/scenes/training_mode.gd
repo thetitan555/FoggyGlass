@@ -46,6 +46,24 @@ class_name TrainingMode
 ## '_process'/'_draw' driven, but tests / a non-visual driver can hook this.
 signal ticked(tick: int)
 
+## HUD LAYOUT SAFETY BOUNDARY (`docs/flags.md` 2026-07-17 "re: HUD (round 2)").
+## The screen-space Y the LEFT-COLUMN readout panels (`FrameDataPanel`/
+## `LiveStatePanel`/`InputHistoryPanel` in `training_mode.tscn`) must keep their
+## REAL RENDERED TEXT bottom edge at or above, so they never occlude the
+## symmetric-start character boxes AD-035/criterion-14 already protects. Not a
+## guess: derived from `GeometryOverlay.compute_world_framing(Vector2(1152,
+## 648))` (the project's fixed default viewport, `project.godot` has no
+## `[display]` override) applied to the shared idle-pushbox height every
+## roster character (A, B, TestSupport) authors (40 world units) — the
+## symmetric-start characters' box TOP lands at screen y ≈ 456.48, confirmed by
+## `test_geometry_overlay.gd`'s own framing test. This constant (442.0) is
+## picked BELOW that true ceiling with real margin (~14px), matching the actual
+## left-column layout this session designed in `training_mode.tscn` — kept as
+## ONE named constant, read by BOTH `test_hud_layout.gd` (this session, real
+## rendered-text-extent verification) and `test_geometry_overlay.gd` (AD-035's
+## own `PANEL_MAX_Y`), so the two can never silently drift apart again.
+const HUD_LEFT_COLUMN_SAFE_MAX_Y: float = 442.0
+
 @onready var _tick_host: TickHost = $TickHost
 
 ## The training-mode control harness (TKT-P1-02/03/04's home, per AD-020's
