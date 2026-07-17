@@ -57,6 +57,7 @@ InspectionView (read-only over the current SimState):
 | `thrown_by` | The attacker index that threw this player, or `-1` if not currently thrown (AD-028). |
 | `invuln` | This player's **current-frame** invulnerability, as read from its covering keyframe (AD-031): `{ strike, throw }` bools. Backs "this frame is invulnerable" and — with `move_contact == whiff` on the opponent — "the hit whiffed *because of* invuln" (charter legibility). A **derived** projection of the defender's authored keyframe (like box geometry), not a serialized `SimState` field; snapshot-able (two plain bools, no float). |
 | `air_action_used` | Bool (AD-046) — whether this player has spent its one air action (air dash / double jump) this jump. Backs the air-economy readout ("your air action is spent"). Reset on landing. |
+| `reaction_kind` | The engine-level `ReactionKind` (AD-049) the player's current state *is*, or `-1` when the state is not a reaction (idle / walk / a normal). A **derived** projection (like `invuln` / box geometry) — **not** a serialized `SimState` field: resolved in `PlayerView._init` by reverse-reading the character's **own** `reaction_map` for the entry whose `state_id` matches the current state (the same authored map AD-049's forward `reaction_state(kind)` reads the other direction). Backs the training mode leading a reaction row with its *specific* identity — knockdown / launch / air reset / hitstun / blockstun / crouch blockstun — where `state_category` alone collapses all four hitstun reactions (`STATE_KNOCKDOWN` / `_HITSTUN_LAUNCH` / `_AIR_RESET` / ordinary hitstun) into one word. `state_category` stays shown *alongside* it, never replaced. Snapshot-shaped (plain int). **Read-only readout truth:** nothing in the sim reads it back, so a `reaction_map` that aliased two kinds onto one `state_id` (first match wins) is a display-only ambiguity, not a resolution risk — real roster characters map every kind to a dedicated state (JC-104). |
 | `input_current` | The raw `InputFrame` this player's source emitted this tick (Tenet 2). |
 | `input_history` | Last N raw `InputFrame`s (ring buffer view). |
 | `boxes` | The resolved `BoxView`s active this tick (below). |
@@ -140,7 +141,10 @@ snapshots them. The single source of truth that QA snapshots stays fixed-point.
    An air normal's **contact depth and height-scaled hitstun delta** (`HitEvent.
    contact_depth`, `HitEvent.air_height_hitstun_delta`, AD-033) are readable through
    `last_hit()`, so *why* a deep jump-in is more plus is attributable (both `0` on a
-   non-air-normal hit).
+   non-air-normal hit). A reaction state's **specific identity** (`reaction_kind`,
+   AD-049) is readable through `PlayerView`, so the training mode names *which*
+   reaction a defender is in (knockdown vs. launch vs. air reset vs. ordinary
+   hitstun) rather than collapsing all four onto their shared `state_category`.
 2. **Read-only.** No method on the surface mutates `SimState`; after any sequence
    of inspection calls, the state hash is unchanged. No mutator is exposed.
 3. **Single source.** `advantage()` returns the value from the sim's one advantage
