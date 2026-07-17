@@ -86,6 +86,21 @@ static func build_test_character() -> Character:
 	var c := Character.new()
 	c.id = CHAR_ID
 	c.idle_state_id = STATE_IDLE
+	# reaction_map (AD-049, REQUIRED): every ReactionKind -> this character's OWN
+	# state_id. This test double has no distinct launch/air-reset/crouch-
+	# blockstun states of its own (it never authors those hitbox properties), so
+	# those kinds reuse STATE_HITSTUN/STATE_BLOCKSTUN -- harmless since nothing
+	# in this suite inflicts them; REACTION_KNOCKDOWN reuses the existing throw
+	# reaction (STATE_THROWN), which was already this character's grounded
+	# non-actionable hard-reaction state.
+	c.reaction_map = [
+		ReactionMapEntry.make(MoveState.REACTION_HITSTUN, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_BLOCKSTUN, STATE_BLOCKSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_CROUCH_BLOCKSTUN, STATE_BLOCKSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_LAUNCH, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_AIR_RESET, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_KNOCKDOWN, STATE_THROWN),
+	]
 
 	var phys := CharacterPhysics.new()
 	phys.walk_speed = FP.from_units(2.0)   # 2 units/tick, baked fixed-point
@@ -236,8 +251,8 @@ static func _make_light_hitbox(x: int, y: int) -> HitBox:
 	hb.hitstop = LIGHT_HITSTOP
 	hb.pushback_hit = FP.from_units(3.0)
 	hb.pushback_block = FP.from_units(2.0)
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_BLOCKSTUN
 	hb.id_group = LIGHT_ID_GROUP
 	hb.rehit_interval = 0
 	# LIGHT grants the special-cancel tag on connect (usable T+1, AD-017).
@@ -290,8 +305,8 @@ static func _fwd_hitbox(damage: int, id_group: int, rehit_interval: int = 0) -> 
 	hb.hitstop = 0                 # 0 so multi-hit/rehit cadence isn't frozen by hitstop
 	hb.pushback_hit = 0
 	hb.pushback_block = 0
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_BLOCKSTUN
 	hb.id_group = id_group
 	hb.rehit_interval = rehit_interval
 	return hb
@@ -356,8 +371,8 @@ static func _build_throw() -> MoveState:
 	tb.tech_window = THROW_TECH_WINDOW   # dedicated tech-window frame count (AD-029)
 	tb.pushback_hit = FP.from_units(THROW_PUSHBACK)   # clash/tech separation (AD-016)
 	tb.hitstop = 0
-	tb.hit_reaction = STATE_THROWN
-	tb.block_reaction = STATE_THROWN
+	tb.hit_reaction = MoveState.REACTION_KNOCKDOWN
+	tb.block_reaction = MoveState.REACTION_KNOCKDOWN
 	tb.id_group = THROW_ID_GROUP
 	tb.is_throw = true
 	var kf := Keyframe.new()
@@ -495,8 +510,8 @@ static func build_projectile_data() -> ProjectileData:
 	hb.hitstop = FIREBALL_HITSTOP
 	hb.pushback_hit = FP.from_units(2.0)
 	hb.pushback_block = FP.from_units(1.0)
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_BLOCKSTUN
 	hb.id_group = FIREBALL_ID_GROUP
 	hb.rehit_interval = 0
 	data.hitbox = hb

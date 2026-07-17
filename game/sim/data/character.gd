@@ -34,18 +34,20 @@ extends Resource
 
 ## The state_id the character returns to when a move ends / becomes actionable
 ## (idle). Authored so the sim knows the neutral state without a hardcoded id.
+## Idle is NOT a reaction (AD-049) -- this field is unaffected by that change.
 @export var idle_state_id: int = 0
 
-## The character's grounded KNOCKDOWN reaction state_id (move-format.md ->
-## Character.knockdown_state_id; AD-043, ratified from JC-070). Optional --
-## default 0 means "no knockdown state authored," in which case a launched
-## HITSTUN state's landing is a no-op (the pre-P2 fallback: the character just
-## keeps falling-then-resting in its own reaction state, no transition). When
-## set, StepPhases._land redirects a launched HITSTUN state's landing here, AND
-## a grounded hard-knockdown hit (a low slide, a throw) may set its own
-## HitBox.hit_reaction directly to this same id -- ground-KD and launch-into-KD
-## converge on ONE learnable wakeup (the whole point of this field).
-@export var knockdown_state_id: int = 0
+## REQUIRED (AD-049). Maps every engine-level ReactionKind (MoveState.REACTION_*)
+## to THIS character's OWN state_id -- move-format.md -> "Reactions" /
+## Character.reaction_map. This is how a state named by someone else (the
+## opponent's HitBox, or the engine's land/throw resolution) is reached without
+## a raw state_id ever crossing a character boundary (the character-namespace
+## rule). Every character must author EVERY kind -- not every kind it inflicts,
+## every kind it can RECEIVE (a character with no launcher of its own still
+## gets launched by one that has one) -- checked statically by
+## move-format.md criterion 15. Folds in the old `knockdown_state_id` field
+## (retired) as `reaction_map[REACTION_KNOCKDOWN]`.
+@export var reaction_map: Array[ReactionMapEntry] = []
 
 
 ## The MoveState with the given id, or null if the character has no such state.
@@ -72,3 +74,45 @@ func cancel_group(group_id: int) -> CancelGroup:
 		if g.id == group_id:
 			return g
 	return null
+
+
+## Resolve an engine-level ReactionKind to THIS character's OWN state_id
+## (move-format.md "Reactions" -> the resolution floor; AD-049). This is the
+## ONLY path a defender-facing reaction lookup takes -- never a raw state_id
+## read against another character's data (the character-namespace rule;
+## combat-resolution.md phase 5 / criterion 17).
+##
+## Resolution floor (a guardrail against a content hole, NOT an authoring
+## fallback -- move-format.md criterion 15 catches a missing kind statically,
+## before this floor would ever fire in play): `kind -> REACTION_HITSTUN ->
+## idle_state_id`. Content that fires this floor has already failed the static
+## completeness check; do not author against it.
+func reaction_state(kind: int) -> int:
+	for e in reaction_map:
+		if e.kind == kind:
+			return e.state_id
+	if kind != MoveState.REACTION_HITSTUN:
+		for e in reaction_map:
+			if e.kind == MoveState.REACTION_HITSTUN:
+				return e.state_id
+	return idle_state_id
+
+
+## True iff this character maps a given ReactionKind (has an authored entry --
+## distinct from reaction_state's floor, which always returns SOME int). Used by
+## move-format.md criterion 15's static roster completeness check.
+func has_reaction(kind: int) -> bool:
+	for e in reaction_map:
+		if e.kind == kind:
+			return true
+	return false
+
+
+## Every ReactionKind this character does NOT author (move-format.md criterion
+## 15's static check: a non-empty result is a content error over the roster).
+func missing_reactions() -> Array[int]:
+	var missing: Array[int] = []
+	for kind in MoveState.VALID_REACTION_KINDS:
+		if not has_reaction(kind):
+			missing.append(kind)
+	return missing

@@ -73,8 +73,8 @@ func _build_state_a() -> MoveState:
 	hb.hitstun = 12
 	hb.blockstun = 8
 	hb.hitstop = 0
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_HITSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_HITSTUN
 	hb.id_group = IDG_A
 	var kf := Keyframe.new()
 	kf.frame_start = 1
@@ -160,6 +160,7 @@ func _build_character(state_a: MoveState) -> Character:
 		_simple_state(STATE_C),
 		_build_hitstun(),
 	]
+	c.reaction_map = _reaction_map()
 
 	var group := CancelGroup.new()
 	group.id = GROUP_ID
@@ -176,9 +177,29 @@ func _build_character(state_a: MoveState) -> Character:
 	return c
 
 
+## Every ReactionKind mapped to THIS character's own STATE_HITSTUN (AD-049,
+## REQUIRED) — the only reaction either the attacker or the (separate-CHAR_ID)
+## defender character in this test ever inflicts/receives is HITSTUN (both
+## hb.hit_reaction and hb.block_reaction on STATE_A's hitbox are authored
+## REACTION_HITSTUN). This is now resolved through EACH character's own map —
+## the two characters no longer need to coincidentally SHARE a raw state_id
+## (the exact bug class AD-049 fixes), they just both author this kind.
+func _reaction_map() -> Array[ReactionMapEntry]:
+	return [
+		ReactionMapEntry.make(MoveState.REACTION_HITSTUN, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_BLOCKSTUN, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_CROUCH_BLOCKSTUN, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_LAUNCH, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_AIR_RESET, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_KNOCKDOWN, STATE_HITSTUN),
+	]
+
+
 func _defender_character() -> Character:
-	# A trivial defender (no attacks needed) — just idle + a plain hurtbox, shares
-	# the same hitstun reaction id so the attacker's hit_reaction resolves.
+	# A trivial defender (no attacks needed) — just idle + a plain hurtbox, on a
+	# DIFFERENT CHAR_ID (CHAR_ID + 1) with its OWN reaction_map (AD-049) — the
+	# attacker's hit_reaction/block_reaction now resolve through the DEFENDER's
+	# own map, not a raw id coincidentally shared across the two characters.
 	var c := Character.new()
 	c.id = CHAR_ID + 1
 	c.idle_state_id = STATE_IDLE
@@ -189,6 +210,7 @@ func _defender_character() -> Character:
 		_simple_state(STATE_IDLE, true, 1),
 		_build_hitstun(),
 	]
+	c.reaction_map = _reaction_map()
 	c.button_map = []
 	return c
 

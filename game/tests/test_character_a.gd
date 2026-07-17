@@ -239,7 +239,7 @@ func _test_2h_safe_anti_air() -> void:
 	for kf in m.timeline:
 		for h in kf.hitboxes:
 			hb = h
-	_eq(hb.hit_reaction, CharacterA.STATE_AIR_RESET, "2H hit reaction is the no-follow-up air reset")
+	_eq(hb.hit_reaction, MoveState.REACTION_AIR_RESET, "2H hit reaction is the no-follow-up air reset (AD-049: a ReactionKind, not a state_id)")
 	# Invuln is AUTHORED (frames 1 through end of active = frame 8) even though
 	# inert pending the engine gap (docs/flags.md) -- assert the DATA is correct.
 	var invuln_covers_1_to_8: bool = true

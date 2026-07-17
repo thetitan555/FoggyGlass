@@ -58,6 +58,29 @@ const VALID_CATEGORIES: Array[int] = [
 	CATEGORY_BLOCKSTUN, CATEGORY_HITSTOP,
 ]
 
+# --- Reaction kinds (AD-049 -- "Reactions") -----------------------------------
+# The closed, engine-level set a HitBox's hit_reaction/block_reaction names
+# (move-format.md "Reactions"; the character-namespace rule). NOT a state_id --
+# an attacker's HitBox says WHAT HAPPENS semantically; the concrete state is
+# always resolved through the DEFENDER's own Character.reaction_map
+# (Character.reaction_state(kind)). Every character must author every kind --
+# not every kind it inflicts, every kind it can RECEIVE (move-format.md
+# criterion 15). Adding a kind here is an Architect call + engine work, never
+# authoring.
+const REACTION_HITSTUN: int = 0            # standard grounded hitstun
+const REACTION_LAUNCH: int = 1             # airborne launch hitstun; juggle-continuable,
+											 # lands into REACTION_KNOCKDOWN (AD-043)
+const REACTION_AIR_RESET: int = 2          # airborne knock-away, no follow-up (A's 2H)
+const REACTION_KNOCKDOWN: int = 3          # grounded hard knockdown / the shared wakeup
+											 # (AD-043; folds in the old knockdown_state_id)
+const REACTION_BLOCKSTUN: int = 4          # standing blockstun
+const REACTION_CROUCH_BLOCKSTUN: int = 5   # crouching blockstun
+
+const VALID_REACTION_KINDS: Array[int] = [
+	REACTION_HITSTUN, REACTION_LAUNCH, REACTION_AIR_RESET,
+	REACTION_KNOCKDOWN, REACTION_BLOCKSTUN, REACTION_CROUCH_BLOCKSTUN,
+]
+
 
 ## True iff `category` is one of the engine-level categories (move-format.md
 ## criterion 6: every state declares a VALID engine-level category).

@@ -141,7 +141,8 @@ func _test_velocity_persists_across_airborne_state_transition() -> void:
 # reading) --------------------------------------------------------
 # DP_L's single hit launches the defender (hb1.launch, STATE_HITSTUN_LAUNCH),
 # whose landing (StepPhases._land) now redirects into character.
-# knockdown_state_id (CharacterA.STATE_KNOCKDOWN). Exact tick numbers below
+# reaction_state(REACTION_KNOCKDOWN) (CharacterA.STATE_KNOCKDOWN; AD-049 folds
+# the old knockdown_state_id field into reaction_map). Exact tick numbers below
 # were derived by actual headless replay (not hand-derived), mirroring this
 # tree's established methodology.
 

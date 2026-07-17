@@ -464,15 +464,16 @@ static func _apply_air_action(p: PlayerState, character: Character) -> void:
 ##   - AIRBORNE category (a jump / air normal): transition to idle, exactly like
 ##     the prior grounded-entry snap's landing case (AD-042, now subsumed).
 ##   - Any other category reaching here (a launched HITSTUN reaction — hit-set
-##     `vel_y` via `HitBox.launch`): transitions to the character's dedicated
-##     `knockdown_state_id` (AD-043's elaboration, ratified from JC-070's
-##     overturned "stay in the launched state" reading) — a grounded,
-##     non-actionable HITSTUN-category reaction distinct from the airborne
-##     launch state, so ground hard-KD (a direct hit_reaction) and
-##     launch-into-KD (this landing transition) converge on ONE state. When
-##     `knockdown_state_id == 0` (unset), falls back to the pre-P2 no-op: the
-##     character simply stays in its current reaction state, only now resting
-##     on the floor instead of still falling.
+##     `vel_y` via `HitBox.launch`): transitions to the character's OWN
+##     `reaction_state(REACTION_KNOCKDOWN)` (AD-043's elaboration, ratified from
+##     JC-070's overturned "stay in the launched state" reading; AD-049 folds
+##     the old `knockdown_state_id` field into `reaction_map[REACTION_KNOCKDOWN]`)
+##     — a grounded, non-actionable HITSTUN-category reaction distinct from the
+##     airborne launch state, so ground hard-KD (a direct hit_reaction of
+##     REACTION_KNOCKDOWN) and launch-into-KD (this landing transition)
+##     converge on ONE state. Every character MUST author this kind (AD-049
+##     criterion 15) — there is no more "unset, no-op" fallback; a content hole
+##     here fails the static roster check, not silently at runtime.
 ##
 ##     WAKEUP COUNTS FROM ENTRY, NOT FROM THE ORIGINAL HIT (the reason this
 ##     transition exists — AD-043's elaboration: "independent of air-time").
@@ -491,15 +492,13 @@ static func _land(next: SimState, p: PlayerState, character: Character, move: Mo
 	p.air_action_used = false
 	if move != null and move.category == MoveState.CATEGORY_AIRBORNE:
 		_enter_state(next, p, character, character.idle_state_id)
-	elif character.knockdown_state_id != 0:
-		_enter_state(next, p, character, character.knockdown_state_id)
-		var knockdown_move: MoveState = character.get_state(character.knockdown_state_id)
+	else:
+		var kd_state_id: int = character.reaction_state(MoveState.REACTION_KNOCKDOWN)
+		_enter_state(next, p, character, kd_state_id)
+		var knockdown_move: MoveState = character.get_state(kd_state_id)
 		if knockdown_move != null:
 			p.stun = knockdown_move.duration
 			p.stun_kind = PlayerView.STUN_HIT
-	# else: character.knockdown_state_id == 0 -- pre-P2 no-op fallback (no
-	# knockdown state authored; the character's current reaction state simply
-	# keeps its own duration/stun counting down as before).
 
 
 ## Fire a keyframe's `spawn` action on the EXACT tick its range is entered
@@ -906,17 +905,22 @@ static func _resolve_one_hit(next: SimState, attacker: int, defender: int, hb: H
 		block_valid = _stance_valid_for_guard(hb.guard_height, defender_crouching)
 	var blocking: bool = attempted_block and block_valid
 
-	var reaction_state: int
+	# --- Reaction KIND (AD-049) -- NOT a state_id -----------------------------
+	# hb.hit_reaction/block_reaction are engine-level ReactionKinds; the actual
+	# defender state is resolved below, through the DEFENDER's OWN
+	# reaction_map, never a raw id read against the attacker's data (the
+	# character-namespace rule).
+	var reaction_kind: int
 	var stun_frames: int
 	var stun_kind: int
 	var contact_depth: int = 0
 	var air_height_hitstun_delta: int = 0
 	if blocking:
-		reaction_state = hb.block_reaction
+		reaction_kind = hb.block_reaction
 		stun_frames = hb.blockstun
 		stun_kind = PlayerView.STUN_BLOCK
 	else:
-		reaction_state = hb.hit_reaction
+		reaction_kind = hb.hit_reaction
 		stun_frames = hb.hitstun
 		stun_kind = PlayerView.STUN_HIT
 		# --- Air-normal height-dependent advantage (AD-033), hit branch only ---
@@ -955,9 +959,13 @@ static func _resolve_one_hit(next: SimState, attacker: int, defender: int, hb: H
 		def.health -= applied_damage
 		def.combo_damage += applied_damage
 
-	# --- Reaction state + stun ----------------------------------------------
-	if character_def != null and reaction_state != 0:
-		_enter_state(next, def, character_def, reaction_state)
+	# --- Reaction state + stun (AD-049: resolved on the DEFENDER) ------------
+	# The defender ALWAYS enters a state from its OWN roster -- reaction_state's
+	# floor guarantees a real, mapped id even in the (statically-caught) case of
+	# a content hole, so there is no more "reaction_state == 0, skip" branch;
+	# that guard belonged to the old raw-id model where 0 meant "unset."
+	if character_def != null:
+		_enter_state(next, def, character_def, character_def.reaction_state(reaction_kind))
 	def.stun = stun_frames
 	def.stun_kind = stun_kind
 
@@ -1122,10 +1130,12 @@ static func _resolve_throw(next: SimState, attacker: int, defender: int, hb: Hit
 	var def: PlayerState = next.players[defender]
 	var character_def: Character = MoveRegistry.character(def.character_id)
 
-	# Throw bypasses block: the defender enters the throw reaction (hit_reaction) and
-	# takes throw hitstun regardless of holding back.
-	if character_def != null and hb.hit_reaction != 0:
-		_enter_state(next, def, character_def, hb.hit_reaction)
+	# Throw bypasses block: the defender enters the throw reaction (hit_reaction,
+	# a ReactionKind -- AD-049) and takes throw hitstun regardless of holding
+	# back. Resolved through the DEFENDER's own reaction_map, exactly like the
+	# strike/block path (never a raw id read against the defender's roster).
+	if character_def != null:
+		_enter_state(next, def, character_def, character_def.reaction_state(hb.hit_reaction))
 	def.stun = hb.hitstun
 	def.stun_kind = PlayerView.STUN_HIT
 

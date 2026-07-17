@@ -59,6 +59,8 @@ STATE id=323 category=2 duration=40 loop=0 is_crouch=0 | startup=0 active=0 reco
   kf[1..40] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
 STATE id=324 category=2 duration=28 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=28 on_hit_adv=0 on_block_adv=0
   kf[1..28] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
+STATE id=325 category=2 duration=20 loop=0 is_crouch=0 | startup=0 active=0 recovery=0 total=20 on_hit_adv=0 on_block_adv=0
+  kf[1..20] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-4915200,w=1966080,h=4915200,gh=-1)
 STATE id=350 category=0 duration=23 loop=0 is_crouch=0 | startup=4 active=1 recovery=18 total=23 on_hit_adv=10 on_block_adv=-18
   kf[1..4] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1)
   kf[5..5] invuln_strike=0 invuln_throw=0 motion=0,0 spawn=0 : PUSH(x=-655360,y=-2621440,w=1310720,h=2621440,gh=-1); HURT(x=-983040,y=-5242880,w=1966080,h=5242880,gh=-1); THROW(x=655360,y=-3932160,w=3604480,h=3932160,gh=0)

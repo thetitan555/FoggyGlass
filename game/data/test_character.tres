@@ -14,8 +14,18 @@
 ;   startup = first_active-1 = 3; active = 6-4+1 = 3; recovery = 12-6 = 6; total = 12.
 ;   on_hit_adv  = hitstun 16  - (recovery 6 + active 3 - 1) = 16 - 8 = +8
 ;   on_block_adv= blockstun 10 - 8                                    = +2
+;
+; AD-049 (2026-07-16, TKT-P2-09+10): light_hit1/light_hit2's hit_reaction/
+; block_reaction are now ReactionKinds (MoveState.REACTION_*), not raw
+; state_ids: hit_reaction=0 is REACTION_HITSTUN, block_reaction=4 is
+; REACTION_BLOCKSTUN. The concrete defender state is resolved through the
+; new `reaction_map` below (Character.reaction_state), not read directly off
+; these ints. Every ReactionKind is mapped for completeness (move-format.md
+; criterion 15); LAUNCH/AIR_RESET/KNOCKDOWN reuse state 20 (HITSTUN) and
+; CROUCH_BLOCKSTUN reuses state 21 (BLOCKSTUN) since this trivial character
+; authors no distinct states for them and nothing in this suite inflicts them.
 
-[gd_resource type="Resource" script_class="Character" load_steps=25 format=3 uid="uid://bfg0testchar0res"]
+[gd_resource type="Resource" script_class="Character" load_steps=32 format=3 uid="uid://bfg0testchar0res"]
 
 [ext_resource type="Script" path="res://sim/data/character.gd" id="1_char"]
 [ext_resource type="Script" path="res://sim/data/move_state.gd" id="2_move"]
@@ -24,6 +34,7 @@
 [ext_resource type="Script" path="res://sim/data/hit_box.gd" id="5_hit"]
 [ext_resource type="Script" path="res://sim/data/button_map_entry.gd" id="6_btn"]
 [ext_resource type="Script" path="res://sim/data/character_physics.gd" id="7_phys"]
+[ext_resource type="Script" path="res://sim/data/reaction_map_entry.gd" id="8_reaction"]
 
 ; --- Shared standing hurtbox: local (-15,0,30,80) -> (-983040,0,1966080,5242880) ---
 [sub_resource type="Resource" id="hurt_stand"]
@@ -59,8 +70,8 @@ hitstop = 8
 pushback_hit = 196608
 pushback_block = 131072
 launch = 0
-hit_reaction = 20
-block_reaction = 21
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 1
 rehit_interval = 0
@@ -85,8 +96,8 @@ hitstop = 8
 pushback_hit = 196608
 pushback_block = 131072
 launch = 0
-hit_reaction = 20
-block_reaction = 21
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 1
 rehit_interval = 0
@@ -223,11 +234,45 @@ walk_speed = 131072
 gravity = 0
 jump_velocity = 0
 
+; --- reaction_map (AD-049, REQUIRED): every ReactionKind -> this character's
+; OWN state_id. kind values: 0=HITSTUN, 1=LAUNCH, 2=AIR_RESET, 3=KNOCKDOWN,
+; 4=BLOCKSTUN, 5=CROUCH_BLOCKSTUN (MoveState.REACTION_*). ---
+[sub_resource type="Resource" id="reaction_hitstun"]
+script = ExtResource("8_reaction")
+kind = 0
+state_id = 20
+
+[sub_resource type="Resource" id="reaction_launch"]
+script = ExtResource("8_reaction")
+kind = 1
+state_id = 20
+
+[sub_resource type="Resource" id="reaction_air_reset"]
+script = ExtResource("8_reaction")
+kind = 2
+state_id = 20
+
+[sub_resource type="Resource" id="reaction_knockdown"]
+script = ExtResource("8_reaction")
+kind = 3
+state_id = 20
+
+[sub_resource type="Resource" id="reaction_blockstun"]
+script = ExtResource("8_reaction")
+kind = 4
+state_id = 21
+
+[sub_resource type="Resource" id="reaction_crouch_blockstun"]
+script = ExtResource("8_reaction")
+kind = 5
+state_id = 21
+
 [resource]
 script = ExtResource("1_char")
 id = 1
 states = Array[MoveState]([SubResource("idle_state"), SubResource("walk_state"), SubResource("light_state"), SubResource("hitstun_state"), SubResource("blockstun_state")])
 button_map = Array[ButtonMapEntry]([SubResource("btn_light")])
 physics = SubResource("phys")
+reaction_map = Array[ReactionMapEntry]([SubResource("reaction_hitstun"), SubResource("reaction_launch"), SubResource("reaction_air_reset"), SubResource("reaction_knockdown"), SubResource("reaction_blockstun"), SubResource("reaction_crouch_blockstun")])
 default_pushbox = SubResource("pushbox_default")
 idle_state_id = 0

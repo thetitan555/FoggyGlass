@@ -42,8 +42,14 @@ const HIT_KIND_PROJECTILE: int = 2
 ## Launch velocity, fixed-point (0 = no launch). Optional.
 @export var launch: int = 0
 
-## Which defender state_id the hit forces (category HITSTUN / BLOCKSTUN). The
-## defender enters `hit_reaction` on hit, `block_reaction` on block.
+## Which reaction the hit forces on the DEFENDER -- a `MoveState.REACTION_*`
+## ReactionKind (AD-049), NOT a state_id. The attacker names WHAT HAPPENS
+## semantically; the concrete state is always resolved through the DEFENDER's
+## OWN `Character.reaction_map` (`Character.reaction_state(kind)`) -- never a
+## raw id read against the defender's roster (move-format.md "The
+## character-namespace rule" / "Reactions"; combat-resolution.md phase 5). The
+## defender enters `reaction_state(hit_reaction)` on hit, `reaction_state(
+## block_reaction)` on block. Default `MoveState.REACTION_HITSTUN` (0).
 @export var hit_reaction: int = 0
 @export var block_reaction: int = 0
 

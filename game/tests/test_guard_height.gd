@@ -92,8 +92,8 @@ func _attack_state(state_id: int, guard_height: int, id_group: int) -> MoveState
 	hb.hitstun = 12
 	hb.blockstun = 8
 	hb.hitstop = 0
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_BLOCKSTUN
 	hb.id_group = id_group
 	var kf := Keyframe.new()
 	kf.frame_start = 1
@@ -137,6 +137,19 @@ func _build_character() -> Character:
 		_attack_state(STATE_ATTACK_MID, HitBox.GUARD_MID, IDG_MID),
 		_reaction(STATE_HITSTUN, MoveState.CATEGORY_HITSTUN),
 		_reaction(STATE_BLOCKSTUN, MoveState.CATEGORY_BLOCKSTUN),
+	]
+	# reaction_map (AD-049, REQUIRED): this minimal test character only ever
+	# inflicts/receives HITSTUN and BLOCKSTUN, but every kind must still be
+	# mapped for the engine's resolve path to be well-defined; unused kinds
+	# reuse STATE_HITSTUN/STATE_BLOCKSTUN (never actually exercised by this
+	# test's scenarios).
+	c.reaction_map = [
+		ReactionMapEntry.make(MoveState.REACTION_HITSTUN, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_BLOCKSTUN, STATE_BLOCKSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_CROUCH_BLOCKSTUN, STATE_BLOCKSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_LAUNCH, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_AIR_RESET, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_KNOCKDOWN, STATE_HITSTUN),
 	]
 	# A bare-DOWN loop-target command (mirrors character_a.gd's crouch entry,
 	# AD-038): a LOOP state re-derives from CURRENT-tick input every tick, so

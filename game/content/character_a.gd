@@ -81,7 +81,9 @@ const STATE_KNOCKDOWN: int = 123   # shared grounded knockdown reaction (AD-043
 									  # throw's DIRECT hit_reaction, and the
 									  # landing target every launched HITSTUN
 									  # state (STATE_HITSTUN_LAUNCH/STATE_AIR_RESET)
-									  # converges on via Character.knockdown_state_id.
+									  # converges on via Character.reaction_map[
+									  # REACTION_KNOCKDOWN] (AD-049; was
+									  # Character.knockdown_state_id, retired).
 									  # Was named STATE_THROWN pre-P2 (id unchanged);
 									  # renamed since it is no longer throw-specific.
 const STATE_CROUCH_BLOCKSTUN: int = 124
@@ -152,10 +154,19 @@ static func build_character() -> Character:
 	var c := Character.new()
 	c.id = CHAR_ID
 	c.idle_state_id = STATE_IDLE
-	c.knockdown_state_id = STATE_KNOCKDOWN   # AD-043 elaboration (JC-070 ratified):
-											   # every launched HITSTUN state's landing
-											   # (STATE_HITSTUN_LAUNCH/STATE_AIR_RESET)
-											   # redirects here via StepPhases._land.
+	# reaction_map (AD-049, REQUIRED): every ReactionKind -> A's OWN state_id.
+	# Folds in the old knockdown_state_id field (retired) as
+	# reaction_map[REACTION_KNOCKDOWN] -- StepPhases._land's launched-landing
+	# transition and the throw's direct hit_reaction both resolve through this,
+	# converging on ONE learnable wakeup exactly as before.
+	c.reaction_map = [
+		ReactionMapEntry.make(MoveState.REACTION_HITSTUN, STATE_HITSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_LAUNCH, STATE_HITSTUN_LAUNCH),
+		ReactionMapEntry.make(MoveState.REACTION_AIR_RESET, STATE_AIR_RESET),
+		ReactionMapEntry.make(MoveState.REACTION_KNOCKDOWN, STATE_KNOCKDOWN),
+		ReactionMapEntry.make(MoveState.REACTION_BLOCKSTUN, STATE_BLOCKSTUN),
+		ReactionMapEntry.make(MoveState.REACTION_CROUCH_BLOCKSTUN, STATE_CROUCH_BLOCKSTUN),
+	]
 
 	var phys := CharacterPhysics.new()
 	phys.walk_speed = FP.from_units(2.2)   # movement table: forward walk speed (data only; back walk is authored per-state)
@@ -672,8 +683,8 @@ static func _build_5l() -> MoveState:
 	hb.hitstop = 8
 	hb.pushback_hit = FP.from_units(2.0)
 	hb.pushback_block = FP.from_units(2.0)
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_BLOCKSTUN
 	hb.id_group = IDG_5L
 	hb.cancel_tags = PackedInt32Array([TAG_SP])
 	var kf_active := Keyframe.new()
@@ -710,8 +721,8 @@ static func _build_5m() -> MoveState:
 	hb.hitstop = 9
 	hb.pushback_hit = FP.from_units(3.0)
 	hb.pushback_block = FP.from_units(3.0)
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_BLOCKSTUN
 	hb.id_group = IDG_5M
 	hb.cancel_tags = PackedInt32Array([TAG_SP])
 	var kf_active := Keyframe.new()
@@ -755,8 +766,8 @@ static func _build_5h() -> MoveState:
 	hb.hitstop = 11
 	hb.pushback_hit = FP.from_units(2.0)
 	hb.pushback_block = FP.from_units(3.0)
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_BLOCKSTUN
 	hb.id_group = IDG_5H
 	# NO cancel_tags: 5H is not special-cancellable (its reward is the LINK,
 	# not a cancel -- character-a.md criterion 3/9). The 5H,5M link itself is
@@ -818,8 +829,8 @@ static func _build_2l() -> MoveState:
 	hb.hitstop = 8
 	hb.pushback_hit = FP.from_units(1.5)
 	hb.pushback_block = FP.from_units(1.5)
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_CROUCH_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_CROUCH_BLOCKSTUN
 	hb.id_group = IDG_2L
 	hb.cancel_tags = PackedInt32Array([TAG_SP])
 	var kf_active := Keyframe.new()
@@ -861,8 +872,8 @@ static func _build_2m() -> MoveState:
 	hb.hitstop = 10
 	hb.pushback_hit = FP.from_units(1.0)   # low pushback (allows the cancel, per spec)
 	hb.pushback_block = FP.from_units(1.0)
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_CROUCH_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_CROUCH_BLOCKSTUN
 	hb.id_group = IDG_2M
 	hb.cancel_tags = PackedInt32Array([TAG_SP])
 	var kf_active := Keyframe.new()
@@ -906,8 +917,8 @@ static func _build_2h() -> MoveState:
 	hb.pushback_hit = FP.from_units(3.0)
 	hb.pushback_block = FP.from_units(2.0)
 	hb.launch = FP.from_units(-4.0)   # knocks the airborne foe away/up, no juggle follow-up authored
-	hb.hit_reaction = STATE_AIR_RESET
-	hb.block_reaction = STATE_CROUCH_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_AIR_RESET
+	hb.block_reaction = MoveState.REACTION_CROUCH_BLOCKSTUN
 	hb.id_group = IDG_2H
 	# no cancel_tags: 2H grants no special-cancel (anti-air, no combo on hit).
 	var kf_active := Keyframe.new()
@@ -980,8 +991,8 @@ static func _build_air_normal(state_id: int, startup: int, active: int, damage: 
 	hb.hitstop = hitstop
 	hb.pushback_hit = FP.from_units(1.0)
 	hb.pushback_block = FP.from_units(1.0)
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_BLOCKSTUN
 	hb.id_group = id_group
 	# No cancel_tags: air normals are not special-cancellable (character-a.md:
 	# "all air normals" listed under Not cancellable).
@@ -1059,8 +1070,8 @@ static func _build_reactions() -> Array[MoveState]:
 	# hit_reaction (a grounded hard-knockdown hit never goes airborne) -- its
 	# duration matches THROW's authored hitstun; (2) via StepPhases._land, which
 	# redirects ANY launched-HITSTUN state's landing here (character.
-	# knockdown_state_id) so ground-KD and launch-into-KD converge on ONE
-	# learnable wakeup, counted from entry (landing), not from the original hit.
+	# reaction_state(REACTION_KNOCKDOWN), AD-049) so ground-KD and launch-into-KD
+	# converge on ONE learnable wakeup, counted from entry (landing), not from the original hit.
 	var knockdown := MoveState.new()
 	knockdown.id = STATE_KNOCKDOWN
 	knockdown.category = MoveState.CATEGORY_HITSTUN
@@ -1177,8 +1188,8 @@ static func _build_projectile_data(proj_id: int, speed: float) -> ProjectileData
 	hb.hitstop = FIREBALL_HITSTOP
 	hb.pushback_hit = FP.from_units(2.0)
 	hb.pushback_block = FP.from_units(1.0)
-	hb.hit_reaction = STATE_HITSTUN
-	hb.block_reaction = STATE_BLOCKSTUN
+	hb.hit_reaction = MoveState.REACTION_HITSTUN
+	hb.block_reaction = MoveState.REACTION_BLOCKSTUN
 	hb.id_group = IDG_FIREBALL_L if proj_id == PROJ_FIREBALL_L \
 		else (IDG_FIREBALL_M if proj_id == PROJ_FIREBALL_M else IDG_FIREBALL_H)
 	hb.rehit_interval = 0
@@ -1276,8 +1287,8 @@ static func _build_dp(state_id: int, startup: int, invuln_end: int, active: int,
 	hb1.pushback_hit = FP.from_units(1.0)
 	hb1.pushback_block = FP.from_units(3.0)
 	hb1.launch = FP.from_units(-6.0)
-	hb1.hit_reaction = STATE_HITSTUN_LAUNCH
-	hb1.block_reaction = STATE_BLOCKSTUN
+	hb1.hit_reaction = MoveState.REACTION_LAUNCH
+	hb1.block_reaction = MoveState.REACTION_BLOCKSTUN
 	hb1.id_group = id_group1
 
 	var kf_active := Keyframe.new()
@@ -1307,8 +1318,8 @@ static func _build_dp(state_id: int, startup: int, invuln_end: int, active: int,
 		hb2.pushback_hit = FP.from_units(1.0)
 		hb2.pushback_block = FP.from_units(3.0)
 		hb2.launch = FP.from_units(-8.0)
-		hb2.hit_reaction = STATE_HITSTUN_LAUNCH
-		hb2.block_reaction = STATE_BLOCKSTUN
+		hb2.hit_reaction = MoveState.REACTION_LAUNCH
+		hb2.block_reaction = MoveState.REACTION_BLOCKSTUN
 		hb2.id_group = id_group2
 		var kf_hit2 := Keyframe.new()
 		kf_hit2.frame_start = last_active
@@ -1367,11 +1378,13 @@ static func _build_throw() -> Array[MoveState]:
 	tb.tech_window = THROW_TECH_WINDOW
 	tb.pushback_hit = FP.from_units(2.0)
 	tb.hitstop = 0
-	tb.hit_reaction = STATE_KNOCKDOWN   # a grounded hard-knockdown hit -- direct to the
-										  # shared knockdown state (AD-043 elaboration): no
-										  # air trip, converges with launch-into-KD on one
-										  # learnable wakeup.
-	tb.block_reaction = STATE_KNOCKDOWN   # unused (throws bypass block) but authored for schema completeness
+	tb.hit_reaction = MoveState.REACTION_KNOCKDOWN   # a grounded hard-knockdown hit -- direct
+													   # to the shared knockdown state (AD-043
+													   # elaboration): no air trip, converges
+													   # with launch-into-KD on one learnable
+													   # wakeup. A ReactionKind (AD-049), resolved
+													   # through the DEFENDER's own reaction_map.
+	tb.block_reaction = MoveState.REACTION_KNOCKDOWN   # unused (throws bypass block) but authored for schema completeness
 	tb.id_group = IDG_THROW
 	tb.is_throw = true
 

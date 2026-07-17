@@ -1,18 +1,19 @@
-[gd_resource type="Resource" script_class="Character" load_steps=277 format=3]
+[gd_resource type="Resource" script_class="Character" load_steps=284 format=3]
 
-[ext_resource type="Script" path="res://sim/data/button_map_entry.gd" id="1_lpyhh"]
-[ext_resource type="Script" path="res://sim/data/cancel_group.gd" id="2_6klhy"]
-[ext_resource type="Script" path="res://sim/data/box.gd" id="3_m1o1t"]
-[ext_resource type="Script" path="res://sim/data/character_physics.gd" id="4_fdh5j"]
-[ext_resource type="Script" path="res://sim/data/character.gd" id="5_w8x0k"]
-[ext_resource type="Script" path="res://sim/data/move_state.gd" id="6_2x0bd"]
-[ext_resource type="Script" path="res://sim/data/cancel_rule.gd" id="7_xscxe"]
-[ext_resource type="Script" path="res://sim/data/keyframe.gd" id="8_24flv"]
-[ext_resource type="Script" path="res://sim/data/hit_box.gd" id="9_fe2sk"]
-[ext_resource type="Script" path="res://sim/data/projectile_data.gd" id="10_gynmq"]
+[ext_resource type="Script" path="res://sim/data/button_map_entry.gd" id="1_4svhw"]
+[ext_resource type="Script" path="res://sim/data/cancel_group.gd" id="2_udl4q"]
+[ext_resource type="Script" path="res://sim/data/box.gd" id="3_re1w1"]
+[ext_resource type="Script" path="res://sim/data/character_physics.gd" id="4_pf75m"]
+[ext_resource type="Script" path="res://sim/data/reaction_map_entry.gd" id="5_a1pvh"]
+[ext_resource type="Script" path="res://sim/data/character.gd" id="6_b48m6"]
+[ext_resource type="Script" path="res://sim/data/move_state.gd" id="7_74onp"]
+[ext_resource type="Script" path="res://sim/data/cancel_rule.gd" id="8_7twvi"]
+[ext_resource type="Script" path="res://sim/data/keyframe.gd" id="9_t4gcx"]
+[ext_resource type="Script" path="res://sim/data/hit_box.gd" id="10_c0hbe"]
+[ext_resource type="Script" path="res://sim/data/projectile_data.gd" id="11_w3t1b"]
 
-[sub_resource type="Resource" id="Resource_0ah7l"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_o8a2j"]
+script = ExtResource("1_4svhw")
 button_index = 0
 chord_button_index = -1
 required_direction = 0
@@ -20,8 +21,8 @@ motion = 623
 target_state_id = 140
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_4hpkq"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_d40is"]
+script = ExtResource("1_4svhw")
 button_index = 1
 chord_button_index = -1
 required_direction = 0
@@ -29,8 +30,8 @@ motion = 623
 target_state_id = 141
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_g3u4m"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_k0ck1"]
+script = ExtResource("1_4svhw")
 button_index = 2
 chord_button_index = -1
 required_direction = 0
@@ -38,8 +39,8 @@ motion = 623
 target_state_id = 142
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_n8g0k"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_4xmc7"]
+script = ExtResource("1_4svhw")
 button_index = 0
 chord_button_index = -1
 required_direction = 0
@@ -47,8 +48,8 @@ motion = 236
 target_state_id = 130
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_7ovd0"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_7wru2"]
+script = ExtResource("1_4svhw")
 button_index = 1
 chord_button_index = -1
 required_direction = 0
@@ -56,8 +57,8 @@ motion = 236
 target_state_id = 131
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_0axw6"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_sbp4i"]
+script = ExtResource("1_4svhw")
 button_index = 2
 chord_button_index = -1
 required_direction = 0
@@ -65,8 +66,8 @@ motion = 236
 target_state_id = 132
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_vio4c"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_mfja6"]
+script = ExtResource("1_4svhw")
 button_index = 0
 chord_button_index = 2
 required_direction = 0
@@ -74,8 +75,8 @@ motion = 0
 target_state_id = 150
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_jwuti"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_tti66"]
+script = ExtResource("1_4svhw")
 button_index = 1
 chord_button_index = -1
 required_direction = 2
@@ -83,8 +84,8 @@ motion = 0
 target_state_id = 114
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_3rfpv"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_bvbke"]
+script = ExtResource("1_4svhw")
 button_index = 0
 chord_button_index = -1
 required_direction = 2
@@ -92,8 +93,8 @@ motion = 0
 target_state_id = 113
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_xfnky"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_q3q4r"]
+script = ExtResource("1_4svhw")
 button_index = 2
 chord_button_index = -1
 required_direction = 2
@@ -101,8 +102,8 @@ motion = 0
 target_state_id = 115
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_6ll7x"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_08px0"]
+script = ExtResource("1_4svhw")
 button_index = -1
 chord_button_index = -1
 required_direction = 2
@@ -110,8 +111,8 @@ motion = 0
 target_state_id = 109
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_bi2cw"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_ke82q"]
+script = ExtResource("1_4svhw")
 button_index = -1
 chord_button_index = -1
 required_direction = 9
@@ -119,8 +120,8 @@ motion = 0
 target_state_id = 160
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_qum1w"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_hvkpi"]
+script = ExtResource("1_4svhw")
 button_index = -1
 chord_button_index = -1
 required_direction = 5
@@ -128,8 +129,8 @@ motion = 0
 target_state_id = 161
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_mvedb"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_w7kug"]
+script = ExtResource("1_4svhw")
 button_index = -1
 chord_button_index = -1
 required_direction = 1
@@ -137,8 +138,8 @@ motion = 0
 target_state_id = 105
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_5jiwr"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_3g1cq"]
+script = ExtResource("1_4svhw")
 button_index = 0
 chord_button_index = -1
 required_direction = 0
@@ -146,8 +147,8 @@ motion = 0
 target_state_id = 110
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_38yjo"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_4x8di"]
+script = ExtResource("1_4svhw")
 button_index = 1
 chord_button_index = -1
 required_direction = 0
@@ -155,8 +156,8 @@ motion = 0
 target_state_id = 111
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_cup70"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_ua1ab"]
+script = ExtResource("1_4svhw")
 button_index = 2
 chord_button_index = -1
 required_direction = 0
@@ -164,8 +165,8 @@ motion = 0
 target_state_id = 112
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_lmspp"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_wmjs7"]
+script = ExtResource("1_4svhw")
 button_index = -1
 chord_button_index = -1
 required_direction = 8
@@ -173,8 +174,8 @@ motion = 0
 target_state_id = 103
 double_tap = true
 
-[sub_resource type="Resource" id="Resource_f6w51"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_oveuk"]
+script = ExtResource("1_4svhw")
 button_index = -1
 chord_button_index = -1
 required_direction = 4
@@ -182,8 +183,8 @@ motion = 0
 target_state_id = 104
 double_tap = true
 
-[sub_resource type="Resource" id="Resource_jg3ot"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_tg2c8"]
+script = ExtResource("1_4svhw")
 button_index = -1
 chord_button_index = -1
 required_direction = 8
@@ -191,8 +192,8 @@ motion = 0
 target_state_id = 101
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_fjilt"]
-script = ExtResource("1_lpyhh")
+[sub_resource type="Resource" id="Resource_mg8u8"]
+script = ExtResource("1_4svhw")
 button_index = -1
 chord_button_index = -1
 required_direction = 4
@@ -200,35 +201,65 @@ motion = 0
 target_state_id = 102
 double_tap = false
 
-[sub_resource type="Resource" id="Resource_cc7cy"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_eutme"]
+script = ExtResource("3_re1w1")
 x = -655360
 y = -2621440
 w = 1310720
 h = 2621440
 
-[sub_resource type="Resource" id="Resource_4crwn"]
-script = ExtResource("4_fdh5j")
+[sub_resource type="Resource" id="Resource_cv634"]
+script = ExtResource("4_pf75m")
 walk_speed = 144179
 gravity = 65536
 jump_velocity = 1441792
 air_dash_speed = 0
 double_jump_velocity = 0
 
-[sub_resource type="Resource" id="Resource_f4x4u"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_gvrc2"]
+script = ExtResource("5_a1pvh")
+kind = 0
+state_id = 120
+
+[sub_resource type="Resource" id="Resource_ejts2"]
+script = ExtResource("5_a1pvh")
+kind = 1
+state_id = 125
+
+[sub_resource type="Resource" id="Resource_pctit"]
+script = ExtResource("5_a1pvh")
+kind = 2
+state_id = 122
+
+[sub_resource type="Resource" id="Resource_wlcvc"]
+script = ExtResource("5_a1pvh")
+kind = 3
+state_id = 123
+
+[sub_resource type="Resource" id="Resource_2pr40"]
+script = ExtResource("5_a1pvh")
+kind = 4
+state_id = 121
+
+[sub_resource type="Resource" id="Resource_cjoxq"]
+script = ExtResource("5_a1pvh")
+kind = 5
+state_id = 124
+
+[sub_resource type="Resource" id="Resource_l8p2r"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_b1luw"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_bt6or"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 1
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_f4x4u")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_l8p2r")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -240,30 +271,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_nmupp"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_wldai"]
+script = ExtResource("7_74onp")
 id = 100
 category = 0
 duration = 1
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_b1luw")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_bt6or")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = true
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_bkee4"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_gng3l"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_wqy6u"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_7vqt4"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 1
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_bkee4")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_gng3l")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = true
 motion_vel_x = 144179
 motion_vel_y = 0
@@ -275,30 +306,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_330dd"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_g6ixq"]
+script = ExtResource("7_74onp")
 id = 101
 category = 0
 duration = 1
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_wqy6u")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_7vqt4")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = true
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_ud1rl"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_d1srr"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_cvhyd"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_mtlak"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 1
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_ud1rl")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_d1srr")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = true
 motion_vel_x = -117965
 motion_vel_y = 0
@@ -310,30 +341,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_ekhc4"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_wbuqs"]
+script = ExtResource("7_74onp")
 id = 102
 category = 0
 duration = 1
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_cvhyd")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_mtlak")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = true
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_4ijvo"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_ce1rx"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_wdlmt"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_xbmsw"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 1
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_4ijvo")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_ce1rx")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -345,30 +376,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_hxgor"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_27aj6"]
+script = ExtResource("7_74onp")
 id = 109
 category = 0
 duration = 1
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_wdlmt")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_xbmsw")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = true
 is_crouch = true
 
-[sub_resource type="Resource" id="Resource_vcigf"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_77wgg"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_v1eyr"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_sgfd8"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 20
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_vcigf")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_77wgg")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = true
 motion_vel_x = 311296
 motion_vel_y = 0
@@ -380,30 +411,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_x0avp"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_m7fxc"]
+script = ExtResource("7_74onp")
 id = 103
 category = 0
 duration = 20
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_v1eyr")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_sgfd8")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_vcdhh"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_ln8jy"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_i4gup"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_d7xq1"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 7
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_vcdhh")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_ln8jy")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = true
 motion_vel_x = -238551
 motion_vel_y = 0
@@ -415,20 +446,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_3ltmn"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_jf666"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_5g1u3"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_jh37n"]
+script = ExtResource("9_t4gcx")
 frame_start = 8
 frame_end = 22
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_3ltmn")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_jf666")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = true
 motion_vel_x = -238551
 motion_vel_y = 0
@@ -440,18 +471,18 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_r6xy5"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_nh3bi"]
+script = ExtResource("7_74onp")
 id = 104
 category = 0
 duration = 22
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_i4gup"), SubResource("Resource_5g1u3")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_d7xq1"), SubResource("Resource_jh37n")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_joub8"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_eifx7"]
+script = ExtResource("8_7twvi")
 target = 106
 target_is_group = false
 condition = 4
@@ -460,20 +491,20 @@ window_end = 3
 input = 0
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_5je8i"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_kyh2b"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_i6wkm"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_22l6b"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 4
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_5je8i")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_kyh2b")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -485,18 +516,18 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_mcdc7"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_h2hjj"]
+script = ExtResource("7_74onp")
 id = 105
 category = 0
 duration = 4
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_i6wkm")])
-cancels = Array[ExtResource("7_xscxe")]([SubResource("Resource_joub8")])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_22l6b")])
+cancels = Array[ExtResource("8_7twvi")]([SubResource("Resource_eifx7")])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_symo1"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_2c1y5"]
+script = ExtResource("8_7twvi")
 target = 107
 target_is_group = false
 condition = 4
@@ -505,20 +536,20 @@ window_end = 3
 input = 0
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_t145v"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_vsejn"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_pjwq0"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_cr4nl"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 4
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_t145v")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_vsejn")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -530,18 +561,18 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_jy2mx"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_8ccu3"]
+script = ExtResource("7_74onp")
 id = 160
 category = 0
 duration = 4
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_pjwq0")])
-cancels = Array[ExtResource("7_xscxe")]([SubResource("Resource_symo1")])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_cr4nl")])
+cancels = Array[ExtResource("8_7twvi")]([SubResource("Resource_2c1y5")])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_agluc"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_otigv"]
+script = ExtResource("8_7twvi")
 target = 108
 target_is_group = false
 condition = 4
@@ -550,20 +581,20 @@ window_end = 3
 input = 0
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_iikc4"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_k2kna"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_di7en"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_tr2h2"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 4
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_iikc4")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_k2kna")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -575,18 +606,18 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_ahc1e"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_23l4y"]
+script = ExtResource("7_74onp")
 id = 161
 category = 0
 duration = 4
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_di7en")])
-cancels = Array[ExtResource("7_xscxe")]([SubResource("Resource_agluc")])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_tr2h2")])
+cancels = Array[ExtResource("8_7twvi")]([SubResource("Resource_otigv")])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_ff5ad"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_bcmix"]
+script = ExtResource("8_7twvi")
 target = 116
 target_is_group = false
 condition = 4
@@ -595,8 +626,8 @@ window_end = 49
 input = 16
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_ji6dp"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_iit2e"]
+script = ExtResource("8_7twvi")
 target = 117
 target_is_group = false
 condition = 4
@@ -605,8 +636,8 @@ window_end = 49
 input = 32
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_i1p0r"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_r4ua1"]
+script = ExtResource("8_7twvi")
 target = 118
 target_is_group = false
 condition = 4
@@ -615,20 +646,20 @@ window_end = 49
 input = 64
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_chvmx"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_h8g1o"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_20gea"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_16t8g"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 1
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_chvmx")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_h8g1o")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = true
 motion_vel_x = 0
 motion_vel_y = -1441792
@@ -640,20 +671,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_kilxf"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_nrnvg"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_i2gph"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_v2672"]
+script = ExtResource("9_t4gcx")
 frame_start = 2
 frame_end = 50
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_kilxf")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_nrnvg")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -665,18 +696,18 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_7re78"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_ubcko"]
+script = ExtResource("7_74onp")
 id = 106
 category = 1
 duration = 50
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_20gea"), SubResource("Resource_i2gph")])
-cancels = Array[ExtResource("7_xscxe")]([SubResource("Resource_ff5ad"), SubResource("Resource_ji6dp"), SubResource("Resource_i1p0r")])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_16t8g"), SubResource("Resource_v2672")])
+cancels = Array[ExtResource("8_7twvi")]([SubResource("Resource_bcmix"), SubResource("Resource_iit2e"), SubResource("Resource_r4ua1")])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_0icso"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_k6thh"]
+script = ExtResource("8_7twvi")
 target = 116
 target_is_group = false
 condition = 4
@@ -685,8 +716,8 @@ window_end = 49
 input = 16
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_wwdwb"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_h3prp"]
+script = ExtResource("8_7twvi")
 target = 117
 target_is_group = false
 condition = 4
@@ -695,8 +726,8 @@ window_end = 49
 input = 32
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_1epce"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_h665v"]
+script = ExtResource("8_7twvi")
 target = 118
 target_is_group = false
 condition = 4
@@ -705,20 +736,20 @@ window_end = 49
 input = 64
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_c7u7a"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_6m6l7"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_o57ga"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_i18o0"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 1
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_c7u7a")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_6m6l7")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = true
 motion_vel_x = 229376
 motion_vel_y = -1441792
@@ -730,20 +761,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_iii1q"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_wmsnl"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_xl1bt"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_ffds0"]
+script = ExtResource("9_t4gcx")
 frame_start = 2
 frame_end = 50
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_iii1q")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_wmsnl")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -755,18 +786,18 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_sorv2"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_noioy"]
+script = ExtResource("7_74onp")
 id = 107
 category = 1
 duration = 50
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_o57ga"), SubResource("Resource_xl1bt")])
-cancels = Array[ExtResource("7_xscxe")]([SubResource("Resource_0icso"), SubResource("Resource_wwdwb"), SubResource("Resource_1epce")])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_i18o0"), SubResource("Resource_ffds0")])
+cancels = Array[ExtResource("8_7twvi")]([SubResource("Resource_k6thh"), SubResource("Resource_h3prp"), SubResource("Resource_h665v")])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_44oqb"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_akahd"]
+script = ExtResource("8_7twvi")
 target = 116
 target_is_group = false
 condition = 4
@@ -775,8 +806,8 @@ window_end = 49
 input = 16
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_gkcoe"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_i0ne7"]
+script = ExtResource("8_7twvi")
 target = 117
 target_is_group = false
 condition = 4
@@ -785,8 +816,8 @@ window_end = 49
 input = 32
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_ijjhc"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_v3tnr"]
+script = ExtResource("8_7twvi")
 target = 118
 target_is_group = false
 condition = 4
@@ -795,20 +826,20 @@ window_end = 49
 input = 64
 requires_tag = 0
 
-[sub_resource type="Resource" id="Resource_oumam"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_l8rhf"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_wqqhg"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_75oew"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 1
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_oumam")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_l8rhf")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = true
 motion_vel_x = -229376
 motion_vel_y = -1441792
@@ -820,20 +851,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_gd10i"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_ct5j8"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_a7bn2"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_yx7ge"]
+script = ExtResource("9_t4gcx")
 frame_start = 2
 frame_end = 50
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_gd10i")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_ct5j8")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -845,18 +876,18 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_bwbr7"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_e8rmp"]
+script = ExtResource("7_74onp")
 id = 108
 category = 1
 duration = 50
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_wqqhg"), SubResource("Resource_a7bn2")])
-cancels = Array[ExtResource("7_xscxe")]([SubResource("Resource_44oqb"), SubResource("Resource_gkcoe"), SubResource("Resource_ijjhc")])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_75oew"), SubResource("Resource_yx7ge")])
+cancels = Array[ExtResource("8_7twvi")]([SubResource("Resource_akahd"), SubResource("Resource_i0ne7"), SubResource("Resource_v3tnr")])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_66tv6"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_rnlkw"]
+script = ExtResource("8_7twvi")
 target = 130
 target_is_group = false
 condition = 2
@@ -865,8 +896,8 @@ window_end = 0
 input = 16
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_m3fhh"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_llgcw"]
+script = ExtResource("8_7twvi")
 target = 131
 target_is_group = false
 condition = 2
@@ -875,8 +906,8 @@ window_end = 0
 input = 32
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_p7hb6"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_wtr4l"]
+script = ExtResource("8_7twvi")
 target = 132
 target_is_group = false
 condition = 2
@@ -885,8 +916,8 @@ window_end = 0
 input = 64
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_t2oor"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_kb1ru"]
+script = ExtResource("8_7twvi")
 target = 140
 target_is_group = false
 condition = 2
@@ -895,8 +926,8 @@ window_end = 0
 input = 16
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_gxo83"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_y5fs4"]
+script = ExtResource("8_7twvi")
 target = 141
 target_is_group = false
 condition = 2
@@ -905,8 +936,8 @@ window_end = 0
 input = 32
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_xe0vl"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_3rcw2"]
+script = ExtResource("8_7twvi")
 target = 142
 target_is_group = false
 condition = 2
@@ -915,20 +946,20 @@ window_end = 0
 input = 64
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_mkclc"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_fhuxe"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_c6cuw"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_ajwp8"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 4
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_mkclc")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_fhuxe")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -940,17 +971,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_yh2ct"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_v4cgr"]
+script = ExtResource("3_re1w1")
 x = 1638400
 y = -4259840
 w = 1638400
 h = 1310720
 
-[sub_resource type="Resource" id="Resource_ugd1d"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_t3o1s"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_yh2ct")
+box = SubResource("Resource_v4cgr")
 damage = 30
 hitstun = 12
 blockstun = 9
@@ -958,28 +989,28 @@ hitstop = 8
 pushback_hit = 131072
 pushback_block = 131072
 launch = 0
-hit_reaction = 120
-block_reaction = 121
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array(1)
 id_group = 1
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_nmivu"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_5gj6q"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_ohwed"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_ebhm5"]
+script = ExtResource("9_t4gcx")
 frame_start = 5
 frame_end = 7
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_nmivu")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_ugd1d")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_5gj6q")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_t3o1s")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -991,20 +1022,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_rlbx7"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_78hxw"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_hlsln"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_ow387"]
+script = ExtResource("9_t4gcx")
 frame_start = 8
 frame_end = 13
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_rlbx7")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_78hxw")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1016,18 +1047,18 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_w6sxt"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_dlt41"]
+script = ExtResource("7_74onp")
 id = 110
 category = 0
 duration = 13
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_c6cuw"), SubResource("Resource_ohwed"), SubResource("Resource_hlsln")])
-cancels = Array[ExtResource("7_xscxe")]([SubResource("Resource_66tv6"), SubResource("Resource_m3fhh"), SubResource("Resource_p7hb6"), SubResource("Resource_t2oor"), SubResource("Resource_gxo83"), SubResource("Resource_xe0vl")])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_ajwp8"), SubResource("Resource_ebhm5"), SubResource("Resource_ow387")])
+cancels = Array[ExtResource("8_7twvi")]([SubResource("Resource_rnlkw"), SubResource("Resource_llgcw"), SubResource("Resource_wtr4l"), SubResource("Resource_kb1ru"), SubResource("Resource_y5fs4"), SubResource("Resource_3rcw2")])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_ksuid"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_1atff"]
+script = ExtResource("8_7twvi")
 target = 130
 target_is_group = false
 condition = 2
@@ -1036,8 +1067,8 @@ window_end = 0
 input = 16
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_frn4l"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_2xu2v"]
+script = ExtResource("8_7twvi")
 target = 131
 target_is_group = false
 condition = 2
@@ -1046,8 +1077,8 @@ window_end = 0
 input = 32
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_ko2hx"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_esu74"]
+script = ExtResource("8_7twvi")
 target = 132
 target_is_group = false
 condition = 2
@@ -1056,8 +1087,8 @@ window_end = 0
 input = 64
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_0rycr"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_i0vn7"]
+script = ExtResource("8_7twvi")
 target = 140
 target_is_group = false
 condition = 2
@@ -1066,8 +1097,8 @@ window_end = 0
 input = 16
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_pxyfo"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_ey248"]
+script = ExtResource("8_7twvi")
 target = 141
 target_is_group = false
 condition = 2
@@ -1076,8 +1107,8 @@ window_end = 0
 input = 32
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_lusm8"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_x1idy"]
+script = ExtResource("8_7twvi")
 target = 142
 target_is_group = false
 condition = 2
@@ -1086,20 +1117,20 @@ window_end = 0
 input = 64
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_lwhsc"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_ni0ry"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_ri3l2"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_pjbg4"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 5
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_lwhsc")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_ni0ry")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1111,17 +1142,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_p00vc"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_ehtfd"]
+script = ExtResource("3_re1w1")
 x = 1638400
 y = -4063232
 w = 1966080
 h = 1441792
 
-[sub_resource type="Resource" id="Resource_bqx26"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_eaaie"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_p00vc")
+box = SubResource("Resource_ehtfd")
 damage = 60
 hitstun = 16
 blockstun = 12
@@ -1129,28 +1160,28 @@ hitstop = 9
 pushback_hit = 196608
 pushback_block = 196608
 launch = 0
-hit_reaction = 120
-block_reaction = 121
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array(1)
 id_group = 2
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_cm4tm"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_dxt0o"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_e7tcg"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_j0n2w"]
+script = ExtResource("9_t4gcx")
 frame_start = 6
 frame_end = 9
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_cm4tm")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_bqx26")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_dxt0o")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_eaaie")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1162,20 +1193,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_0kbh4"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_umbkm"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_jykob"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_l5apq"]
+script = ExtResource("9_t4gcx")
 frame_start = 10
 frame_end = 20
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_0kbh4")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_umbkm")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1187,30 +1218,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_7rl63"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_dpt3i"]
+script = ExtResource("7_74onp")
 id = 111
 category = 0
 duration = 20
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_ri3l2"), SubResource("Resource_e7tcg"), SubResource("Resource_jykob")])
-cancels = Array[ExtResource("7_xscxe")]([SubResource("Resource_ksuid"), SubResource("Resource_frn4l"), SubResource("Resource_ko2hx"), SubResource("Resource_0rycr"), SubResource("Resource_pxyfo"), SubResource("Resource_lusm8")])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_pjbg4"), SubResource("Resource_j0n2w"), SubResource("Resource_l5apq")])
+cancels = Array[ExtResource("8_7twvi")]([SubResource("Resource_1atff"), SubResource("Resource_2xu2v"), SubResource("Resource_esu74"), SubResource("Resource_i0vn7"), SubResource("Resource_ey248"), SubResource("Resource_x1idy")])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_yjsqp"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_1s46k"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_8b5mx"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_h2q62"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 25
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_yjsqp")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_1s46k")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = true
 motion_vel_x = 70124
 motion_vel_y = 0
@@ -1222,17 +1253,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_oua25"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_507tv"]
+script = ExtResource("3_re1w1")
 x = 1966080
 y = -3932160
 w = 2293760
 h = 1638400
 
-[sub_resource type="Resource" id="Resource_tra0g"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_apv2i"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_oua25")
+box = SubResource("Resource_507tv")
 damage = 80
 hitstun = 22
 blockstun = 18
@@ -1240,28 +1271,28 @@ hitstop = 11
 pushback_hit = 131072
 pushback_block = 196608
 launch = 0
-hit_reaction = 120
-block_reaction = 121
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 3
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_in4ri"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_i30x1"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_ni4r0"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_okkfb"]
+script = ExtResource("9_t4gcx")
 frame_start = 26
 frame_end = 28
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_in4ri")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_tra0g")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_i30x1")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_apv2i")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = true
 motion_vel_x = 70124
 motion_vel_y = 0
@@ -1273,20 +1304,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_flojr"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_5l3hl"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_t5y0i"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_qpn8g"]
+script = ExtResource("9_t4gcx")
 frame_start = 29
 frame_end = 41
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_flojr")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_5l3hl")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1298,18 +1329,18 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_vvp6s"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_c2866"]
+script = ExtResource("7_74onp")
 id = 112
 category = 0
 duration = 41
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_8b5mx"), SubResource("Resource_ni4r0"), SubResource("Resource_t5y0i")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_h2q62"), SubResource("Resource_okkfb"), SubResource("Resource_qpn8g")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_d2q3n"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_wgdht"]
+script = ExtResource("8_7twvi")
 target = 130
 target_is_group = false
 condition = 2
@@ -1318,8 +1349,8 @@ window_end = 0
 input = 16
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_8lykg"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_bmj5e"]
+script = ExtResource("8_7twvi")
 target = 131
 target_is_group = false
 condition = 2
@@ -1328,8 +1359,8 @@ window_end = 0
 input = 32
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_b4qa8"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_stqgu"]
+script = ExtResource("8_7twvi")
 target = 132
 target_is_group = false
 condition = 2
@@ -1338,8 +1369,8 @@ window_end = 0
 input = 64
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_20ft0"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_1llu3"]
+script = ExtResource("8_7twvi")
 target = 140
 target_is_group = false
 condition = 2
@@ -1348,8 +1379,8 @@ window_end = 0
 input = 16
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_nm4o2"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_0a37u"]
+script = ExtResource("8_7twvi")
 target = 141
 target_is_group = false
 condition = 2
@@ -1358,8 +1389,8 @@ window_end = 0
 input = 32
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_cln8n"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_gke34"]
+script = ExtResource("8_7twvi")
 target = 142
 target_is_group = false
 condition = 2
@@ -1368,20 +1399,20 @@ window_end = 0
 input = 64
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_4tke4"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_ixqte"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_wu7qf"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_kfepb"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 4
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_4tke4")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_ixqte")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1393,17 +1424,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_ytien"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_dnw3f"]
+script = ExtResource("3_re1w1")
 x = 1310720
 y = -1310720
 w = 1638400
 h = 983040
 
-[sub_resource type="Resource" id="Resource_5h03w"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_4rm6r"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_ytien")
+box = SubResource("Resource_dnw3f")
 damage = 20
 hitstun = 15
 blockstun = 10
@@ -1411,28 +1442,28 @@ hitstop = 8
 pushback_hit = 98304
 pushback_block = 98304
 launch = 0
-hit_reaction = 120
-block_reaction = 124
+hit_reaction = 0
+block_reaction = 5
 cancel_tags = PackedInt32Array(1)
 id_group = 4
 rehit_interval = 0
 tech_window = 0
 guard_height = 2
 
-[sub_resource type="Resource" id="Resource_1ehfk"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_elxf3"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_cipxe"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_nim07"]
+script = ExtResource("9_t4gcx")
 frame_start = 5
 frame_end = 7
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_1ehfk")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_5h03w")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_elxf3")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_4rm6r")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1444,20 +1475,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_w4nh6"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_5sbml"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_lojsx"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_tgujx"]
+script = ExtResource("9_t4gcx")
 frame_start = 8
 frame_end = 14
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_w4nh6")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_5sbml")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1469,18 +1500,18 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_tikuu"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_a3eyx"]
+script = ExtResource("7_74onp")
 id = 113
 category = 0
 duration = 14
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_wu7qf"), SubResource("Resource_cipxe"), SubResource("Resource_lojsx")])
-cancels = Array[ExtResource("7_xscxe")]([SubResource("Resource_d2q3n"), SubResource("Resource_8lykg"), SubResource("Resource_b4qa8"), SubResource("Resource_20ft0"), SubResource("Resource_nm4o2"), SubResource("Resource_cln8n")])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_kfepb"), SubResource("Resource_nim07"), SubResource("Resource_tgujx")])
+cancels = Array[ExtResource("8_7twvi")]([SubResource("Resource_wgdht"), SubResource("Resource_bmj5e"), SubResource("Resource_stqgu"), SubResource("Resource_1llu3"), SubResource("Resource_0a37u"), SubResource("Resource_gke34")])
 loop = false
 is_crouch = true
 
-[sub_resource type="Resource" id="Resource_5465r"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_v2qxs"]
+script = ExtResource("8_7twvi")
 target = 130
 target_is_group = false
 condition = 2
@@ -1489,8 +1520,8 @@ window_end = 0
 input = 16
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_u7ukd"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_1vewd"]
+script = ExtResource("8_7twvi")
 target = 131
 target_is_group = false
 condition = 2
@@ -1499,8 +1530,8 @@ window_end = 0
 input = 32
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_lgxfs"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_08jew"]
+script = ExtResource("8_7twvi")
 target = 132
 target_is_group = false
 condition = 2
@@ -1509,8 +1540,8 @@ window_end = 0
 input = 64
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_k3kkf"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_eb67q"]
+script = ExtResource("8_7twvi")
 target = 140
 target_is_group = false
 condition = 2
@@ -1519,8 +1550,8 @@ window_end = 0
 input = 16
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_bymuv"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_qkuk2"]
+script = ExtResource("8_7twvi")
 target = 141
 target_is_group = false
 condition = 2
@@ -1529,8 +1560,8 @@ window_end = 0
 input = 32
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_renlx"]
-script = ExtResource("7_xscxe")
+[sub_resource type="Resource" id="Resource_cjl0v"]
+script = ExtResource("8_7twvi")
 target = 142
 target_is_group = false
 condition = 2
@@ -1539,20 +1570,20 @@ window_end = 0
 input = 64
 requires_tag = 1
 
-[sub_resource type="Resource" id="Resource_f2kc2"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_qrn1s"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_wqyga"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_sdmh4"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 6
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_f2kc2")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_qrn1s")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1564,17 +1595,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_ku2xs"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_lpdti"]
+script = ExtResource("3_re1w1")
 x = 1966080
 y = -1835008
 w = 2949120
 h = 1179648
 
-[sub_resource type="Resource" id="Resource_1y358"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_ncdtv"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_ku2xs")
+box = SubResource("Resource_lpdti")
 damage = 70
 hitstun = 18
 blockstun = 14
@@ -1582,28 +1613,28 @@ hitstop = 10
 pushback_hit = 65536
 pushback_block = 65536
 launch = 0
-hit_reaction = 120
-block_reaction = 124
+hit_reaction = 0
+block_reaction = 5
 cancel_tags = PackedInt32Array(1)
 id_group = 5
 rehit_interval = 0
 tech_window = 0
 guard_height = 2
 
-[sub_resource type="Resource" id="Resource_lvpr8"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_16qkq"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_sonln"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_kmff0"]
+script = ExtResource("9_t4gcx")
 frame_start = 7
 frame_end = 9
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_lvpr8")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_1y358")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_16qkq")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_ncdtv")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1615,20 +1646,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_ueyma"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_vtykl"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_dlyg1"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_jgo7p"]
+script = ExtResource("9_t4gcx")
 frame_start = 10
 frame_end = 22
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_ueyma")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_vtykl")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1640,30 +1671,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_qj20i"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_rq5pa"]
+script = ExtResource("7_74onp")
 id = 114
 category = 0
 duration = 22
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_wqyga"), SubResource("Resource_sonln"), SubResource("Resource_dlyg1")])
-cancels = Array[ExtResource("7_xscxe")]([SubResource("Resource_5465r"), SubResource("Resource_u7ukd"), SubResource("Resource_lgxfs"), SubResource("Resource_k3kkf"), SubResource("Resource_bymuv"), SubResource("Resource_renlx")])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_sdmh4"), SubResource("Resource_kmff0"), SubResource("Resource_jgo7p")])
+cancels = Array[ExtResource("8_7twvi")]([SubResource("Resource_v2qxs"), SubResource("Resource_1vewd"), SubResource("Resource_08jew"), SubResource("Resource_eb67q"), SubResource("Resource_qkuk2"), SubResource("Resource_cjl0v")])
 loop = false
 is_crouch = true
 
-[sub_resource type="Resource" id="Resource_5q5ie"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_k2hkx"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_41kjk"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_5hrm0"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 5
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_5q5ie")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_k2hkx")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1675,17 +1706,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_l0kp1"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_x6ai7"]
+script = ExtResource("3_re1w1")
 x = 983040
 y = -5898240
 w = 2293760
 h = 3932160
 
-[sub_resource type="Resource" id="Resource_frvpd"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_7msm5"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_l0kp1")
+box = SubResource("Resource_x6ai7")
 damage = 60
 hitstun = 20
 blockstun = 13
@@ -1693,28 +1724,28 @@ hitstop = 10
 pushback_hit = 196608
 pushback_block = 131072
 launch = -262144
-hit_reaction = 122
-block_reaction = 124
+hit_reaction = 2
+block_reaction = 5
 cancel_tags = PackedInt32Array()
 id_group = 6
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_4hbyi"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_2u7w0"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_4tnes"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_hhpc0"]
+script = ExtResource("9_t4gcx")
 frame_start = 6
 frame_end = 8
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_4hbyi")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_frvpd")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_2u7w0")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_7msm5")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1726,20 +1757,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_72dil"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_q0pyj"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_a0pu8"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_d1lgt"]
+script = ExtResource("9_t4gcx")
 frame_start = 9
 frame_end = 21
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_72dil")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_q0pyj")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1751,30 +1782,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_8ltih"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_snlqc"]
+script = ExtResource("7_74onp")
 id = 115
 category = 0
 duration = 21
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_41kjk"), SubResource("Resource_4tnes"), SubResource("Resource_a0pu8")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_5hrm0"), SubResource("Resource_hhpc0"), SubResource("Resource_d1lgt")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = true
 
-[sub_resource type="Resource" id="Resource_lbnwr"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_yj22w"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_hg1fl"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_3ikoy"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 4
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_lbnwr")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_yj22w")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1786,17 +1817,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_t76u1"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_wrrkv"]
+script = ExtResource("3_re1w1")
 x = 983040
 y = -2621440
 w = 1638400
 h = 1310720
 
-[sub_resource type="Resource" id="Resource_jneed"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_bbs2x"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_t76u1")
+box = SubResource("Resource_wrrkv")
 damage = 30
 hitstun = 14
 blockstun = 8
@@ -1804,28 +1835,28 @@ hitstop = 9
 pushback_hit = 65536
 pushback_block = 65536
 launch = 0
-hit_reaction = 120
-block_reaction = 121
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 7
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_t6b6y"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_fa732"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_wy4hb"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_7g15u"]
+script = ExtResource("9_t4gcx")
 frame_start = 5
 frame_end = 10
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_t6b6y")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_jneed")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_fa732")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_bbs2x")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1837,30 +1868,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_f1q70"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_j6b4k"]
+script = ExtResource("7_74onp")
 id = 116
 category = 1
 duration = 10
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_hg1fl"), SubResource("Resource_wy4hb")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_3ikoy"), SubResource("Resource_7g15u")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_bx2fv"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_jarkf"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_4pjbv"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_6tr7a"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 6
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_bx2fv")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_jarkf")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1872,17 +1903,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_fld23"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_t6cva"]
+script = ExtResource("3_re1w1")
 x = 983040
 y = -2621440
 w = 1966080
 h = 1638400
 
-[sub_resource type="Resource" id="Resource_f72dd"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_6tw05"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_fld23")
+box = SubResource("Resource_t6cva")
 damage = 50
 hitstun = 14
 blockstun = 8
@@ -1890,28 +1921,28 @@ hitstop = 10
 pushback_hit = 65536
 pushback_block = 65536
 launch = 0
-hit_reaction = 120
-block_reaction = 121
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 8
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_dm67s"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_yn6mt"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_04rcg"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_r7fot"]
+script = ExtResource("9_t4gcx")
 frame_start = 7
 frame_end = 11
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_dm67s")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_f72dd")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_yn6mt")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_6tw05")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1923,30 +1954,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_52tk7"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_lcjp6"]
+script = ExtResource("7_74onp")
 id = 117
 category = 1
 duration = 11
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_4pjbv"), SubResource("Resource_04rcg")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_6tr7a"), SubResource("Resource_r7fot")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_vchh8"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_nxeov"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_iureh"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_ix43r"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 8
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_vchh8")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_nxeov")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -1958,17 +1989,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_60385"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_16xn2"]
+script = ExtResource("3_re1w1")
 x = 983040
 y = -2621440
 w = 2293760
 h = 1966080
 
-[sub_resource type="Resource" id="Resource_u3ygg"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_nq55r"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_60385")
+box = SubResource("Resource_16xn2")
 damage = 80
 hitstun = 14
 blockstun = 8
@@ -1976,28 +2007,28 @@ hitstop = 11
 pushback_hit = 65536
 pushback_block = 65536
 launch = 0
-hit_reaction = 120
-block_reaction = 121
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 9
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_rn4dg"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_hax5i"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_i3tvb"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_3g60t"]
+script = ExtResource("9_t4gcx")
 frame_start = 9
 frame_end = 13
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_rn4dg")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_u3ygg")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_hax5i")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_nq55r")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2009,30 +2040,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_aqjxn"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_oegob"]
+script = ExtResource("7_74onp")
 id = 118
 category = 1
 duration = 13
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_iureh"), SubResource("Resource_i3tvb")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_ix43r"), SubResource("Resource_3g60t")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_l5kxr"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_lnyis"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_ps3lf"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_3q50p"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 22
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_l5kxr")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_lnyis")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2044,30 +2075,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_a4b2a"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_oegio"]
+script = ExtResource("7_74onp")
 id = 120
 category = 2
 duration = 22
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_ps3lf")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_3q50p")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_q1mm3"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_oo4cq"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_e0cb0"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_y0ybp"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 18
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_q1mm3")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_oo4cq")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2079,30 +2110,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_ey8c2"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_ttqsy"]
+script = ExtResource("7_74onp")
 id = 121
 category = 3
 duration = 18
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_e0cb0")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_y0ybp")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_j2rog"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_l0fyy"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -3604480
 w = 1966080
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_5nr2f"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_1ok8s"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 14
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_j2rog")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_l0fyy")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2114,30 +2145,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_v1cg8"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_kqnpe"]
+script = ExtResource("7_74onp")
 id = 124
 category = 3
 duration = 14
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_5nr2f")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_1ok8s")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = true
 
-[sub_resource type="Resource" id="Resource_ihex3"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_7ch7g"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_r4lkl"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_546ee"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 20
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_ihex3")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_7ch7g")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2149,30 +2180,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_ju6kg"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_jtp4i"]
+script = ExtResource("7_74onp")
 id = 122
 category = 2
 duration = 20
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_r4lkl")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_546ee")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_lqfob"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_q5mao"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_q2edp"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_032nf"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 30
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_lqfob")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_q5mao")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2184,30 +2215,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_8y6ue"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_vnbms"]
+script = ExtResource("7_74onp")
 id = 123
 category = 2
 duration = 30
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_q2edp")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_032nf")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_jvvqu"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_mxiep"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_njalg"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_dc4ut"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 40
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_jvvqu")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_mxiep")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2219,30 +2250,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_dw7xu"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_82ylm"]
+script = ExtResource("7_74onp")
 id = 125
 category = 2
 duration = 40
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_njalg")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_dc4ut")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_54ych"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_t8jhq"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_ay6o3"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_k7chs"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 13
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_54ych")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_t8jhq")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2254,24 +2285,24 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_u13er"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_hrt35"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_l3r7q"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_oclmu"]
+script = ExtResource("3_re1w1")
 x = -786432
 y = -786432
 w = 1572864
 h = 1572864
 
-[sub_resource type="Resource" id="Resource_lwy7w"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_qxneu"]
+script = ExtResource("10_c0hbe")
 hit_kind = 2
-box = SubResource("Resource_l3r7q")
+box = SubResource("Resource_oclmu")
 damage = 60
 hitstun = 16
 blockstun = 12
@@ -2279,55 +2310,55 @@ hitstop = 8
 pushback_hit = 131072
 pushback_block = 65536
 launch = 0
-hit_reaction = 120
-block_reaction = 121
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 10
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_6s6hf"]
-script = ExtResource("10_gynmq")
+[sub_resource type="Resource" id="Resource_b8di8"]
+script = ExtResource("11_w3t1b")
 id = 201
-hitbox = SubResource("Resource_lwy7w")
+hitbox = SubResource("Resource_qxneu")
 lifetime = 60
 max_per_owner = 1
 gravity = 0
 
-[sub_resource type="Resource" id="Resource_nkhn5"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_jetbi"]
+script = ExtResource("9_t4gcx")
 frame_start = 14
 frame_end = 14
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_u13er")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_hrt35")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
 invuln_strike = false
 invuln_throw = false
 has_spawn = true
-spawn_projectile = SubResource("Resource_6s6hf")
+spawn_projectile = SubResource("Resource_b8di8")
 spawn_offset_x = 1638400
 spawn_offset_y = -2949120
 spawn_velocity_x = 327680
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_lmc85"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_iuecf"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_1hrnv"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_scwfa"]
+script = ExtResource("9_t4gcx")
 frame_start = 15
 frame_end = 44
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_lmc85")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_iuecf")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2339,30 +2370,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_02ox2"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_b4khj"]
+script = ExtResource("7_74onp")
 id = 130
 category = 0
 duration = 44
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_ay6o3"), SubResource("Resource_nkhn5"), SubResource("Resource_1hrnv")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_k7chs"), SubResource("Resource_jetbi"), SubResource("Resource_scwfa")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_v5rjn"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_og3w8"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_3ustf"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_udcf7"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 13
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_v5rjn")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_og3w8")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2374,24 +2405,24 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_hjfmj"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_ishxu"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_mkyrb"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_8ckfj"]
+script = ExtResource("3_re1w1")
 x = -786432
 y = -786432
 w = 1572864
 h = 1572864
 
-[sub_resource type="Resource" id="Resource_fe6u3"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_avcct"]
+script = ExtResource("10_c0hbe")
 hit_kind = 2
-box = SubResource("Resource_mkyrb")
+box = SubResource("Resource_8ckfj")
 damage = 60
 hitstun = 16
 blockstun = 12
@@ -2399,55 +2430,55 @@ hitstop = 8
 pushback_hit = 131072
 pushback_block = 65536
 launch = 0
-hit_reaction = 120
-block_reaction = 121
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 11
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_r14lq"]
-script = ExtResource("10_gynmq")
+[sub_resource type="Resource" id="Resource_edywy"]
+script = ExtResource("11_w3t1b")
 id = 202
-hitbox = SubResource("Resource_fe6u3")
+hitbox = SubResource("Resource_avcct")
 lifetime = 60
 max_per_owner = 1
 gravity = 0
 
-[sub_resource type="Resource" id="Resource_ya3lh"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_1mcsx"]
+script = ExtResource("9_t4gcx")
 frame_start = 14
 frame_end = 14
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_hjfmj")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_ishxu")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
 invuln_strike = false
 invuln_throw = false
 has_spawn = true
-spawn_projectile = SubResource("Resource_r14lq")
+spawn_projectile = SubResource("Resource_edywy")
 spawn_offset_x = 1638400
 spawn_offset_y = -2949120
 spawn_velocity_x = 458752
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_bhupr"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_aibii"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_7oolf"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_ou1cb"]
+script = ExtResource("9_t4gcx")
 frame_start = 15
 frame_end = 44
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_bhupr")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_aibii")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2459,30 +2490,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_hxc0u"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_ii5bs"]
+script = ExtResource("7_74onp")
 id = 131
 category = 0
 duration = 44
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_3ustf"), SubResource("Resource_ya3lh"), SubResource("Resource_7oolf")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_udcf7"), SubResource("Resource_1mcsx"), SubResource("Resource_ou1cb")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_waocv"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_7q7fd"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_avcp2"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_mgxcg"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 13
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_waocv")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_7q7fd")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2494,24 +2525,24 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_nijm7"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_7f4ww"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_tornc"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_4drui"]
+script = ExtResource("3_re1w1")
 x = -786432
 y = -786432
 w = 1572864
 h = 1572864
 
-[sub_resource type="Resource" id="Resource_5yp5e"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_ry64d"]
+script = ExtResource("10_c0hbe")
 hit_kind = 2
-box = SubResource("Resource_tornc")
+box = SubResource("Resource_4drui")
 damage = 60
 hitstun = 16
 blockstun = 12
@@ -2519,55 +2550,55 @@ hitstop = 8
 pushback_hit = 131072
 pushback_block = 65536
 launch = 0
-hit_reaction = 120
-block_reaction = 121
+hit_reaction = 0
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 12
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_1kkrd"]
-script = ExtResource("10_gynmq")
+[sub_resource type="Resource" id="Resource_vsxv6"]
+script = ExtResource("11_w3t1b")
 id = 203
-hitbox = SubResource("Resource_5yp5e")
+hitbox = SubResource("Resource_ry64d")
 lifetime = 60
 max_per_owner = 1
 gravity = 0
 
-[sub_resource type="Resource" id="Resource_8s671"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_ebsvw"]
+script = ExtResource("9_t4gcx")
 frame_start = 14
 frame_end = 14
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_nijm7")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_7f4ww")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
 invuln_strike = false
 invuln_throw = false
 has_spawn = true
-spawn_projectile = SubResource("Resource_1kkrd")
+spawn_projectile = SubResource("Resource_vsxv6")
 spawn_offset_x = 1638400
 spawn_offset_y = -2949120
 spawn_velocity_x = 589824
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_np5e7"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_n1hra"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_1jr10"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_vis0j"]
+script = ExtResource("9_t4gcx")
 frame_start = 15
 frame_end = 44
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_np5e7")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_n1hra")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2579,30 +2610,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_cccj4"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_l31hg"]
+script = ExtResource("7_74onp")
 id = 132
 category = 0
 duration = 44
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_avcp2"), SubResource("Resource_8s671"), SubResource("Resource_1jr10")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_mgxcg"), SubResource("Resource_ebsvw"), SubResource("Resource_vis0j")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_qtwwj"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_hhmlq"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_uac05"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_o2df5"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 3
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_qtwwj")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_hhmlq")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2614,17 +2645,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_tnbhg"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_t4uvr"]
+script = ExtResource("3_re1w1")
 x = 655360
 y = -4915200
 w = 2293760
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_g5ccl"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_tsewf"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_tnbhg")
+box = SubResource("Resource_t4uvr")
 damage = 100
 hitstun = 30
 blockstun = 10
@@ -2632,28 +2663,28 @@ hitstop = 12
 pushback_hit = 65536
 pushback_block = 196608
 launch = -393216
-hit_reaction = 125
-block_reaction = 121
+hit_reaction = 1
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 13
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_51cba"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_if2ct"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_35ubn"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_q7vop"]
+script = ExtResource("9_t4gcx")
 frame_start = 4
 frame_end = 11
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_51cba")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_g5ccl")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_if2ct")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_tsewf")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2665,20 +2696,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_jv2o6"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_w5ve6"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_m2ap0"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_1b3qd"]
+script = ExtResource("9_t4gcx")
 frame_start = 12
 frame_end = 51
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_jv2o6")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_w5ve6")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2690,30 +2721,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_2gitw"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_5qk5d"]
+script = ExtResource("7_74onp")
 id = 140
 category = 0
 duration = 51
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_uac05"), SubResource("Resource_35ubn"), SubResource("Resource_m2ap0")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_o2df5"), SubResource("Resource_q7vop"), SubResource("Resource_1b3qd")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_e0x06"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_3nrrb"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_iuxpv"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_pt0i7"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 4
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_e0x06")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_3nrrb")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2725,17 +2756,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_p7q5p"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_occ8h"]
+script = ExtResource("3_re1w1")
 x = 655360
 y = -4915200
 w = 2293760
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_avmgx"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_vht0a"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_p7q5p")
+box = SubResource("Resource_occ8h")
 damage = 130
 hitstun = 30
 blockstun = 10
@@ -2743,28 +2774,28 @@ hitstop = 12
 pushback_hit = 65536
 pushback_block = 196608
 launch = -393216
-hit_reaction = 125
-block_reaction = 121
+hit_reaction = 1
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 14
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_y2mn0"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_0u4gg"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_c1fg5"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_ddji3"]
+script = ExtResource("9_t4gcx")
 frame_start = 5
 frame_end = 12
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_y2mn0")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_avmgx")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_0u4gg")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_vht0a")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2776,20 +2807,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_j8c22"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_6xoky"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_ljss5"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_rxvs0"]
+script = ExtResource("9_t4gcx")
 frame_start = 13
 frame_end = 54
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_j8c22")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_6xoky")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2801,30 +2832,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_n3rq8"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_kvorh"]
+script = ExtResource("7_74onp")
 id = 141
 category = 0
 duration = 54
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_iuxpv"), SubResource("Resource_c1fg5"), SubResource("Resource_ljss5")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_pt0i7"), SubResource("Resource_ddji3"), SubResource("Resource_rxvs0")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_5y0x3"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_gckwm"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_47i08"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_ytbht"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 5
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_5y0x3")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_gckwm")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2836,17 +2867,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_2eqxn"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_28hwh"]
+script = ExtResource("3_re1w1")
 x = 655360
 y = -4915200
 w = 2293760
 h = 3604480
 
-[sub_resource type="Resource" id="Resource_kalr7"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_7l8e3"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_2eqxn")
+box = SubResource("Resource_28hwh")
 damage = 96
 hitstun = 30
 blockstun = 10
@@ -2854,28 +2885,28 @@ hitstop = 12
 pushback_hit = 65536
 pushback_block = 196608
 launch = -393216
-hit_reaction = 125
-block_reaction = 121
+hit_reaction = 1
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 15
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_w2t8h"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_gcctl"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_g10d0"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_nloh8"]
+script = ExtResource("9_t4gcx")
 frame_start = 6
 frame_end = 14
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_w2t8h")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_kalr7")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_gcctl")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_7l8e3")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2887,17 +2918,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_x83vn"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_e1vyb"]
+script = ExtResource("3_re1w1")
 x = 655360
 y = -3604480
 w = 2293760
 h = 2949120
 
-[sub_resource type="Resource" id="Resource_kle5q"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_u3a8y"]
+script = ExtResource("10_c0hbe")
 hit_kind = 0
-box = SubResource("Resource_x83vn")
+box = SubResource("Resource_e1vyb")
 damage = 64
 hitstun = 30
 blockstun = 10
@@ -2905,28 +2936,28 @@ hitstop = 12
 pushback_hit = 65536
 pushback_block = 196608
 launch = -524288
-hit_reaction = 125
-block_reaction = 121
+hit_reaction = 1
+block_reaction = 4
 cancel_tags = PackedInt32Array()
 id_group = 16
 rehit_interval = 0
 tech_window = 0
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_evqoj"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_wi8bu"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -4915200
 w = 1966080
 h = 4915200
 
-[sub_resource type="Resource" id="Resource_2wmgp"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_j3fha"]
+script = ExtResource("9_t4gcx")
 frame_start = 15
 frame_end = 15
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_evqoj")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_kalr7"), SubResource("Resource_kle5q")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_wi8bu")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_7l8e3"), SubResource("Resource_u3a8y")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2938,20 +2969,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_qpfvt"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_ck2ju"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_dts0g"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_ff8fv"]
+script = ExtResource("9_t4gcx")
 frame_start = 16
 frame_end = 62
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_qpfvt")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_ck2ju")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2963,30 +2994,30 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_c73w3"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_eaylb"]
+script = ExtResource("7_74onp")
 id = 142
 category = 0
 duration = 62
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_47i08"), SubResource("Resource_g10d0"), SubResource("Resource_2wmgp"), SubResource("Resource_dts0g")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_ytbht"), SubResource("Resource_nloh8"), SubResource("Resource_j3fha"), SubResource("Resource_ff8fv")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
-[sub_resource type="Resource" id="Resource_lwx0g"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_0ou5e"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_swvbs"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_aevrv"]
+script = ExtResource("9_t4gcx")
 frame_start = 1
 frame_end = 4
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_lwx0g")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_0ou5e")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -2998,17 +3029,17 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_cmjiv"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_tfkrg"]
+script = ExtResource("3_re1w1")
 x = 655360
 y = -3932160
 w = 3932160
 h = 3932160
 
-[sub_resource type="Resource" id="Resource_53lw7"]
-script = ExtResource("9_fe2sk")
+[sub_resource type="Resource" id="Resource_8qsak"]
+script = ExtResource("10_c0hbe")
 hit_kind = 1
-box = SubResource("Resource_cmjiv")
+box = SubResource("Resource_tfkrg")
 damage = 120
 hitstun = 30
 blockstun = 0
@@ -3016,28 +3047,28 @@ hitstop = 0
 pushback_hit = 131072
 pushback_block = 0
 launch = 0
-hit_reaction = 123
-block_reaction = 123
+hit_reaction = 3
+block_reaction = 3
 cancel_tags = PackedInt32Array()
 id_group = 17
 rehit_interval = 0
 tech_window = 7
 guard_height = 0
 
-[sub_resource type="Resource" id="Resource_6bbhi"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_l64h0"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_ck7fv"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_75ts3"]
+script = ExtResource("9_t4gcx")
 frame_start = 5
 frame_end = 5
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_6bbhi")])
-hitboxes = Array[ExtResource("9_fe2sk")]([SubResource("Resource_53lw7")])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_l64h0")])
+hitboxes = Array[ExtResource("10_c0hbe")]([SubResource("Resource_8qsak")])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -3049,20 +3080,20 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_rf64m"]
-script = ExtResource("3_m1o1t")
+[sub_resource type="Resource" id="Resource_su2m8"]
+script = ExtResource("3_re1w1")
 x = -983040
 y = -5242880
 w = 1966080
 h = 5242880
 
-[sub_resource type="Resource" id="Resource_vtlpj"]
-script = ExtResource("8_24flv")
+[sub_resource type="Resource" id="Resource_s85eu"]
+script = ExtResource("9_t4gcx")
 frame_start = 6
 frame_end = 25
-hurtboxes = Array[ExtResource("3_m1o1t")]([SubResource("Resource_rf64m")])
-hitboxes = Array[ExtResource("9_fe2sk")]([])
-throwboxes = Array[ExtResource("3_m1o1t")]([])
+hurtboxes = Array[ExtResource("3_re1w1")]([SubResource("Resource_su2m8")])
+hitboxes = Array[ExtResource("10_c0hbe")]([])
+throwboxes = Array[ExtResource("3_re1w1")]([])
 has_motion = false
 motion_vel_x = 0
 motion_vel_y = 0
@@ -3074,23 +3105,23 @@ spawn_offset_y = 0
 spawn_velocity_x = 0
 spawn_velocity_y = 0
 
-[sub_resource type="Resource" id="Resource_287qy"]
-script = ExtResource("6_2x0bd")
+[sub_resource type="Resource" id="Resource_mk7fr"]
+script = ExtResource("7_74onp")
 id = 150
 category = 0
 duration = 25
-timeline = Array[ExtResource("8_24flv")]([SubResource("Resource_swvbs"), SubResource("Resource_ck7fv"), SubResource("Resource_vtlpj")])
-cancels = Array[ExtResource("7_xscxe")]([])
+timeline = Array[ExtResource("9_t4gcx")]([SubResource("Resource_aevrv"), SubResource("Resource_75ts3"), SubResource("Resource_s85eu")])
+cancels = Array[ExtResource("8_7twvi")]([])
 loop = false
 is_crouch = false
 
 [resource]
-script = ExtResource("5_w8x0k")
+script = ExtResource("6_b48m6")
 id = 2
-states = Array[ExtResource("6_2x0bd")]([SubResource("Resource_nmupp"), SubResource("Resource_330dd"), SubResource("Resource_ekhc4"), SubResource("Resource_hxgor"), SubResource("Resource_x0avp"), SubResource("Resource_r6xy5"), SubResource("Resource_mcdc7"), SubResource("Resource_jy2mx"), SubResource("Resource_ahc1e"), SubResource("Resource_7re78"), SubResource("Resource_sorv2"), SubResource("Resource_bwbr7"), SubResource("Resource_w6sxt"), SubResource("Resource_7rl63"), SubResource("Resource_vvp6s"), SubResource("Resource_tikuu"), SubResource("Resource_qj20i"), SubResource("Resource_8ltih"), SubResource("Resource_f1q70"), SubResource("Resource_52tk7"), SubResource("Resource_aqjxn"), SubResource("Resource_a4b2a"), SubResource("Resource_ey8c2"), SubResource("Resource_v1cg8"), SubResource("Resource_ju6kg"), SubResource("Resource_8y6ue"), SubResource("Resource_dw7xu"), SubResource("Resource_02ox2"), SubResource("Resource_hxc0u"), SubResource("Resource_cccj4"), SubResource("Resource_2gitw"), SubResource("Resource_n3rq8"), SubResource("Resource_c73w3"), SubResource("Resource_287qy")])
-button_map = Array[ExtResource("1_lpyhh")]([SubResource("Resource_0ah7l"), SubResource("Resource_4hpkq"), SubResource("Resource_g3u4m"), SubResource("Resource_n8g0k"), SubResource("Resource_7ovd0"), SubResource("Resource_0axw6"), SubResource("Resource_vio4c"), SubResource("Resource_jwuti"), SubResource("Resource_3rfpv"), SubResource("Resource_xfnky"), SubResource("Resource_6ll7x"), SubResource("Resource_bi2cw"), SubResource("Resource_qum1w"), SubResource("Resource_mvedb"), SubResource("Resource_5jiwr"), SubResource("Resource_38yjo"), SubResource("Resource_cup70"), SubResource("Resource_lmspp"), SubResource("Resource_f6w51"), SubResource("Resource_jg3ot"), SubResource("Resource_fjilt")])
-physics = SubResource("Resource_4crwn")
-default_pushbox = SubResource("Resource_cc7cy")
-cancel_groups = Array[ExtResource("2_6klhy")]([])
+states = Array[ExtResource("7_74onp")]([SubResource("Resource_wldai"), SubResource("Resource_g6ixq"), SubResource("Resource_wbuqs"), SubResource("Resource_27aj6"), SubResource("Resource_m7fxc"), SubResource("Resource_nh3bi"), SubResource("Resource_h2hjj"), SubResource("Resource_8ccu3"), SubResource("Resource_23l4y"), SubResource("Resource_ubcko"), SubResource("Resource_noioy"), SubResource("Resource_e8rmp"), SubResource("Resource_dlt41"), SubResource("Resource_dpt3i"), SubResource("Resource_c2866"), SubResource("Resource_a3eyx"), SubResource("Resource_rq5pa"), SubResource("Resource_snlqc"), SubResource("Resource_j6b4k"), SubResource("Resource_lcjp6"), SubResource("Resource_oegob"), SubResource("Resource_oegio"), SubResource("Resource_ttqsy"), SubResource("Resource_kqnpe"), SubResource("Resource_jtp4i"), SubResource("Resource_vnbms"), SubResource("Resource_82ylm"), SubResource("Resource_b4khj"), SubResource("Resource_ii5bs"), SubResource("Resource_l31hg"), SubResource("Resource_5qk5d"), SubResource("Resource_kvorh"), SubResource("Resource_eaylb"), SubResource("Resource_mk7fr")])
+button_map = Array[ExtResource("1_4svhw")]([SubResource("Resource_o8a2j"), SubResource("Resource_d40is"), SubResource("Resource_k0ck1"), SubResource("Resource_4xmc7"), SubResource("Resource_7wru2"), SubResource("Resource_sbp4i"), SubResource("Resource_mfja6"), SubResource("Resource_tti66"), SubResource("Resource_bvbke"), SubResource("Resource_q3q4r"), SubResource("Resource_08px0"), SubResource("Resource_ke82q"), SubResource("Resource_hvkpi"), SubResource("Resource_w7kug"), SubResource("Resource_3g1cq"), SubResource("Resource_4x8di"), SubResource("Resource_ua1ab"), SubResource("Resource_wmjs7"), SubResource("Resource_oveuk"), SubResource("Resource_tg2c8"), SubResource("Resource_mg8u8")])
+physics = SubResource("Resource_cv634")
+default_pushbox = SubResource("Resource_eutme")
+cancel_groups = Array[ExtResource("2_udl4q")]([])
 idle_state_id = 100
-knockdown_state_id = 123
+reaction_map = Array[ExtResource("5_a1pvh")]([SubResource("Resource_gvrc2"), SubResource("Resource_ejts2"), SubResource("Resource_pctit"), SubResource("Resource_wlcvc"), SubResource("Resource_2pr40"), SubResource("Resource_cjoxq")])

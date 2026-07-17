@@ -133,7 +133,7 @@ func _cleanup() -> void:
 
 func _test_authored_as_data_air() -> void:
 	var c := CharacterB.build_character()
-	_true(c.knockdown_state_id != 0, "character B now declares a knockdown_state_id (AD-043 catch-up)")
+	_true(c.reaction_state(MoveState.REACTION_KNOCKDOWN) != 0, "character B declares a REACTION_KNOCKDOWN reaction (AD-043 catch-up, folded into AD-049's reaction_map)")
 	var slide: MoveState = c.get_state(CharacterB.STATE_SLIDE)
 	_true(slide != null, "the low slide is authored")
 	var arc_l: MoveState = c.get_state(CharacterB.STATE_ARC_L)
@@ -298,7 +298,7 @@ func _test_slide_is_a_low_hard_knockdown() -> void:
 				found_low = true
 			hit_reaction = hb.hit_reaction
 	_true(found_low, "the low slide is authored guard_height=LOW (must be crouch-blocked)")
-	_eq(hit_reaction, CharacterB.STATE_KNOCKDOWN, "the slide's hit_reaction routes DIRECTLY into the shared knockdown state (AD-043, no air trip)")
+	_eq(hit_reaction, MoveState.REACTION_KNOCKDOWN, "the slide's hit_reaction is the REACTION_KNOCKDOWN kind (AD-049), which B's own reaction_map routes DIRECTLY into the shared knockdown state (AD-043, no air trip)")
 	_true(m.is_crouch, "the slide is authored crouched throughout (matches the LOW's animation, AD-045)")
 
 
@@ -499,7 +499,7 @@ func _test_2h_jump_cancel_into_airdash() -> void:
 
 func _test_knockdown_state_wired_and_shared() -> void:
 	var c := CharacterB.build_character()
-	_eq(c.knockdown_state_id, CharacterB.STATE_KNOCKDOWN, "Character.knockdown_state_id is set")
+	_eq(c.reaction_state(MoveState.REACTION_KNOCKDOWN), CharacterB.STATE_KNOCKDOWN, "Character.reaction_map[REACTION_KNOCKDOWN] is set (AD-049 fold-in of the old knockdown_state_id)")
 
 	# 2H's launch lands into the SAME shared knockdown state (via StepPhases._land).
 	var s := _two_char_state(40)
@@ -602,4 +602,4 @@ func _test_baked_tres_matches_builder_after_air_content() -> void:
 	var built := CharacterB.build_character()
 	_eq(baked.states.size(), built.states.size(), "baked .tres has the same state count as the builder (post air-content)")
 	_eq(baked.button_map.size(), built.button_map.size(), "baked .tres has the same button_map size as the builder")
-	_eq(baked.knockdown_state_id, built.knockdown_state_id, "baked .tres carries the same knockdown_state_id as the builder")
+	_eq(baked.reaction_state(MoveState.REACTION_KNOCKDOWN), built.reaction_state(MoveState.REACTION_KNOCKDOWN), "baked .tres carries the same REACTION_KNOCKDOWN mapping as the builder")
