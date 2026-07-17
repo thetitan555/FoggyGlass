@@ -74,7 +74,7 @@ defect was isolated to this one panel, not a repeated pattern. JC-108 records th
 design. Spec note: `inspection-surface.md`'s `PlayerView` table doesn't yet list
 `reaction_kind` — for the Architect to fold in on ratification.
 
-### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: AD-043 air-move semantics (`combat-resolution.md` criterion 15)
+### [resolved] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: AD-043 air-move semantics (`combat-resolution.md` criterion 15)
 Problem: **performing an aerial as either character snaps it to the ground** (divekicks
 excepted). This is the **exact defect TKT-P2-01 was dispatched to fix** — the roadmap's
 P2 opener names it verbatim: *"the P1.1 re-gate found an air normal stops the jump arc
@@ -85,9 +85,24 @@ air normals to **carry the fall**. TKT-P2-01 was reported complete, QA passed cr
 Determine whether the fix never covered air *normals* (as opposed to jump arcs), or
 regressed. This is a P2 acceptance criterion that does not hold.
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-17, commit `7c6c14a`): **Never-covered, not a regression.**
+TKT-P2-01 built the correct AD-043 continuous ground-clamp landing mechanism, but
+`_build_air_normal` (character_a.gd, and character_b.gd's copy of it) was never revisited
+afterward — it still authored `duration = startup + active` alone, a leftover of the
+pre-AD-043 model where the once-through-move-ended → idle transition *was* the landing
+mechanism, paired with `_enter_state`'s AD-042 grounded-entry snap. That short duration
+forced phase 2 to end the air-normal state mid-air, well before physical landing, and the
+AD-042 snap then teleported the character to the floor. Fixed: both characters'
+`_build_air_normal` now authors a generous safety-tail duration (mirroring the existing
+`JUMP_DURATION`/`DIVEKICK_SAFETY_TAIL` convention already used elsewhere in the same
+files) plus a tail keyframe supplying only the airborne hurtbox, so the real continuous
+ground clamp is always what ends the move. New regression test drives an air-normal-
+cancelled jump all the way to landing and requires it to land on the EXACT SAME physical
+tick an uninterrupted jump does — the old test only checked one tick of `vel_y` then
+treated "eventually reaches idle" as proof of landing, which a duration-based early snap
+also satisfies. Re-baked both characters' `.tres`.
 
-### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: AD-046 air-action economy / `briefs/character-a.md`
+### [resolved] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: AD-046 air-action economy / `briefs/character-a.md`
 Problem: **character A can attempt an air dash and a double jump**, which instantly
 halt its air momentum. Two defects in one: A should have **neither**, and the thing it
 does get is broken.
@@ -102,9 +117,21 @@ kit on a character its content never authored**. Both are content-seam violation
 AD-046 genuinely specs the air-action commands as engine-generic rather than
 data-gated, that is an **Architect** call — flag it up, don't re-scope it yourself.
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-17, commit `999ddfe`): **Implementation defect against the
+now-explicit data-gated contract** (AD-046's 2026-07-17 elaboration, ruled before this
+fix). `StepPhases._apply_air_action` previously set velocity and consumed
+`air_action_used` unconditionally once an edge/double-tap was recognized, regardless of
+the authored field's value. Fixed: each branch (double jump, air dash) now gates the
+actual velocity-set / `air_action_used` consumption on `double_jump_velocity != 0` /
+`air_dash_speed != 0` respectively; a gated-out branch touches nothing at all and falls
+through — not a suppression, there's nothing to suppress. A (authoring neither field)
+now gets neither action, momentum untouched. New regression test drives character A's
+REAL, unmodified physics (not the file's existing test-only override used to exercise
+the generic mechanism) through the exact gestures that spend an air action for a
+character that has one, and confirms A's vel_x/vel_y follow nothing but natural jump-arc
+gravity with `air_action_used` never consumed.
 
-### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: `match-flow.md` (sudden death) criteria 1–8
+### [resolved] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: `match-flow.md` (sudden death) criteria 1–8
 Problem: **sudden death cannot end the match.** It grants a point to **both** players,
 and further wins increment both counts indefinitely — `MATCH_END` is unreachable. The
 tie-at-match-point rule is briefed in `briefs/match-flow.md` and specced under AD-048;
@@ -113,7 +140,22 @@ Non-blocking observation from the same item, **not** a defect: after the final r
 game shows "match over" and stops until the window is closed. That is acceptable for the
 slice (no restart flow is in scope) — see the separate instrument-ergonomics flag below.
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-17, commit `82fb2a4`): **Real state-machine defect.**
+`MatchState._step_round_end` compared each side's CUMULATIVE `round_wins` independently
+against the fixed win threshold (`p0_at_threshold and p1_at_threshold`) — correct only
+the first time both sides reach it together (the genuine tie-at-match-point that starts
+sudden death). Once sudden death was under way, the losing side's `round_wins` never
+dropped back below threshold (wins only increment), so after an outright single-winner
+sudden-death round both sides still separately read "at threshold," and the old check
+re-entered sudden death again instead of ending the match — every subsequent round then
+kept incrementing wins without ever resolving. Fixed by comparing the two counts to EACH
+OTHER, not just each to the threshold: at/past threshold with the counts still equal is
+a tie (sudden death, first entry or a repeat, per JC-073); at/past threshold with the
+counts unequal is a decisive win (`MATCH_END`), including the outright resolution of a
+sudden-death round. New regression test drives a full match through an ENTIRE real
+sudden-death cycle (`ROUND_START` → `ACTIVE` → `ROUND_END` → `ROUND_START` → `ACTIVE` →
+`ROUND_END` → `MATCH_END`) and observes an actual `MATCH_END` — the exact path the old
+code could never reach.
 
 ### [open] 2026-07-17 · raised-by: Strategist · owner: QA · re: `test_character_b_air.gd` and the shape of our tests
 Problem: **the slide's knockdown has a test, it passes, and it could not have caught
