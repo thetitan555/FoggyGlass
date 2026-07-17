@@ -383,21 +383,42 @@ static func _step_active(next: MatchState, in_p1: int, in_p2: int) -> void:
 ## in sudden death re-triggers another single sudden-death round rather than
 ## being undefined; see JC-073). Otherwise a single player at/over threshold ->
 ## MATCH_END; neither -> the next ordinary round.
+##
+## FIXED 2026-07-17 (flags.md, "match-flow.md (sudden death) criteria 1-8"):
+## the PRIOR check was `p0_at_threshold and p1_at_threshold`, comparing each
+## side's CUMULATIVE round_wins against the fixed threshold independently.
+## That is correct only the FIRST time both sides reach it together (the
+## genuine tie-at-match-point that starts sudden death). Once sudden death is
+## under way, round_wins[loser] stays >= ROUND_WIN_THRESHOLD forever (wins
+## never decrement) — so after an OUTRIGHT single-winner sudden-death round
+## (round_wins go e.g. [2,2] -> [3,2]), BOTH sides still separately read as
+## "at threshold," and the old check re-entered sudden death again instead of
+## ending the match: MATCH_END became unreachable, and every further round
+## (of whatever kind) kept incrementing wins without ever resolving. The fix
+## compares the two counts to EACH OTHER, not just each to the threshold: at
+## or past threshold with the counts STILL EQUAL is a tie (sudden death,
+## first entry or a repeat); at or past threshold with the counts UNEQUAL is a
+## decisive win (MATCH_END), regardless of which side got there first.
 static func _step_round_end(next: MatchState) -> void:
 	next.phase_timer -= 1
 	if next.phase_timer > 0:
 		return
 
-	var p0_at_threshold: bool = next.round_wins[0] >= ROUND_WIN_THRESHOLD
-	var p1_at_threshold: bool = next.round_wins[1] >= ROUND_WIN_THRESHOLD
+	var at_threshold: bool = next.round_wins[0] >= ROUND_WIN_THRESHOLD or next.round_wins[1] >= ROUND_WIN_THRESHOLD
+	if not at_threshold:
+		_enter_next_round(next)
+		return
 
-	if p0_at_threshold and p1_at_threshold:
+	if next.round_wins[0] == next.round_wins[1]:
+		# Tied AT OR PAST the threshold: the tie-at-match-point rule (AD-048) —
+		# one more sudden-death round, any win takes it. A repeat tie inside
+		# sudden death re-triggers this same branch (JC-073).
 		next.sudden_death = true
 		_enter_next_round(next)
-	elif p0_at_threshold or p1_at_threshold:
-		next.match_phase = PHASE_MATCH_END
 	else:
-		_enter_next_round(next)
+		# Unequal counts with at least one side at/over threshold: a decisive
+		# winner — including the outright resolution of a sudden-death round.
+		next.match_phase = PHASE_MATCH_END
 
 
 ## Build the next round's fresh SimState (carrying tick/rng/stage/character_ids

@@ -75,6 +75,7 @@ func _run() -> void:
 	_test_timeout_equal_health_ties()
 	_test_match_end_on_threshold()
 	_test_sudden_death_on_simultaneous_threshold()
+	_test_sudden_death_round_resolves_to_match_end_on_outright_win()
 	_test_round_reset_matches_canonical_fresh_round()
 	_test_match_view_legibility()
 	_test_purity_and_non_mutation()
@@ -248,6 +249,52 @@ func _test_sudden_death_on_simultaneous_threshold() -> void:
 	_true(next.sudden_death, "a simultaneous tie at match point triggers sudden death")
 	_eq(next.match_phase, MatchState.PHASE_ROUND_START, "sudden death is one more round, not MATCH_END")
 	_eq(next.round_index, 1, "round index advances into the sudden-death round")
+
+
+## FIXED 2026-07-17 (flags.md, "match-flow.md (sudden death) criteria 1-8"):
+## drives an ENTIRE match into sudden death and THROUGH an outright single-
+## winner sudden-death round, observing an actual MATCH_END — the exact path
+## the old `_step_round_end` broke. The old check compared each side's
+## round_wins to the fixed threshold INDEPENDENTLY; once both were >=
+## threshold (from the tie that started sudden death), the LOSER's count never
+## dropped back below threshold even after losing the decisive round, so the
+## old code re-entered sudden death forever and MATCH_END was unreachable.
+## Runs the REAL state machine end to end (ROUND_START -> ACTIVE -> ROUND_END
+## -> ROUND_START -> ACTIVE -> ROUND_END -> MATCH_END) — no field is asserted
+## without the actual transition having produced it.
+func _test_sudden_death_round_resolves_to_match_end_on_outright_win() -> void:
+	# Enter sudden death for real (mirrors the setup above): a double-KO with
+	# both players already at 1 win pushes both to the threshold together.
+	var ms := _active_match_state(0, 0, 3000, 1, 1)
+	var next := MatchState.match_step(ms, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+	for i in range(MatchState.ROUND_END_BEAT_TICKS):
+		next = MatchState.match_step(next, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+	_true(next.sudden_death, "entered sudden death (setup, mirrors the test above)")
+	_eq(next.match_phase, MatchState.PHASE_ROUND_START, "sudden death is a fresh round (setup)")
+
+	# Run the ROUND_START beat for real so the sudden-death round goes ACTIVE.
+	for i in range(MatchState.ROUND_START_BEAT_TICKS):
+		next = MatchState.match_step(next, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+	_eq(next.match_phase, MatchState.PHASE_ACTIVE, "the sudden-death round becomes ACTIVE (setup)")
+
+	# Inject an OUTRIGHT KO for p1 only (spot-mutate the clone's health, per
+	# this file's documented convention — the scoring/phase-transition logic
+	# itself still runs for real through match_step below, not asserted directly).
+	next = next.clone()
+	next.sim.players[1].health = 0
+	next = MatchState.match_step(next, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+	_eq(next.last_round_end_reason, MatchState.REASON_KO, "the sudden-death round ends by an outright KO, not another tie")
+	_eq(next.round_wins[0], 3, "p0 (the sudden-death winner) gets exactly one more round win")
+	_eq(next.round_wins[1], 2, "p1 (the sudden-death loser) gains no win from this round")
+	_eq(next.match_phase, MatchState.PHASE_ROUND_END, "the SD round ends normally into ROUND_END (setup)")
+
+	# Run the ROUND_END beat for real. THIS is exactly where the old code
+	# re-entered sudden death forever instead of ending the match, because
+	# round_wins[1] (2) still independently read as ">= threshold".
+	for i in range(MatchState.ROUND_END_BEAT_TICKS):
+		next = MatchState.match_step(next, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+	_eq(next.match_phase, MatchState.PHASE_MATCH_END,
+		"an outright single-winner sudden-death round actually reaches MATCH_END, not another sudden-death round")
 
 
 # ---------------------------------------------------------------------------
