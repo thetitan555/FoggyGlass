@@ -92,13 +92,20 @@ proof the format is not A-shaped.
 ## Specials
 
 ### Low slide (`236L/M/H` or a command — provisional input)
-**One canonical move, three inputs (ratified from JC-092).** Unlike the divekick and the arc
-projectile — which each enumerate three behaviourally distinct versions below — the slide is a
-**single** authored state that all of `236L`, `236M`, `236H` route to. `236L/M/H` names three ways to
-*reach* the same move, not three moves; no per-strength differentiation of the slide is intended, and
-B-1's spacing-variable advantage is fully carried by the one move's several active frames. (If a
-future revision wants three distinct slides, that is a contract addition here — specific per-strength
-values — not an authoring call.)
+**Three per-strength distance variants (JC-112, superseding JC-092).** The slide is authored as
+**three sibling states** — `STATE_SLIDE_L/M/H` — that `236L`, `236M`, `236H` route to respectively.
+All three share **every** frame-data property (startup / active / recovery / damage / hitstun /
+blockstun / hitstop / hitbox geometry) and differ **only** in travel distance (`motion_vel_x` over
+the active window): L short, M mid, H long. This supersedes the earlier "one canonical move, three
+inputs" ratification (JC-092): the P2 human-inspection gate directed that the slides' distances vary
+much more between strengths (the JC-095-settled tuning flag), which is exactly the "contract addition
+here" that ratification reserved to the Architect. Per-strength differentiation is now intended, and
+is limited to **distance** — the move's *shape* (frame data / hit properties) stays shared, so B-1's
+spacing-variable advantage mechanism is identical per strength (each state still has several active
+frames; contact on a later active frame ⇒ different live advantage). Varying behaviour by button
+strength requires distinct states because the input layer is semantically blank once resolved to a
+state (AD-018) — the same reason the divekick and arc projectile already enumerate per-strength
+versions.
 
 A low-hitting slide. **`guard_height = LOW`** (must be crouch-blocked). Causes a
 **hard knockdown** (→ knockdown-into-ground reaction, AD-043) and is B's **most
