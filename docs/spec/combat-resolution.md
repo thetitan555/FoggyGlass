@@ -28,13 +28,16 @@
    `velocity` persisting across airborne state transitions; a keyframe `motion` may *set*
    velocity (jump takeoff, air dash, double jump, divekick dive). **After integration**, an
    airborne character whose `pos_y >= ground_y` is clamped to `ground_y` and transitioned
-   `AIRBORNE → GROUNDED` (landing) with velocity zeroed — clamp and landing are one mechanism;
-   a **launched (airborne HITSTUN)** character instead transitions to the character's dedicated
-   grounded **`knockdown_state_id`** reaction (AD-043, ratified from JC-070), not idle, **re-arming
-   `stun` to that state's `duration` on the landing tick** so wakeup counts from landing, not from the
-   original hit (ratified from JC-088 — note the intended `duration − 1` same-tick readout there).
-   Landing
-   **resets `air_action_used`** to false (AD-046). Integrate live projectiles'
+   `AIRBORNE → GROUNDED` (landing) with velocity zeroed — clamp and landing are one mechanism.
+   The landing **target** resolves by fixed precedence: (a) a **launched (airborne HITSTUN)**
+   character transitions to its own grounded **`reaction_map[REACTION_KNOCKDOWN]`** reaction
+   (AD-043/AD-049, ratified from JC-070), not idle, **re-arming `stun` to that state's `duration`
+   on the landing tick** so wakeup counts from landing, not from the original hit (ratified from
+   JC-088 — note the intended `duration − 1` same-tick readout there); (b) else, a state whose
+   **`MoveState.landing_state_id != 0`** (a **divekick**, AD-050) transitions into that grounded
+   landing-recovery state (non-actionable, once-through; **no** `stun` re-arm — it is the
+   character's own recovery, not inflicted stun); (c) else the ordinary jump/air-normal landing to
+   `idle_state_id`. Landing **resets `air_action_used`** to false (AD-046). Integrate live projectiles'
    positions too — applying each projectile's own `gravity` (AD-047) before its position — and
    process any `spawn` actions firing this tick (subject to the per-owner cap); an arc projectile
    at `pos_y >= ground_y` despawns.
@@ -454,3 +457,12 @@ deterministic, serializable sim.
     exists where the projectile and a simultaneous B strike require mutually-incompatible defense
     (opposite `guard_height`, or block-vs-untechable-throw) — a single defensive stance/action
     always defends the projectile, leaving the guess to a visible high/low or strike/throw.
+18. **Landing-recovery redirect (AD-050).** An airborne state with `MoveState.landing_state_id != 0`
+    that is **not** a launched HITSTUN reaction lands (via the AD-043 clamp) into its
+    `landing_state_id` — a grounded, non-actionable, once-through recovery state — rather than
+    `idle_state_id`, and does **not** re-arm `stun`; the `_land` precedence
+    (launched-knockdown → `landing_state_id` → idle) is load-bearing. A state with the field unset
+    (`0`) lands to idle unchanged (jumps, air normals). A divekick's active hitbox authored through
+    its descent lands as one hit per contact (`active_hit_ids`), and its landing-recovery
+    `duration` equals its `HitBox.blockstun` — yielding the height-dependent block advantage of
+    `character-b.md` B-7, read through the one AD-008 live-advantage formula and neutral-restoration.

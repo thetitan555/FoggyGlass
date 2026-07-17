@@ -145,14 +145,21 @@ Authored via AD-043 velocity-sets: each version sets its dive velocity after its
 constraint (brief):** the three must be **visually distinguishable in the air** so the
 defender can read whether the overhead (H) is coming — see acceptance criterion B-3.
 
-**Landing (ratified from JC-094).** A divekick lands like any other `AIRBORNE` state: the AD-043
-continuous clamp ends it into `idle_state_id`, hit/blocked/whiffed alike. **There is no bespoke
-landing-recovery tail** — the genre-conventional "a whiffed/blocked divekick eats extra recovery on
-landing" is *not* built, because `_land`'s idle target is engine behavior no `MoveState` can override
-by authoring. That is a deliberate deferral, not an oversight: adding it means a new landing-redirect
-field (a `knockdown_state_id`-style hook), which is a format/AD change, not a data fix. See Open items
-— it is a live human-gate question, since a divekick with no landing recovery is a strong,
-low-risk approach.
+**Landing — active until ground, recovery == blockstun (AD-050; supersedes JC-094).** The P2
+re-gate settled the divekick with a **mechanical** call (not a number): a divekick **stays active
+until it reaches the ground**, and its **ground recovery equals its blockstun**. Authored via the
+new `MoveState.landing_state_id` (AD-050): the divekick's active hitbox runs through its descent
+(the AD-043 landing clamp ends the state, so the hitbox is active from the dive until landing —
+`active_hit_ids` keeps it **one hit per contact**), and on landing it redirects into a grounded,
+non-actionable recovery state whose `duration` is authored **equal to that divekick's `blockstun`**.
+This replaces JC-094's land-straight-to-idle deferral (which the Open items predicted would become
+exactly this Architect format call — it did). The two clauses together produce **height-dependent
+block advantage as an emergent property**: hit low ⇒ B lands almost immediately ⇒ ≈ neutral; hit
+high ⇒ B falls the remaining distance while the defender's blockstun ticks out ⇒ deeply minus. Same
+cherished-friction shape as B-1's slide, and observable because *how high you hit* is the most
+visible thing on screen — see acceptance criterion **B-7**. The numeric tuning (hang, dive vectors,
+the blockstun/recovery value) is the separate JC-095 Developer flag; this half is the **mechanic +
+the recovery==blockstun equality**, which is contract.
 
 ## Mixup layer
 
@@ -239,16 +246,32 @@ Format/mechanism criteria (frame numbers are provisional; these are the invarian
   cancellable on contact, punishable on whiff *because* not" model; `MoveState.duration` is
   single-valued, so no outcome-dependent authored recovery exists (or is wanted). QA checks the
   effective-recovery gap via scripted trace (whiff vs. block), not an authored whiff tail.
+- **B-7 · Divekick height-dependent block advantage is instrument-readable (AD-050).** A divekick
+  stays active until it lands and lands into a recovery state whose `duration == its blockstun`, so
+  **blocking the same divekick at different contact heights yields different, formula-correct block
+  advantage** — a low block ≈ neutral, a high block deeply minus (roughly the remaining descent),
+  read through the one AD-008 live-advantage formula and the neutral-restoration edge as the
+  situation resolves, and the causal spacing (contact height) is visible in the geometry overlay.
+  Verified by a scripted-input trace (mirrors B-1): two blocks of the same divekick at different
+  heights produce different, correctly-ordered advantages / neutral-restoration timings surfaced
+  through the seam. **This is cherished friction only because it is observable** — never a memorized
+  number. (Scope, per AD-050: the difference is delivered by B's landing-recovery resolving later
+  for a higher block, not by a fall-time-prediction primitive in `frames_to_actionable`; the
+  contact-height variance being real, one-formula-computed, and on-screen is the bar.) The active
+  hitbox is **one hit per contact** (`active_hit_ids`), not a machine-gun.
 
 ## Open items routed with this spec
 
 - **Reaction-window floor for overhead mixups (B-4)** — a feel number, Strategist's via
   the spec. **Placeholder 12 ticks; H-divekick currently measures 17.** The mechanism is pinned; the
   floor settles at the human-inspection gate against the measured value.
-- **Divekick landing recovery (JC-094, ratified)** — divekicks currently land straight to idle with no
-  recovery tail. If the gate finds they need real landing punishment, that is an **Architect format
-  call** (a landing-redirect field on `Character`/`MoveState` parallel to `knockdown_state_id`, and an
-  AD-043 revision), routed as a flag — never a content workaround.
+- **Divekick landing recovery — RESOLVED (AD-050, 2026-07-17).** The JC-094 deferral predicted this
+  would become an Architect format call if the gate found the divekicks needed real landing
+  punishment. The gate found exactly that: the user settled it with the mechanical ruling now specced
+  as **AD-050** — active-until-ground + a `MoveState.landing_state_id` recovery redirect whose
+  `duration == blockstun`, giving the emergent height-dependent block advantage (criterion **B-7**).
+  The `MoveState.landing_state_id` field is the predicted landing-redirect hook. Numeric tuning stays
+  the separate JC-095 Developer flag.
 - **Does B need a low-committal "get in" tool beyond air mobility + ground dash** (brief
   open question) — surfaced to the Strategist **only if** playtest/QA finds B cannot
   legibly approach a zoning A (a flag, not a silent addition).

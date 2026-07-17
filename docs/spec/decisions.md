@@ -58,6 +58,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-046** Double-tap direction command (dash) as a `ButtonMapEntry` shape + one-air-action economy via serialized `players[i].air_action_used` (air dash / double jump; reset on landing); divekick does not spend the air action — settled (P2)
 - **AD-047** Arc-projectile gravity: `ProjectileData.gravity` gives parabolic setplay projectiles; ground-contact despawn; the "falls-in-front" oki must resolve to a readable mixup (never an unblockable) by guard-height compatibility — settled (P2)
 - **AD-048** Match layer: `MatchState` wraps `SimState` + round/match fields, advanced by a pure `match_step`; health/round-wins/timer/RNG are serialized game state on the fixed timestep (Tenet 1 per-match); `MatchView` seam read; round-end **reason** is serialized truth — settled (P2)
+- **AD-050** Divekick stays **active until it lands**, then lands into a **recovery redirect** (`MoveState.landing_state_id`) whose `duration == the move's blockstun` — yielding **height-dependent block advantage as an emergent property** (hit low ⇒ ≈ neutral, hit high ⇒ deeply minus), observable because contact height is the most visible thing on screen; resolves the JC-094 divekick-landing deferral — settled (P2)
 - **AD-049** **The character-namespace rule**, and reactions as defender-resolved kinds: a raw `state_id` is meaningful **only** inside its own character; no field authored on character X may carry a `state_id` read against character Y. `HitBox.hit_reaction`/`block_reaction` become a `ReactionKind` (engine-level semantic name) resolved through the **defender's** own `Character.reaction_map`; **every character must author every reaction kind** (reactions are defender-side content — you receive what the opponent inflicts); `knockdown_state_id` folds in as `REACTION_KNOCKDOWN`. Projectile `data_id` is declared a **global** namespace with install-time uniqueness enforcement. Fixes the cross-character wedge (P2-gate flags 2/3) and closes the third instance of an implicit-shared-namespace bug — settled (P2)
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
@@ -2236,3 +2237,132 @@ So: **two instances, one fixed structurally and one fixed by enforcement, and th
 the surface is genuinely clean.** The pattern that made the safe sites safe is the same one
 Decision 1 now states as a rule: they pass engine-level *semantics* across the boundary, not
 character-local *identifiers*.
+
+## AD-050 · Divekick lands active into a landing-recovery redirect (`MoveState.landing_state_id`); recovery == blockstun; height-dependent block advantage as an emergent property — settled (P2)
+
+**Context.** JC-094 (ratified into `character-b.md`) built the divekick to land like any
+other `AIRBORNE` state — the AD-043 continuous clamp ends it into `idle_state_id`, with **no
+landing-recovery tail** — and flagged, as an explicit deferral, that adding real landing
+recovery would be *"an Architect format call (a landing-redirect field on `Character`/
+`MoveState` parallel to `knockdown_state_id`, and an AD-043 revision), routed as a flag —
+never a content workaround"* (`character-b.md` Open items). The P2 human-inspection re-gate
+made that call: the user settled the JC-095 divekick tuning with a **mechanical** ruling
+(this AD), separate from the numeric tuning (which stays a Developer flag). This AD is the
+predicted format call, and it resolves the JC-094 deferral.
+
+**The user's ruling, in two clauses:**
+1. **A divekick stays active until it reaches the ground.**
+2. **Its ground recovery equals its blockstun.**
+
+**Decision.** Three coupled parts, all authored data over one new `MoveState` field — **no
+new engine primitive** (the format-generality posture holds):
+
+- **Active-until-ground.** A divekick's active hitbox is authored to persist through the
+  descent; the state's end — which is **landing**, not a fixed active window — is what stops
+  it. Because the AD-043 continuous clamp transitions an airborne state out on the landing
+  tick, an active window authored to run through the state's descent is clipped exactly at
+  landing. Single-hit integrity is unchanged: `active_hit_ids` (AD-026, cleared on state
+  entry) still guarantees **one hit per `id_group` per contact**, so a long active window is
+  not a machine-gun — it is one hit available anywhere in the fall.
+
+- **Landing-recovery redirect — `MoveState.landing_state_id`.** A new `MoveState` field
+  (default `0` = unset). When an airborne state with `landing_state_id != 0` reaches the
+  ground via the AD-043 clamp *and is not a launched HITSTUN reaction*, `_land` transitions
+  it to `landing_state_id` **instead of** `idle_state_id`. The landing target is a
+  **grounded, non-actionable, once-through recovery state** (`GROUNDED` category), during
+  which B is committed (not actionable) until `frame_in_state >= duration`. **Precedence in
+  `_land`** (pinned): (1) a **launched HITSTUN** reaction lands into
+  `reaction_map[REACTION_KNOCKDOWN]` and re-arms `stun` (AD-043/AD-049 — unchanged, highest);
+  (2) else, a state with `landing_state_id != 0` lands into it; (3) else `idle_state_id`.
+  Jumps and air normals leave `landing_state_id` unset (`0`) and land to idle **exactly as
+  before** — this is additive and touches no existing airborne state. This is the direct
+  `MoveState`-level parallel to `Character.knockdown_state_id`/`idle_state_id` the JC-094
+  deferral named; it is a *landing redirect*, not stun, so — unlike knockdown — it does **not**
+  re-arm `stun` (the recovery is B's own commitment, governed by `duration`/actionability, not
+  a countdown inflicted by an opponent).
+
+- **Recovery == blockstun (the pinned invariant).** The divekick's landing-recovery state
+  authors `duration == the divekick's own `HitBox.blockstun``. This equality is **contract**
+  (it is what makes a low block ≈ neutral — see below); the *value* of blockstun is Developer
+  tuning (the separate JC-095 numeric flag). The recovery is a single authored value applied
+  on landing regardless of outcome (hit / block / whiff) — the divekick is a real commitment
+  whether or not it connects. Each of the three divekicks (L/M/H) authors its own recovery
+  state (or shares one where blockstun coincides).
+
+**Why — height-dependent block advantage falls out for free, and it is observable.** Take a
+blocked divekick. At contact the defender enters `BLOCKSTUN` with `stun = blockstun`, counting
+from contact. B, still airborne, must fall the **remaining** distance to the ground, then serve
+`blockstun` frames of landing-recovery. So through the one AD-008 advantage formula
+(`defender_remaining_stun − attacker_remaining_recovery`), evaluated as the situation resolves:
+
+```
+B's block advantage  ≈  blockstun − (remaining_descent + blockstun)  =  − remaining_descent
+```
+
+- **Hit low** (contact near the ground): `remaining_descent ≈ 0`, so B lands almost
+  immediately and recovers as the defender's blockstun ticks out — **≈ neutral**.
+- **Hit high** (contact far above the ground): B must fall the whole remaining distance while
+  the defender's blockstun ticks out, then recover — **deeply minus** by roughly the descent
+  time.
+
+This is the **same cherished-friction shape as B-1's spacing-dependent slide** — a real,
+tunable frame-data variance that the charter's "no knowledge checks" line permits **only
+because it is observable** — and here the causal variable, *how high you hit*, is the single
+most visible thing on screen (the geometry overlay shows the contact height directly). The
+advantage is surfaced through the same machinery B-1 uses: the training-mode **live advantage
+read** (AD-008) and the **neutral-restoration** edge (AD-025), resolving across the descent, so
+"B is minus because it hit high" is legible as it happens, never a memorized number.
+
+**Observability / `frames_to_actionable` — the honest scope note.** The height-dependent
+minus is delivered by the **actual state resolving** — B's landing-recovery state ending later
+(in wall-clock ticks) for a higher block, while the defender's blockstun ran from contact —
+read through the one live-advantage formula and the neutral-restoration flag over the
+interaction, exactly as B-1 verifies the slide (a scripted-input trace comparing two blocks).
+It deliberately does **not** require a new fall-time-prediction primitive inside
+`Actionability.frames_to_actionable` (which reads the current state's `duration −
+frame_in_state`): predicting exact remaining airborne descent as a single contact-tick number
+is speculative engine complexity Tenet 3 says to leave in the field. The contract is *the
+difference is real, computed by the one formula from actual state, surfaced through the seam,
+and caused by an on-screen variable* — the B-1 bar — not that a single instantaneous number at
+the contact tick predicts the landing. If a future playtest finds the contact-tick readout
+itself misleading enough to matter, adding landing-aware `frames_to_actionable` is a revision
+here (door left open, not built).
+
+**Constraints carried from the brief, and why this AD respects them.**
+- **B-3 (three divekicks legibly distinct):** untouched. This AD changes only the active-window
+  extent and the landing target; the hang/dive trajectories (the distinctness signal) are
+  unchanged. The L/M-more-horizontal tuning lives in the separate JC-095 flag.
+- **B-4 (H stays the sole overhead; overheads reactable, not near-instant):** untouched.
+  Active-until-ground extends the hitbox *later* into the descent; it never makes an overhead
+  come out *sooner*. H-divekick's hang-tell and its entry-to-active delay are unchanged, so the
+  reaction-window floor still holds. `guard_height` is unchanged (H HIGH, L/M MID).
+- **B-2 (arc projectile never unblockable):** holds by construction (AD-047/JC-093): the
+  projectile is `MID` and B authors no untechable throw, so no simultaneous strike — divekick
+  included, at any active frame — can be the incompatible half of a guard conflict. A longer
+  divekick active window does not reopen it.
+
+**Consequence (Developer).** Add `MoveState.landing_state_id` (default `0`) to the schema and
+its `.tres` bake; add the phase-3 `_land` branch (precedence above); author each divekick with
+an active window running through its descent and a `landing_state_id` pointing at a grounded
+recovery state whose `duration == that divekick's blockstun`. No change to any existing airborne
+state (jumps, air normals: field unset). All integer/FP (AD-014); no new serialized `SimState`
+field (`landing_state_id` is authored `MoveState` data, resolved through `MoveRegistry` like box
+geometry). The numeric tuning (hang, dive vectors, blockstun/recovery values) is the separate
+JC-095 Developer flag — this AD owns the **mechanic and the recovery==blockstun equality**, not
+the numbers.
+
+**Rejected.**
+- **Keep JC-094's land-to-idle (no recovery tail).** Overturned by the user's ruling; a
+  divekick with zero landing recovery is a strong, near-riskless approach, and — the point of
+  this AD — a *flat* landing recovery would not produce the height-dependent, observable
+  friction the mechanic is chosen for.
+- **A flat authored block advantage number** (the numeric-tuning reading). The Strategist
+  routed this as a *mechanic*, not a number, precisely because the emergent height-dependence is
+  a better, more legible mechanic than any single figure — and it is not a Developer latitude
+  call (it changes the contract).
+- **Fall-time prediction in `frames_to_actionable`** now (see the scope note): speculative;
+  the observable resolution already delivers the legibility bar. Deferred behind a real need.
+- **A `Character`-level landing redirect** (one per character, like `knockdown_state_id`). Wrong
+  granularity — the redirect is per-*move* (only divekicks want it; each strength may differ),
+  so it belongs on `MoveState`. `knockdown_state_id` is character-level because knockdown is one
+  shared wakeup; divekick recovery is a property of the specific move.

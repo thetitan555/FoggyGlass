@@ -74,6 +74,11 @@ player-facing side builds on them):
    (see the ticket). **Dispatch before anything else in P2 resumes.** **Checkpoint:** A and B
    hit each other correctly in both directions for every reaction kind. The human gate and
    QA's cross-system consistency check both **re-run after it** — see the Cross-cutting note.
+7. **TKT-P2-11 (divekick active/recovery — AD-050), added 2026-07-17 after the second human gate.**
+   A small self-contained engine field (`MoveState.landing_state_id`) + one `_land` branch + a B
+   divekick re-author. Depends on 01 (`_land`) and 06 (B's divekick content). **Per-ticket** — not a
+   cluster. **Checkpoint:** a blocked divekick lands into recovery and is height-dependently minus,
+   read out through the training mode; jumps/air normals land to idle unchanged.
 
 **Cluster exception (the only one):** **03+04 run in one Developer session** — both are
 combat-resolution engine capabilities with high spec-read overlap (`combat-resolution.md`
@@ -284,6 +289,50 @@ rule).
 **Note for the Developer:** you declined to patch this and escalated it — that was the right
 call and it is why the fix is a contract and not a workaround. AD-049 is now the contract;
 build against it and raise anything it still leaves ambiguous.
+
+---
+
+### TKT-P2-11 · Divekick lands active into a landing-recovery redirect (AD-050)
+**Serves:** **AD-050**; `move-format.md` → `MoveState.landing_state_id` + movement invariants;
+`combat-resolution.md` → phase 3 landing precedence + criterion 18; `character-b.md` → Divekick
+"Landing" + criterion **B-7**. **Depends:** TKT-P2-01 (airborne physics / `_land`), TKT-P2-06
+(B's divekick content — landed). **Resolves:** `flags.md` 2026-07-17 (Strategist → Architect,
+divekick active/recovery semantics). **Per-ticket dispatch** (a small, self-contained engine
+field + B re-author; not a cluster).
+
+**Scope (engine — one new `MoveState` field + one `_land` branch):**
+- Add **`MoveState.landing_state_id`** (default `0` = unset) to the schema and its `.tres` bake.
+- In `StepPhases._land`, insert the AD-050 precedence: (1) launched HITSTUN →
+  `reaction_map[REACTION_KNOCKDOWN]` (re-arm `stun`, unchanged); (2) else `landing_state_id != 0`
+  → that grounded recovery state (**no** `stun` re-arm); (3) else `idle_state_id`. Existing airborne
+  states (jumps, air normals: field unset) land to idle **unchanged** — this is additive.
+
+**Scope (B content — data only, no further engine change):**
+- Re-author each of B's **three divekicks**: extend the active hitbox window to run through the
+  descent (active from the dive impulse; the landing clamp ends the state — `active_hit_ids` keeps
+  it one hit per contact), and set `landing_state_id` to a **grounded, non-actionable, once-through
+  recovery state**.
+- Author each divekick's landing-recovery state with **`duration == that divekick's `HitBox.blockstun``**
+  (the AD-050 equality invariant — author the number the JC-095 tuning flag sets for blockstun into
+  the recovery `duration`; if L/M/H blockstun differ, author separate recovery states, or share where
+  they coincide).
+
+**Acceptance:** `combat-resolution.md` criterion 18; `character-b.md` **B-7**; and — unchanged —
+B-3, B-4, criterion 4 (this ticket must not regress them: trajectories/tells and `guard_height`
+are untouched, jumps/air normals still land to idle). **Verify B-7 with a scripted-input trace**
+(mirror B-1): two blocks of the same divekick at different contact heights yield different,
+correctly-ordered live advantages / neutral-restoration timings through the seam; a low block ≈
+neutral, a high block markedly minus. Confirm one hit per divekick (not per active frame). Existing
+goldens re-baseline where the extended active window / new recovery states move resolved frame data
+(expected diff — say which and why; an unexplained golden move is not).
+
+**Judgment-log:** the recovery-state authoring (shared vs. per-strength), any latitude. The
+blockstun/recovery **numbers** ride the separate JC-095 tuning flag — this ticket owns the
+**mechanic + the recovery==blockstun equality**, not the values.
+
+**Checkpoint:** *a blocked divekick lands into recovery and is height-dependently minus (low ≈
+neutral, high deeply minus), read out through the training mode; jumps and air normals land to
+idle exactly as before.*
 
 ---
 ## Cross-cutting (verified at feature audit / human gate / by QA, not separate build tickets)

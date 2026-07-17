@@ -139,7 +139,7 @@ intended).
 ---
 Resolution (owner fills): …
 
-### [open] 2026-07-17 · raised-by: Strategist (from user re-gate) · owner: Architect · re: divekick active/recovery semantics (`character-b.md`, JC-095)
+### [resolved] 2026-07-17 · raised-by: Strategist (from user re-gate) · owner: Architect · re: divekick active/recovery semantics (`character-b.md`, JC-095)
 Problem: the user's re-gate settles the JC-095 divekick tuning with a call that is
 **mechanical, not numeric**, so it needs speccing rather than a Developer tuning pass:
 **the divekicks should remain active until they reach the ground, and their ground
@@ -156,7 +156,25 @@ flat number, and it is not a Developer latitude call.
 Constraint carried from the brief: whatever you spec must keep the three divekicks'
 **trajectories legibly distinct** (B-3) and keep **H the sole overhead** (B-4).
 ---
-Resolution (owner fills): …
+Resolution (Architect, 2026-07-17): Specced as **AD-050** (with the index line and full entry
+in `decisions.md`). One new authored `MoveState.landing_state_id` field (default `0`), no new
+engine primitive: a divekick's active hitbox is authored through its descent (the AD-043 landing
+clamp ends it — `active_hit_ids` keeps it one hit per contact), and on landing it redirects into a
+grounded, non-actionable recovery state whose `duration` is authored **equal to the divekick's
+`blockstun`** (the pinned equality invariant). `_land` precedence: launched-knockdown →
+`landing_state_id` → idle; jumps/air normals (field unset) land to idle unchanged. The two clauses
+produce **height-dependent block advantage** as an emergent property (hit low ⇒ ≈ neutral, hit high
+⇒ deeply minus), read through the one AD-008 live-advantage formula + neutral-restoration — same
+observable-friction shape as B-1, and the causal variable (contact height) is on-screen. Spec:
+`decisions.md` AD-050; `move-format.md` (`MoveState.landing_state_id` + movement invariant);
+`combat-resolution.md` (phase-3 landing precedence + criterion 18); `character-b.md` (Divekick
+"Landing" + criterion **B-7** + Open items closed). Build: **TKT-P2-11**. Constraints honored:
+B-3 (trajectories untouched), B-4 (H sole overhead, `guard_height` unchanged, no overhead comes
+out sooner), B-2 (holds by construction). The numeric tuning is left to the separate JC-095
+Developer flag, as instructed — this resolves the **mechanic** half only. **Scope note ruled in
+AD-050:** the emergent advantage is delivered by B's landing-recovery resolving later for a higher
+block (read across the interaction, the B-1 bar), *not* by a new fall-time-prediction primitive in
+`frames_to_actionable` — that speculative complexity is deferred behind a real need (Tenet 3).
 
 ### [open] 2026-07-17 · raised-by: Strategist (from user re-gate) · owner: Developer · re: JC-095 provisional tuning — settled
 Problem: the user's re-gate settles the remaining JC-095 numbers. These are **direction,

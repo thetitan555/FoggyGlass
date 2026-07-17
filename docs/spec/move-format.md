@@ -136,6 +136,7 @@ the *situation*; `category` still governs physics and legal transitions.
 | `cancels` | A list of `CancelRule` (see below) — not one opaque field (AD-015). |
 | `loop` | Whether `duration` loops (idle/walk) or plays once. |
 | `is_crouch` | Optional (AD-045, ratified from JC-078); default `false`. Marks this state as a **crouching stance** — the signal directional block enforcement reads to derive defender stance (a `LOW` is blocked only while `is_crouch`, a `HIGH` only while standing). Authored content, resolved off the defender's current `state_id` through `MoveRegistry` (no `SimState` change). Exists because engine `category` does not distinguish stand from crouch (both are `GROUNDED`). Character A authors `is_crouch = true` on its crouch + crouch-blockstun states; every other state defaults `false`. |
+| `landing_state_id` | Optional (AD-050); default `0` (unset). A **landing-recovery redirect** for an `AIRBORNE` state: when this state reaches the ground via the AD-043 clamp *and is not a launched HITSTUN reaction*, `_land` transitions it to `landing_state_id` (a grounded, non-actionable, once-through recovery state) **instead of** `idle_state_id`. Precedence in `_land`: launched-HITSTUN → `reaction_map[REACTION_KNOCKDOWN]` (re-arms `stun`); else `landing_state_id != 0` → that state; else `idle_state_id`. Unlike knockdown it does **not** re-arm `stun` — the recovery is the character's own commitment, governed by `duration`/actionability. Character B's **divekicks** set it (each pointing at a recovery state whose `duration == that divekick's `HitBox.blockstun``, the AD-050 equality invariant); jumps and air normals leave it `0` and land to idle exactly as before. |
 
 ### `Keyframe` (a frame range within a `MoveState`)
 | Field | Meaning |
@@ -343,6 +344,15 @@ way, so two characters can't disagree about what "startup" or "advantage" means.
   slide, a throw KD) reach the **same** state via `hit_reaction = REACTION_KNOCKDOWN`, so both converge
   on one learnable wakeup. The old `knockdown_state_id` field and its `== 0` no-transition fallback are
   **retired** (AD-049): the reaction is now required content, resolved on the defender's own map.
+- **A divekick stays active until it lands, then lands into a recovery redirect (AD-050).** Author a
+  divekick's active hitbox to run through its descent — the AD-043 landing clamp (which ends the state)
+  is what stops it, so the hitbox is active from the dive impulse until landing; `active_hit_ids`
+  (AD-026) keeps it **one hit per contact**, not a machine-gun. Set the divekick's `landing_state_id`
+  (above) to a **grounded, non-actionable recovery state** whose `duration` is authored **equal to the
+  divekick's `HitBox.blockstun`** (the AD-050 invariant). The two together produce **height-dependent
+  block advantage** as an emergent property — hit low ⇒ ≈ neutral, hit high ⇒ deeply minus — read out
+  through the one AD-008 live-advantage formula and neutral-restoration, the same observable-friction
+  shape as B-1's slide. This is the only place `landing_state_id` is used in the slice.
 
 ## Acceptance criteria (QA-checkable)
 
