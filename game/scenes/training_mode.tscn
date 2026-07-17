@@ -65,10 +65,8 @@ offset_bottom = 100.0
 [node name="ControlsLegend" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 0
-offset_left = 750.0
-offset_top = 16.0
-offset_right = 1136.0
-offset_bottom = 260.0
+offset_right = 386.0
+offset_bottom = 244.0
 script = ExtResource("7_legend")
 
 [node name="Label" type="Label" parent="ControlsLegend"]
