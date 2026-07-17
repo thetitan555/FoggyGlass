@@ -436,25 +436,50 @@ static func phase3_movement(next: SimState) -> void:
 ## fixed-point constants (0 = the character has no such kit, mirroring `gravity`/
 ## `jump_velocity`'s own 0-disables convention) — this mechanism is engine-uniform,
 ## never character-branched (move-format.md criterion 4 in spirit).
+##
+## DATA-GATED, NOT ENGINE-GENERIC (AD-046 elaboration, 2026-07-17 2nd-gate ruling;
+## the mirror of AD-049). FIXED 2026-07-17 (flags.md, "AD-046 air-action economy"):
+## a character has an air action ONLY IF its content authors it — for a character
+## whose corresponding field is `0`, the engine must NOT perform the velocity-set,
+## must NOT consume `air_action_used`, and must NOT touch velocity at all. The
+## PRIOR version of this function set `p.vel_y`/`p.vel_x` and consumed
+## `air_action_used` unconditionally once an edge/double-tap was recognized,
+## regardless of the authored field's value — so character A (authoring NEITHER
+## field, both default `0`) could still air-dash / double-jump, halting its air
+## momentum via a zero-velocity set. `direction_pressed_edge` for UP stays a
+## GENERIC recognition (every character presses up to jump), but the ACTION is
+## now gated on `double_jump_velocity != 0`; likewise the double-tap edge reuses
+## a character's own grounded-dash recognition, but the AIR-dash ACTION is gated
+## on `air_dash_speed != 0` (authoring a ground dash never implies an air dash).
+## A gated-out branch does nothing at all (falls through to the next check) —
+## it is not a suppression, there is nothing to suppress.
 static func _apply_air_action(p: PlayerState, character: Character) -> void:
 	if p.air_action_used:
 		return
 	if InputBuffer.direction_pressed_edge(p.input_history, InputFrame.UP, p.facing):
-		p.vel_y = -character.physics.double_jump_velocity
-		p.air_action_used = true
-		return
+		if character.physics.double_jump_velocity != 0:
+			p.vel_y = -character.physics.double_jump_velocity
+			p.air_action_used = true
+			return
+		# double_jump_velocity == 0: this character authors no double jump.
+		# Recognized-but-gated -- no velocity-set, no air_action_used consumption,
+		# momentum untouched. Fall through in case this same tick ALSO satisfies
+		# the (separately gated) air-dash double-tap below.
 	if InputBuffer.double_tap_recognized(p.input_history, InputFrame.RIGHT, p.facing):
-		# RIGHT in required_direction means FORWARD (facing-resolved, AD-002) — apply
-		# along facing, mirroring the keyframe-motion convention (_apply_keyframe_motion).
-		p.vel_x = character.physics.air_dash_speed * p.facing
-		p.vel_y = 0
-		p.air_action_used = true
-		return
+		if character.physics.air_dash_speed != 0:
+			# RIGHT in required_direction means FORWARD (facing-resolved, AD-002) —
+			# apply along facing, mirroring the keyframe-motion convention
+			# (_apply_keyframe_motion).
+			p.vel_x = character.physics.air_dash_speed * p.facing
+			p.vel_y = 0
+			p.air_action_used = true
+			return
 	if InputBuffer.double_tap_recognized(p.input_history, InputFrame.LEFT, p.facing):
-		p.vel_x = -character.physics.air_dash_speed * p.facing
-		p.vel_y = 0
-		p.air_action_used = true
-		return
+		if character.physics.air_dash_speed != 0:
+			p.vel_x = -character.physics.air_dash_speed * p.facing
+			p.vel_y = 0
+			p.air_action_used = true
+			return
 
 
 ## Land a physically-airborne character (AD-043's continuous clamp fused with

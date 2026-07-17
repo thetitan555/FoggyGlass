@@ -68,6 +68,9 @@ func _run() -> void:
 	_test_held_up_from_takeoff_does_not_spend_double_jump()
 	_test_plain_air_normal_does_not_spend_air_action()
 
+	_test_real_character_a_air_dash_gated_off_by_authored_zero()
+	_test_real_character_a_double_jump_gated_off_by_authored_zero()
+
 	_test_player_view_surfaces_air_action_used()
 
 
@@ -410,6 +413,62 @@ func _test_plain_air_normal_does_not_spend_air_action() -> void:
 		"pressing L mid-jump still reaches STATE_JL (air-normal reachability unchanged)")
 	_eq(s.players[0].air_action_used, false,
 		"reaching an ordinary air normal (the divekick stand-in) never spends the air action")
+	_cleanup()
+
+
+# =============================================================================
+# AD-046 elaboration (2026-07-17 2nd-gate ruling): air actions are DATA-GATED,
+# not engine-generic. FIXED (flags.md, "AD-046 air-action economy"): character
+# A authors NEITHER air_dash_speed nor double_jump_velocity (both default 0),
+# so it must have NEITHER action -- these drive the REAL, UNMODIFIED
+# CharacterA.build_character() (not the test-only override _air_action_roster()
+# above uses to exercise the generic mechanism) through the exact gestures that
+# spend an air action for a character that HAS one, and confirm A's momentum is
+# entirely untouched -- not merely that its physics fields read 0.
+# =============================================================================
+
+func _real_air_action_roster() -> Dictionary:
+	return {CharacterA.CHAR_ID: CharacterA.build_character()}
+
+
+func _test_real_character_a_air_dash_gated_off_by_authored_zero() -> void:
+	var roster := _real_air_action_roster()
+	var s := _mid_flight_state(roster)
+	var vx_before: int = s.players[0].vel_x
+	var vy_before: int = s.players[0].vel_y
+	var gravity: int = CharacterA.build_character().physics.gravity
+
+	# The exact double-tap-forward gesture that spends the air action for a
+	# character that HAS one (mirrors _test_air_dash_spends_air_action_and_sets_velocity).
+	s = SimState.step(s, InputFrame.RIGHT, InputFrame.NEUTRAL)
+	s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+	s = SimState.step(s, InputFrame.RIGHT, InputFrame.NEUTRAL)   # the tap would complete THIS tick
+
+	_eq(s.players[0].vel_x, vx_before,
+		"A's air_dash_speed==0 (unauthored): the double-tap-forward gesture sets NO horizontal " +
+		"velocity at all -- vel_x is untouched by the air-action mechanism, not merely zeroed")
+	_eq(s.players[0].vel_y, vy_before + 3 * gravity,
+		"A's vertical velocity follows ONLY its natural jump-arc gravity accrual across these 3 " +
+		"ticks (+3*gravity) -- no air-dash-driven vel_y reset ever happened")
+	_eq(s.players[0].air_action_used, false, "A's air_action_used is never consumed -- there is no air action to spend")
+	_cleanup()
+
+
+func _test_real_character_a_double_jump_gated_off_by_authored_zero() -> void:
+	var roster := _real_air_action_roster()
+	var s := _mid_flight_state(roster)
+	var vy_before: int = s.players[0].vel_y
+	var gravity: int = CharacterA.build_character().physics.gravity
+
+	# A FRESH up-press (the exact gesture that spends a double jump for a
+	# character that has one -- mirrors _test_double_jump_spends_air_action_and_reimpulses).
+	s = SimState.step(s, InputFrame.UP, InputFrame.NEUTRAL)
+
+	_eq(s.players[0].vel_y, vy_before + gravity,
+		"A's double_jump_velocity==0 (unauthored): pressing UP mid-air does NOT re-impulse vel_y " +
+		"at all -- A keeps falling on its OWN ongoing jump-arc trajectory, exactly one more tick " +
+		"of natural gravity, not a near-zero double-jump re-impulse")
+	_eq(s.players[0].air_action_used, false, "A's air_action_used is never consumed -- there is no air action to spend")
 	_cleanup()
 
 
