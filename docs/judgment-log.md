@@ -93,3 +93,106 @@ horizontally past its existing 386px — doing so would collide with
 vertical span (y 16–460) once enlarged; kept the existing right-column x-range
 (750–1136) that `DummyModeIndicator`/`MatchPanel` already used instead.
 Serving: flag `docs/flags.md` (2026-07-16, "HUD text overlap," resolved).
+
+### JC-102 · 2026-07-16 · TKT-P2-09 (AD-049) · B's `STATE_AIR_RESET` framing — provisional
+**Decided:** character B's new `STATE_AIR_RESET` (the reaction it never inflicts but must
+author to RECEIVE character A's `2H`) is authored as an exact structural mirror of character
+A's own `STATE_AIR_RESET`: `CATEGORY_HITSTUN`, B's existing airborne hurtbox (`_hurt_air()`),
+and a flat `duration = 20`. It converges into B's own `reaction_map[REACTION_KNOCKDOWN]` on
+landing via the SAME existing engine mechanism (`StepPhases._land`'s "any non-AIRBORNE-
+category state reaching here redirects to the knockdown reaction") that already applies to
+A's own air-reset — no new engine behavior, no bespoke "air-reset lands to idle instead of
+knockdown" carve-out invented for B.
+**Why 20, not a B-specific derivation:** B reuses A's own verified `gravity` constant
+(TKT-P2-05's own judgment call) and the inflicting hitbox is literally A's `2H` (same launch
+magnitude, since B is only ever the defender here) — so the physical airborne flight time is
+the same order as A's own air-reset under the same physics. This is the same "physics
+determines the number, not a guess" standard `AirHeightScaling`/A's jump-arc re-baselining
+used (JC-039/072-style).
+**Alternative passed over:** author a genuinely NEW landing behavior for B's air-reset (e.g.
+recover directly to idle/neutral fall rather than converging into knockdown), reasoning that
+the brief's "AIR_RESET ... nothing follows" language implies a softer landing than LAUNCH.
+Rejected as an invented engine special-case, not a reading of the brief: the brief's hard
+constraint is that the three airborne reactions be **tellable apart on sight while airborne**
+(a pose/animation concern this headless builder cannot resolve either way) — it says nothing
+about the GROUND landing behavior, and AD-043's whole point is that every physically-airborne
+hard reaction converges on ONE learnable wakeup. Diverging B's landing from that established
+convergence would be a bigger, uninvited change than the ticket asked for.
+**Not a flag:** legibility and B's feel do not conflict here — the constraint that's mine to
+honor (distinctness while airborne) is a pose/duration/momentum question explicitly named as
+latitude, and I did not have to trade it against anything to keep the landing mechanism
+consistent with A's.
+Serving: `TKT-P2-09` (`docs/tickets/p2-char-b-match.md`); `docs/briefs/character-b.md` "What
+B looks like when it receives"; AD-043's knockdown convergence.
+
+### JC-103 · 2026-07-16 · TKT-P2-09 (AD-049) · `ReactionMapEntry` as a typed Resource array — provisional
+**Decided:** `Character.reaction_map` is `Array[ReactionMapEntry]` (a small typed Resource
+with `kind`/`state_id` fields, plus a `make()` convenience constructor), not a bare
+`Dictionary`. `Character.reaction_state(kind)` is the one resolution path (linear scan over
+the array); nothing else reads `reaction_map` directly.
+**Why:** mirrors the project's own established convention for authored collections that need
+to stay `.tres`-diffable/golden-able — `ButtonMapEntry`, `CancelGroup` (JC-079's identical
+reasoning) — rather than introducing the first bare-`Dictionary` `.tres` export in the
+schema. Godot 4.3 (this project's pinned version) has no typed-`Dictionary` export anyway, so
+a `Dictionary` here would also lose the `kind`/`state_id` type safety a Resource gives for
+free.
+**Alternative passed over:** a plain `Dictionary` (`ReactionKind int -> state_id int`).
+Rejected: less consistent with every other authored-collection field in the schema, no
+compile-time field typing, and a `.tres` dictionary literal is less readable/diffable than a
+list of named sub-resources.
+**No contract surface moves:** AD-049/move-format.md name `Character.reaction_map` as a
+required mapping and `Character.reaction_state(kind)` as its resolution — the storage shape
+behind that accessor is exactly the kind of internal packaging call latitude covers.
+Serving: `TKT-P2-09`; `move-format.md` → `Character.reaction_map`.
+
+### JC-104 · 2026-07-16 · TKT-P2-09 (AD-049) · test-only reaction_map reuse for unexercised kinds — provisional (test-only latitude)
+**Decided:** the small test-only characters that predate AD-049 (`TestSupport`'s P0 test
+character, and `test_guard_height.gd`/`test_cancel_groups.gd`'s local minimal characters) are
+given a COMPLETE `reaction_map` (all six kinds, satisfying criterion 15's completeness shape),
+but the kinds none of their scenarios ever inflict (`LAUNCH`, `AIR_RESET`, and — for
+`TestSupport` — `CROUCH_BLOCKSTUN`) are mapped onto the character's EXISTING
+`HITSTUN`/`BLOCKSTUN` state rather than authoring new dedicated reaction states nobody
+exercises. `TestSupport`'s `REACTION_KNOCKDOWN` reuses its existing `STATE_THROWN` (already a
+grounded, non-actionable hard-reaction state — the closest existing analogue), and its own
+`hit_reaction`/`block_reaction` on the throw hitbox move from the old raw `STATE_THROWN` id to
+the `REACTION_KNOCKDOWN` kind.
+**Why:** these are P0/P2-03-era test doubles whose whole point is to be minimal and
+hand-computable; adding real new states to them for kinds their own tests never drive would
+be test-content bloat serving no scenario, while leaving a kind genuinely unmapped would fail
+their own `reaction_state`'s floor silently (reusing an existing state keeps the mapping
+honest without inventing unused content).
+**Alternative passed over:** leave these test characters' unexercised kinds unmapped,
+relying on `reaction_state`'s `kind -> HITSTUN -> idle_state_id` floor. Rejected: that floor
+exists as a guardrail against exactly this kind of content hole, not a license to lean on it
+where authoring the (cheap, reused) mapping costs nothing — using the floor here would be
+authoring against it, which move-format.md explicitly says not to do.
+**No production content affected** — character A and B (the real roster) map every kind onto
+a dedicated, purpose-built state; only test-only fixtures reuse.
+Serving: `TKT-P2-09`; move-format.md criterion 15 (test-fixture side).
+
+### JC-105 · 2026-07-16 · TKT-P2-10 (AD-049) · `ProjectileRegistry.install` accepts a Dictionary OR an Array of Dictionaries — provisional
+**Decided:** `ProjectileRegistry.install` takes an untyped `roster` parameter: a single
+`data_id -> ProjectileData` `Dictionary` (every existing single-source call site, unchanged
+behavior) is installed as-is; an `Array` of such Dictionaries is MERGED internally with
+duplicate-`data_id` rejection (`push_error` + the roster left untouched, returns `false`).
+`training_mode.gd`'s A+B merge is the one caller that now passes the Array form.
+**Why:** a plain `Dictionary` literal (`{**reg_a, **reg_b}`-style, or a manual `for k in
+reg_b: merged[k] = reg_b[k]` loop) has ALREADY resolved any key collision — silently,
+last-write-wins — by the time it would ever reach `install`. Detecting a duplicate `data_id`
+therefore requires the MERGE itself to go through the registry, not a post-hoc check on an
+already-flattened dict. Accepting both shapes (rather than changing the signature to
+`Array[Dictionary]` outright) keeps every one of the ~15 existing single-roster call sites
+(tests, `trace_harness.gd`, the sandbox single-character path) completely unchanged, so the
+fix is additive at the one call site that actually merges more than one character's
+projectiles.
+**Alternative passed over:** change `install`'s signature to `Array[Dictionary]` unconditionally,
+migrating every call site to wrap its single dict in a one-element array. Rejected: pure
+churn across ~15 unrelated call sites for no behavior change there, when the untyped
+Dictionary-or-Array acceptance gets the same duplicate-detection guarantee at the one site
+that needs it.
+**Return value:** `install` now returns `bool` (was `void`). Every existing call site ignores
+the return value as a bare statement (GDScript permits this), so this is source-compatible;
+`training_mode.gd` is the one caller that now checks it (`push_error` + a wiring-time warning
+on `false`, per JC-048's push_error-is-the-reliable-fail-fast convention — GDScript has no
+exceptions).
+Serving: `TKT-P2-10`; move-format.md criterion 18; AD-049 Decision 3.
