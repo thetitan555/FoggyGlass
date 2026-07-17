@@ -6,24 +6,53 @@
 
 ---
 
-### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: knockdown / `character-b.md` B-1, B-2
-Problem: **no knockdown occurs by any means.** B's slide is briefed as causing a
-**hard knockdown** and being B's most desirable combo ender (→ oki); at the re-gate
-the slide put A into **state 123 (hitstun) only**, and the user could not produce a
-knockdown by *any* route. This blocks gate item 9 outright — **B-2 (no unblockable
-off the projectile oki) is untestable without a knockdown to set up oki from.**
-Severity: this is a briefed, load-bearing mechanic that does not exist in play, and
-it passed QA's objective audit.
-Diagnosis lead (hypothesis, Developer owns the call): AD-049 folded
-`knockdown_state_id` into `REACTION_KNOCKDOWN` resolved through the defender's
-`reaction_map`, and AD-049 deliberately includes a resolution **floor**
-(`kind → HITSTUN → idle_state_id`) so a content hole cannot reproduce the boxless
-wedge. A missing/mis-authored `REACTION_KNOCKDOWN` in **A's** `reaction_map`, or a
-slide hitbox still naming a non-knockdown kind, would fall through that floor and
-present *exactly* as "reads as plain hitstun." If that is the cause, the floor is
-**masking** a content hole the static completeness check was supposed to catch first
-— which is a finding about AD-049's check, not just this bug. Report that explicitly;
-it routes to the Architect.
+### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: reaction legibility — THE HEADLINE DEFECT
+Problem, as reported: **"the slide doesn't cause a knockdown on A. I can't get a
+knockdown by any means, and I can't test an oki setup without a knockdown"** — the
+slide read as **state 123, hitstun**; B's `2H` read as **125 then 123**, both
+"hitstun"; A's `2H` put B into **325 then 324**, likewise.
+
+**Correction, established before dispatch — knockdown is NOT broken. Every one of
+those observations is the system working correctly, and the instrument lying about
+it.** Read against `game/content/character_a.gd`:
+- **123 = `STATE_KNOCKDOWN`.** The slide *is* causing a hard knockdown, direct to the
+  shared knockdown state with no air trip — exactly as B-1 briefs and AD-043 specs.
+- **125 = `STATE_HITSTUN_LAUNCH`, 122 = `STATE_AIR_RESET`.** "125 then 123" is a
+  launch landing into the shared knockdown — the precise AD-043/AD-049 behaviour.
+- **325/324** are B's own equivalents. Cross-character reactions resolve correctly.
+- A's `reaction_map` is complete and correct (`REACTION_KNOCKDOWN → STATE_KNOCKDOWN`).
+  The AD-049 floor is **not** being hit. There is no content hole.
+
+**The actual defect, and it is one bug, not two:** `live_state_panel_model.gd`'s
+`category_name()` labels the readout with the state's **`category`**, and
+`STATE_KNOCKDOWN`, `STATE_HITSTUN_LAUNCH`, `STATE_AIR_RESET` and `STATE_HITSTUN` all
+carry `CATEGORY_HITSTUN`. So all four render as the single word **"hitstun"**, and the
+only thing separating them on screen is a raw integer state id the player would have to
+have memorised.
+
+**Why this is the most important finding of the re-gate.** With no art or audio, the
+instrument is the *only* channel carrying this information — and its opacity caused
+**the project's own gate-holder**, holding the brief, to conclude that a working,
+briefed, load-bearing mechanic did not exist, and to report the oki test as
+un-runnable. That is not a near-miss. That is `audit-criterion.md` half 1 failing
+against us, at full strength, on the charter's centerpiece surface: *the player could
+not find out what happened.* Every argument this project makes for legibility just got
+demonstrated on ourselves.
+
+**Fix (the requirement is mine, stated so it isn't re-litigated):** surface the
+**`ReactionKind` / the state's own identity** in the readout — knockdown reads
+"knockdown," launch reads "launch," air-reset reads "air reset." `briefs/character-b.md`
+("What B looks like when it *receives*") requires these three be tellable apart on
+sight, because they demand different responses — juggle incoming, wakeup mixup
+incoming, or nothing — in the same airborne moment. Category is real information and may
+stay; it is not a substitute for identity. Do **not** add a crossup-style answer key —
+transparency, never an answer.
+**Also fix the class, not the instance:** `category_name()` collapsing four distinct
+states into one word is a *labelling* bug of the same shape as AD-049's id bug —
+information exists in the sim and is destroyed on the way to the human. Audit the other
+readouts for the same collapse and report what you find.
+**Gate consequence to relay back:** gate item 9 (oki / B-2) is **testable after all** —
+it was never blocked by a missing knockdown.
 ---
 Resolution (owner fills): …
 
@@ -68,23 +97,23 @@ slice (no restart flow is in scope) — see the separate instrument-ergonomics f
 ---
 Resolution (owner fills): …
 
-### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: reaction legibility on the instrument
-Problem: **the airborne reaction kinds are not tellable apart on the instrument.** B's
-`2H` puts A into state 125 then 123; A's `2H` puts B into 325 then 324 — AD-049 is
-resolving correctly (that is the fix working), but **every one of them reads as
-"hitstun" in the overlay**, because the readout surfaces the *category*
-(`CATEGORY_HITSTUN`) rather than the `ReactionKind`. The user could only distinguish
-them by reading raw state ids off the screen.
-This fails the constraint I set on `briefs/character-b.md` ("What B looks like when it
-*receives*"): **`AIR_RESET` / `LAUNCH` / `KNOCKDOWN` must be tellable apart on sight**,
-because they demand different responses — juggle incoming, wakeup mixup incoming, or
-nothing — in the same airborne moment. With no art or audio, **the instrument is
-currently the only channel that can carry this**, so the readout must name the kind.
-Distinguishing them by memorising integer state ids is a knowledge check on our own
-instrument (`audit-criterion.md`).
-Requirement (mine, stated so it isn't re-litigated): surface the **`ReactionKind`** in
-the readout. Do **not** add a "you got crossed up"-style answer key — legibility is
-bought by transparency, never by answering the question for the player.
+### [open] 2026-07-17 · raised-by: Strategist · owner: QA · re: `test_character_b_air.gd` and the shape of our tests
+Problem: **the slide's knockdown has a test, it passes, and it could not have caught
+this.** `test_character_b_air.gd:301` asserts
+`hit_reaction == MoveState.REACTION_KNOCKDOWN` — it reads the **authored data field**
+back and checks it equals the constant it was authored as. It never drives a slide into
+a defender and observes a knockdown happen.
+That test cannot fail for any realistic defect in knockdown *resolution*. It is the
+exact pattern `audit-criterion.md` → "Exercise the thing, not a proxy for it" now
+forbids: assert-the-data-you-authored is a tautology wearing a test's clothes. (In this
+instance resolution happened to work — but the test contributed nothing to knowing that,
+and it is *why* nobody knew.)
+Not a criticism of the method you were given — my cross-cutting check invited exactly
+this, and the criterion that forbids it landed after your P2 audit. The ask: **on the
+re-audit, sweep the suite for the same shape** — tests that read back authored constants,
+assert on `.rect`s instead of rendered output, or verify a field instead of a behaviour —
+and report the count. I want to know how much of our 44/44 is load-bearing. If the answer
+is "a lot of it isn't," that is a finding I need, not one to soften.
 ---
 Resolution (owner fills): …
 
