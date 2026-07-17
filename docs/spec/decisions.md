@@ -309,6 +309,73 @@ match gap-fills, JC-078's stance signal) are folded into the ADs / spec below.
   one group per higher-strength source) — *latitude*: the mechanical application of AD-044's
   own "shared groups where sets coincide" rule; naming/factoring only.
 
+## P2-gate latitude ratifications (JC-106..115)
+
+The P2 re-gate fix judgment calls (correctness batch TKT-P2-11/AD-050; instrument batch —
+gate readout/tuning fixes), disposed at the P2-gate ratification pass (2026-07-17). Full
+reasoning in `judgment-log.md` (or the archive once swept); this records the disposition.
+**All ten ratified (none overturned).** Three carry a contract fold — folded into the
+surfaces named below; the rest are latitude.
+
+- **JC-106** divekick landing-recovery authored per-strength (three `_LANDING` states), not
+  shared — *latitude*, exactly the call AD-050 delegates ("authors its own recovery state, or
+  shares one where blockstun coincides"). L/M/H's blockstun (9/11/13) is pairwise distinct, so
+  the pinned `recovery == blockstun` per-move equality *requires* three durations; both build
+  sites read one named `DIVEKICK_{L,M,H}_BLOCKSTUN` constant so the equality holds by
+  construction. No contract surface (AD-050 owns the equality; per-strength-vs-shared was the
+  delegated latitude).
+- **JC-107** the B-7 regression test injects contact height via direct `PlayerState` and
+  measures advantage by driving both sides to actionable, not by reading `Advantage.live` at
+  the contact tick — *test-only latitude*, and the correct reading of AD-050's own
+  "Observability / `frames_to_actionable`" scope note (the contact-tick snapshot uses the
+  safety-tail `duration`, not a fall-time prediction, so the honest measure is the interaction
+  *resolving*). No sim code.
+- **JC-108** `PlayerView.reaction_kind` — **ratified, folded into `inspection-surface.md`**
+  (below). Confirmed genuinely derived: computed in `PlayerView._init` by reverse-reading the
+  character's own `reaction_map` (AD-049), no new `SimState` field, no hash/determinism impact
+  — the exact shape of `invuln`/`air_action_used`. The headline gate legibility fix.
+- **JC-109** facing surfaced in the live-state row — *latitude*. `PlayerView.facing` is already
+  a spec'd seam field; this is a training-mode panel-display choice (which panel shows it),
+  matching the brief's "expose it as ordinary state." No seam change.
+- **JC-110** HUD `.tscn` resized against real font-measured text extents (not box math), with a
+  shared `HUD_LEFT_COLUMN_SAFE_MAX_Y` / AD-035 occlusion-ceiling constant — *latitude*:
+  training-mode layout; AD-035's render-framing contract unchanged. Good single-source
+  consolidation of the occlusion ceiling.
+- **JC-111** throw hitbox retuned to ~a tenth area, torso-centered — *latitude*: geometry
+  tuning; AD-016/AD-029's throw model unchanged (no new throw rule).
+- **JC-112** slide distance varies by strength via three sibling states — **ratified, folded
+  into `character-b.md`** (below). The build is correct (three states sharing all frame data,
+  differing only in `motion_vel_x` — the format-mandated way to vary by strength, since AD-018
+  keeps the input layer blank once resolved).
+- **JC-113** arc-projectile L/H retune + the projectile-gravity duplication fix — **ratified;
+  a reinforcing single-source note folded into move-format.md** (below). The tuning (scaled
+  `vel_y`/`gravity`) is latitude; the duplication fix (one `_arc_params` source + a pin test)
+  is Developer-owned and correct — the format already intended one source, so the note makes
+  the anti-drift rule explicit rather than adding a new one.
+- **JC-114** divekick L/M `dive_vx` increased, capped below the straight-down-whiff point by an
+  existing connect test — *latitude*: tuning against a real functional floor, with a floor
+  assertion added.
+- **JC-115** 6H forward creep via the existing `has_motion` keyframe mechanism (AD-043) —
+  *latitude*: no new engine primitive; a behaviour-verifying test, not an authored-flag
+  readback.
+
+**Folds:**
+- **JC-108 → `inspection-surface.md`** — `PlayerView.reaction_kind` added as a named **derived**
+  field (mirrors `invuln`/`air_action_used`): resolves reaction identity by reverse-reading the
+  character's own `reaction_map`, `-1` = not a reaction. Character-agnostic and snapshot-shaped
+  (plain int); the alias ambiguity is a training-readout-only concern (nothing in the sim reads
+  it back — JC-104). Criterion 1 extended so reaction identity is a traceable readout.
+- **JC-112 → `character-b.md` "Low slide"** — supersedes the JC-092 "one canonical move, three
+  inputs" ratification. The human gate (JC-095-settled flag) made exactly the "contract
+  addition here" that section reserved to the Architect; the slide is now three per-strength
+  distance variants (`STATE_SLIDE_L/M/H`), sharing all frame data, differing only in travel.
+  B-1's spacing-variable advantage is unchanged (each state still has several active frames).
+- **JC-113 → move-format.md** (`spawn` keyframe row) — a reinforcing single-source note: a
+  projectile's fixed design (`gravity`, `hitbox`, hit data, `lifetime`) is authored **once** on
+  its registry `ProjectileData`; the `spawn` keyframe references it by `data_id` and supplies
+  only spawn-time `offset`/`velocity`, never a second copy of the design fields (the AD-030
+  field split; AD-049 single-source thesis applied to projectiles).
+
 ---
 
 ### AD-001 · State is data; the scene tree is a view — settled

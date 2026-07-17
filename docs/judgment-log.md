@@ -20,7 +20,7 @@
 ## Provisional (awaiting ratification)
 
 <!-- JC-100..105 ratified and swept to judgment-log-archive.md (Strategist, 2026-07-17). -->
-### JC-106 · 2026-07-17 · TKT-P2-11 (AD-050) · divekick landing-recovery authored per-strength, not shared — provisional
+### JC-106 · 2026-07-17 · TKT-P2-11 (AD-050) · divekick landing-recovery authored per-strength, not shared — ratified
 **Decided:** each of B's three divekicks (L/M/H) gets its OWN landing-recovery `MoveState`
 (`STATE_DIVEKICK_L_LANDING` / `_M_LANDING` / `_H_LANDING`), rather than one shared recovery
 state. AD-050 explicitly leaves this call open ("author separate recovery states, or share
@@ -43,7 +43,7 @@ blockstun") reads as a per-move invariant, not a character-wide one.
 MAY share a landing-recovery state at that point (nothing here blocks it) — not forced now.
 Serving: `TKT-P2-11`; `AD-050`; `combat-resolution.md` criterion 18.
 
-### JC-107 · 2026-07-17 · TKT-P2-11 (AD-050) · B-7 regression test drives contact height via direct `PlayerState` injection, not scripted jump timing — provisional
+### JC-107 · 2026-07-17 · TKT-P2-11 (AD-050) · B-7 regression test drives contact height via direct `PlayerState` injection, not scripted jump timing — ratified
 **Decided:** `_test_divekick_height_dependent_block_advantage_b7` (test_character_b_air.gd)
 forces B directly into the M divekick's active window at a chosen `pos_y` (mirrors this
 file's own established hand-driven-state convention, e.g. the knockdown-landing test), rather
@@ -73,7 +73,7 @@ would not honestly reflect the eventual outcome — the height-dependent minus i
 the interaction RESOLVING, not of the contact-tick instant.
 Serving: `TKT-P2-11`; `AD-050`; `character-b.md` criterion B-7.
 
-### JC-108 · 2026-07-17 · flag "re: reaction legibility" (P2-gate headline) · `PlayerView.reaction_kind` — a new DERIVED field resolving state identity, reverse through the character's own `reaction_map` — provisional
+### JC-108 · 2026-07-17 · flag "re: reaction legibility" (P2-gate headline) · `PlayerView.reaction_kind` — a new DERIVED field resolving state identity, reverse through the character's own `reaction_map` — ratified
 **Decided:** the fix for `category_name()` collapsing `STATE_KNOCKDOWN` /
 `STATE_HITSTUN_LAUNCH` / `STATE_AIR_RESET` / ordinary hitstun into one word ("hitstun",
 since all four share `CATEGORY_HITSTUN`) is a new `PlayerView.reaction_kind: int` field
@@ -123,7 +123,7 @@ nothing — the collapse was isolated to this one panel, not a repeated pattern.
 Serving: `docs/flags.md` (2026-07-17, "re: reaction legibility"); `inspection-surface.md`
 `PlayerView`; `training-mode.md` "Live-state panel."
 
-### JC-109 · 2026-07-17 · flag "re: B-5 facing readout" · facing surfaced in the live-state row, not a new panel — provisional
+### JC-109 · 2026-07-17 · flag "re: B-5 facing readout" · facing surfaced in the live-state row, not a new panel — ratified
 **Finding (the flag's concrete question):** facing was **not** exposed in any training-
 mode readout before this session. `PlayerView.facing` existed (sim truth, used
 internally by `InputHistoryPanelModel.recognized_commands` for command recognition) but
@@ -146,7 +146,7 @@ stun" (i.e., IN that panel).
 Serving: `docs/flags.md` (2026-07-17, "re: B-5 facing readout"); `briefs/character-b.md`
 "What B-5 actually requires."
 
-### JC-110 · 2026-07-17 · flag "re: HUD (round 2)" · training_mode.tscn layout resized against REAL font-measured worst-case text, not box math — provisional
+### JC-110 · 2026-07-17 · flag "re: HUD (round 2)" · training_mode.tscn layout resized against REAL font-measured worst-case text, not box math — ratified
 **Decided:** replaced the prior box-only fix (JC-101, which asserted no two `Control.rect`s
 overlap) with a layout resized against the ACTUAL rendered glyph extents Godot's own
 `Font.get_multiline_string_size()` produces for each panel's real formatter output under a
@@ -217,7 +217,7 @@ untouched.
 Serving: `docs/flags.md` (2026-07-17, "re: HUD (round 2)"); `training-mode.md` criterion
 14; AD-035.
 
-### JC-111 · 2026-07-17 · flag "re: throw hitbox geometry" · retuned to ~a tenth AREA (15×25 vs 60×60), re-centered on the torso, not a literal ×0.1 of each dimension — provisional
+### JC-111 · 2026-07-17 · flag "re: throw hitbox geometry" · retuned to ~a tenth AREA (15×25 vs 60×60), re-centered on the torso, not a literal ×0.1 of each dimension — ratified
 **Decided:** both characters' throw `HitBox.box` (`character_a.gd`/`character_b.gd`
 `_build_throw`) moves from `Box.make(10, -60, 60, 60)` (area 3600; world reach to
 attacker+70 — 25 units past even the FAR edge of a defender's 30-wide hurtbox at the
@@ -255,7 +255,7 @@ area the user asked for.
 Serving: `docs/flags.md` (2026-07-17, "re: throw hitbox geometry"); AD-016/AD-029's throw
 model (unchanged — geometry-only tuning, no new throw rule).
 
-### JC-112 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · slide distances now vary by strength via THREE sibling states (STATE_SLIDE_L/M/H), not one number bumped — provisional
+### JC-112 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · slide distances now vary by strength via THREE sibling states (STATE_SLIDE_L/M/H), not one number bumped — ratified
 **Decided:** to satisfy "the slides' distances should vary much more between strengths," first
 had to establish there was ANY variation to widen — there wasn't. `236`+L/M/H previously all
 routed to the SAME canonical `STATE_SLIDE` (a prior logged latitude call: "the spec describes
@@ -292,7 +292,7 @@ divekick/arc projectile already do it.
 Serving: `docs/flags.md` (2026-07-17, "re: JC-095 provisional tuning — settled"); `character-b.md`
 "Low slide."
 
-### JC-113 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · arc projectile L/H height retune via scaled (vel_y, gravity) — and a real duplication bug it uncovered — provisional
+### JC-113 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · arc projectile L/H height retune via scaled (vel_y, gravity) — and a real duplication bug it uncovered — ratified
 **Decided (the tuning):** B's `H` arc projectile's apex retuned "a little lower," `L`'s "much
 higher," per the settled direction. Both changes scale `spawn_vel_y` and `gravity` by the SAME
 factor rather than touching either alone or `spawn_vel_x`: apex ∝ vel_y², time-to-apex ∝
@@ -327,7 +327,7 @@ authored these, unrelated to this session's numbers), not a design/contract ques
 is squarely "the authored data was wrong in a way that broke a passing test," Developer-owned.
 Serving: `docs/flags.md` (2026-07-17, "re: JC-095 provisional tuning — settled"); AD-047.
 
-### JC-114 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · divekick L/M dive_vx increased, capped below the point where a straight-up jump-in whiffs — provisional
+### JC-114 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · divekick L/M dive_vx increased, capped below the point where a straight-up jump-in whiffs — ratified
 **Decided:** `DIVEKICK_L_DIVE_VX` 1.0→2.0, `DIVEKICK_M_DIVE_VX` 4.5→7.0 (H's `0.0` untouched, per
 the flag's own "H and the hang profiles are fine"). Not scaled to a larger, rounder-looking
 jump (e.g. L→3.0) because `_test_divekick_connects_on_hit` — a straight-up jump then immediate
@@ -345,7 +345,7 @@ the above — verified failing against `_test_divekick_connects_on_hit`, not ass
 Serving: `docs/flags.md` (2026-07-17, "re: JC-095 provisional tuning — settled"); `character-b.md`
 "Divekick" / B-3.
 
-### JC-115 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · 6H forward creep via the same has_motion keyframe mechanism the slide/divekick already use — provisional
+### JC-115 · 2026-07-17 · flag "re: JC-095 provisional tuning — settled" · 6H forward creep via the same has_motion keyframe mechanism the slide/divekick already use — ratified
 **Decided:** 6H's startup keyframe (frames 1-22) now authors `has_motion=true`/
 `motion_vel_x=FP.from_units(1.0)` — a modest creep (22 units total over the full startup, about
 half the character's own pushbox width) rather than a dash-in, per the flag's own "move forward
