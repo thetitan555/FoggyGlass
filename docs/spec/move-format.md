@@ -45,6 +45,73 @@ into its `JUMP_N/F/B` arc; `button_map` routes composite `UP|FORWARD` / `UP|BACK
 Air normals are reached by **cancelling the jump state** into `j.*` (a `CancelRule` per attack
 button). Both are expressed in data with existing mechanisms — no format change.
 
+## The character-namespace rule (AD-049 — read this before authoring anything with an id in it)
+
+> **A `state_id` is meaningful only within its own character.** No field authored on
+> character X may contain a `state_id` that is resolved against character Y. Any state a
+> character enters that is *named by something outside that character* — the opponent's
+> move data, or the engine — is resolved through that character's **own** declared map,
+> never by a raw id crossing the boundary.
+
+State ids are **character-local** and always were (A's run 100s–160s, B's 300s+, by each
+character's own convention). The format never required two characters to share an id
+namespace, so nothing may depend on them doing so. This rule exists because three separate
+defects have now come from an identifier silently crossing a boundary the format never
+declared (AD-049 lists them); it is stated here as an invariant so it is checkable rather
+than remembered.
+
+**Which namespace is which:**
+
+| Identifier | Namespace | Resolved against |
+|---|---|---|
+| `MoveState.id` (`state_id`) | **Character-local.** | Its own `Character.states` — *never* another character's. |
+| `HitBox.id_group` | **Character-local**, attacker-only. | The attacker's own `active_hit_ids` memory. Never crosses. |
+| `CancelGroup.id`, `CancelRule.requires_tag` | **Character-local**, attacker-only. | The attacker's own `cancel_groups` / granted tags. |
+| `ReactionKind` | **Engine-level** (shared vocabulary, not an id). | The **defender's** own `reaction_map`. |
+| `MoveState.category`, `guard_height` | **Engine-level** (shared vocabulary). | Engine semantics. |
+| `ProjectileData.id` (`data_id`) | **GLOBAL** across the whole roster (AD-049). | `ProjectileRegistry`, with no character context. **Must be unique roster-wide**; `install` rejects duplicates. Allocate a fresh range per character (A: 201–203, B: 220–222). |
+| `Character.id` | **Global.** | `MoveRegistry`. |
+
+The pattern: what crosses a character boundary is engine-level **semantics**, never a
+character-local **identifier**.
+
+## Reactions (AD-049)
+
+**Reactions are defender-side content.** An attacker's `HitBox` names *what happens*
+semantically (`REACTION_LAUNCH`); the defender's `reaction_map` decides *what state that is
+on me*. This is why the id never crosses: a defender must look like itself while being hit.
+
+**`ReactionKind`** — the engine-level set (closed; adding one is an Architect call and
+engine work, not authoring):
+
+| Kind | Meaning |
+|---|---|
+| `REACTION_HITSTUN` | Standard grounded hitstun. |
+| `REACTION_LAUNCH` | Airborne launch hitstun; juggle-continuable, lands into `REACTION_KNOCKDOWN` (AD-043). |
+| `REACTION_AIR_RESET` | Airborne knock-away, **no follow-up** (character A's `2H`). |
+| `REACTION_KNOCKDOWN` | Grounded hard knockdown / the shared wakeup (AD-043). |
+| `REACTION_BLOCKSTUN` | Standing blockstun. |
+| `REACTION_CROUCH_BLOCKSTUN` | Crouching blockstun. |
+
+**Every character must author a state for every kind.** Not "every kind it inflicts" —
+**every kind it can receive**, which is all of them. A character with no launcher of its own
+still gets launched by one that has one. This is the authoring obligation that replaces the
+old (broken) assumption that the attacker could supply the state. QA checks it statically
+over the roster (criterion 15); a character missing a kind is a **content error**, caught
+before it is ever played.
+
+**Resolution floor (a guardrail, not a license).** If a kind is somehow unmapped, resolution
+falls back `kind → REACTION_HITSTUN → idle_state_id`. This exists so the worst case is a
+*wrong-looking reaction* rather than the AD-049 failure mode (a defender entered into a
+nonexistent state: no boxes, unhittable, permanently un-actionable, since phase 2's
+`move != null` guards gate even stun-expiry). Content that fires the floor fails the static
+check first — do not author against it.
+
+**Categories still bind.** A state mapped to a `REACTION_*` kind must declare a sane
+engine-level `category`: the hitstun family (`HITSTUN`, `LAUNCH`, `AIR_RESET`, `KNOCKDOWN`)
+must be `HITSTUN`-category; the blockstun family must be `BLOCKSTUN`-category. The kind names
+the *situation*; `category` still governs physics and legal transitions.
+
 ## Schema
 
 ### `Character`
@@ -55,8 +122,9 @@ button). Both are expressed in data with existing mechanisms — no format chang
 | `button_map` | Maps generic `BUTTON_n` (+ direction/motion) → `state_id`. The only place buttons gain meaning. |
 | `cancel_groups` | Optional (AD-044). Named sets of `state_id`s a `CancelRule.target` may reference (character B's gatling strength/stance ladder). Authored data; empty for characters with no group targets. |
 | `physics` | Walk/dash/jump/**gravity** constants, as baked fixed-point integers (AD-014). `gravity` is the per-tick `velocity.y` acceleration applied to an **airborne** character (AD-043); jumps set a takeoff velocity and land by the runtime clamp — no hand-balanced net-zero arc (supersedes the old invariant). Also carries the air-action constants **`air_dash_speed`** and **`double_jump_velocity`** (AD-046, ratified from JC-075); both default `0` (= no such action, same 0-disables convention as `gravity`/`jump_velocity`). |
-| `idle_state_id` | The character's neutral/idle `state_id` — the fallback a released held-input stance returns to (AD-038) and the target the ordinary jump-landing clamp enters (AD-043). |
-| `knockdown_state_id` | Optional (AD-043, ratified from JC-070); the character's grounded **knockdown** reaction `state_id`. A **launched HITSTUN** state landing via the continuous clamp transitions here (when set; `0` ⇒ no transition — the pre-P2 fallback); grounded hard-knockdown hits (a low slide, a throw) reach the **same** state via `HitBox.hit_reaction`. Non-actionable, HITSTUN-category, fixed wakeup `duration` counted **from entry (landing)** so oki timing is independent of air-time. May author a downed hurtbox distinct from the airborne launch hurtbox. |
+| `idle_state_id` | The character's neutral/idle `state_id` — the fallback a released held-input stance returns to (AD-038) and the target the ordinary jump-landing clamp enters (AD-043). Idle is **not** a reaction; this field stays as-is under AD-049. |
+| `reaction_map` | **Required (AD-049).** `ReactionKind → this character's own `state_id``. Every reaction kind must be mapped (see "Reactions"). This is how a state named by *someone else* (the opponent's `HitBox`, or the engine) is reached without a raw id crossing a character boundary. |
+| ~~`knockdown_state_id`~~ | **Retired (AD-049)** — folded into `reaction_map[REACTION_KNOCKDOWN]`, which is the same concept under a second name. `_land`'s launched-into-ground transition (AD-043) now resolves `reaction_state(REACTION_KNOCKDOWN)`. Semantics otherwise unchanged: non-actionable, HITSTUN-category, fixed wakeup `duration` counted **from entry (landing)** so oki timing is independent of air-time; may author a downed hurtbox distinct from the airborne launch hurtbox; grounded hard-knockdown hits (a low slide, a throw) converge on the **same** state via `hit_reaction = REACTION_KNOCKDOWN`. |
 
 ### `MoveState`
 | Field | Meaning |
@@ -88,7 +156,7 @@ content, resolved through `ProjectileRegistry` — *not* serialized state (AD-02
 
 | Field | Meaning |
 |---|---|
-| `id` | Registry key (`data_id`); the runtime entity carries this to re-reach its authored data. |
+| `id` | Registry key (`data_id`); the runtime entity carries this to re-reach its authored data. **GLOBAL namespace (AD-049)** — `ProjectileRegistry` is one flat roster with no character context (the id is serialized bare in `Projectile.to_dict`), so `data_id` must be **unique across the entire roster**, not merely within a character. Allocate a fresh range per character (A: 201–203, B: 220–222). `ProjectileRegistry.install` **rejects duplicates** rather than silently overwriting — the collision that would otherwise let character C's projectile quietly replace character A's. |
 | `hitbox` | A `HitBox` (geometry + hit data) carried by the projectile. |
 | `lifetime` | Frames it persists before despawning; consumed on hit/block. Measured from the tick *after* spawn (AD-030 / JC-034 — see below). |
 | `max_per_owner` | Live cap (1 for the slice fireball). |
@@ -225,7 +293,7 @@ per-keyframe unless a move overrides it.
 | `hitstop` | Freeze frames applied to both parties on contact (AD-010). |
 | `pushback_hit`, `pushback_block` | Positional pushback. |
 | `launch` / `juggle` | Vertical/launch properties + juggle limit interaction (optional). |
-| `hit_reaction`, `block_reaction` | Which defender `state_id` (category `HITSTUN`/`BLOCKSTUN`) the hit forces. |
+| `hit_reaction`, `block_reaction` | **A `ReactionKind`** (AD-049) — the engine-level *semantic* reaction this box inflicts on hit / on block (e.g. `REACTION_LAUNCH`, `REACTION_CROUCH_BLOCKSTUN`). **Not a `state_id`.** The defender's own state is resolved through the **defender's** `Character.reaction_map` (see "Reactions" below). An attacker names *what happens*; the defender owns *what that looks like on itself*. |
 | `cancel_tags` | Tags this hitbox grants for the attacker's cancels (e.g. enables special-cancel). |
 | `id_group` | Groups hitboxes of one attack so a single attack hits once (no multi-count from overlapping boxes). |
 | `rehit_interval` | Optional (AD-016). If set, this `id_group` may hit the same target again after this many frames — the cadenced multi-hit form. Unset ⇒ one hit per contact. |
@@ -267,13 +335,14 @@ way, so two characters can't disagree about what "startup" or "advantage" means.
   **inherits the ongoing fall** — which is exactly the fix for "an air normal stops the jump arc."
   Grounded horizontal movement (walk, dash) stays authored displacement/velocity, `pos_y` pinned at
   `ground_y`, no gravity.
-- **Knockdown lands into a dedicated grounded state (AD-043, ratified from JC-070).** A launched
-  (airborne HITSTUN) character that reaches the ground **transitions to the character's
-  `knockdown_state_id`** — a grounded, non-actionable knockdown reaction (fixed wakeup `duration` counted
-  **from landing**, so oki timing is independent of launch/air-time) — rather than snapping to idle or
-  continuing the airborne reaction in place. Grounded hard-knockdown hits (a low slide, a throw KD) reach
-  the **same** state via `HitBox.hit_reaction`, so both converge on one learnable wakeup. When
-  `knockdown_state_id == 0` the launched-landing keeps the pre-P2 no-transition fallback.
+- **Knockdown lands into a dedicated grounded state (AD-043, ratified from JC-070; re-expressed by
+  AD-049).** A launched (airborne HITSTUN) character that reaches the ground **transitions to its own
+  `reaction_map[REACTION_KNOCKDOWN]`** — a grounded, non-actionable knockdown reaction (fixed wakeup
+  `duration` counted **from landing**, so oki timing is independent of launch/air-time) — rather than
+  snapping to idle or continuing the airborne reaction in place. Grounded hard-knockdown hits (a low
+  slide, a throw KD) reach the **same** state via `hit_reaction = REACTION_KNOCKDOWN`, so both converge
+  on one learnable wakeup. The old `knockdown_state_id` field and its `== 0` no-transition fallback are
+  **retired** (AD-049): the reaction is now required content, resolved on the defender's own map.
 
 ## Acceptance criteria (QA-checkable)
 
@@ -319,3 +388,26 @@ way, so two characters can't disagree about what "startup" or "advantage" means.
     All integer/FP.
 14. **Arc projectile (AD-047).** A `ProjectileData` with `gravity != 0` follows a parabola and
     despawns on ground contact; `gravity = 0` stays straight (A's fireball unchanged).
+15. **Reaction-map completeness (AD-049).** Every character in the roster maps **every**
+    `ReactionKind` to one of its **own** `state_id`s, and each mapped state exists in that
+    character's `states` and declares the category its kind requires (hitstun family ⇒
+    `HITSTUN`; blockstun family ⇒ `BLOCKSTUN`). Checkable statically over the roster with no
+    sim run — a character missing a kind fails here, not in play. This is the check that
+    would have caught the P2 defect.
+16. **Cross-character reactions resolve (AD-049 — the regression this exists to prevent).**
+    Character **A hits character B** (and B hits A — *asymmetric*, never a mirror): the
+    defender enters a state **from its own roster**, `PlayerView.boxes` is **non-empty** on
+    every tick of the reaction, and the defender **becomes actionable again** when stun
+    expires without any external reset. Asserted for each `ReactionKind` — including
+    `REACTION_AIR_RESET`, which only A inflicts and only B receives. **A mirror matchup
+    cannot satisfy this criterion**; the test must use two characters with disjoint state-id
+    ranges. (Every pre-P2 test matched a character against itself, which is exactly why this
+    shipped.)
+17. **No raw `state_id` crosses a character boundary (AD-049).** No `HitBox`/`Character`
+    field authored on one character carries a `state_id` resolved against another. The
+    defender-facing lookups in hit/throw/land resolution take a `ReactionKind` and resolve it
+    through the **defender's own** `reaction_map`. Greppable: `get_state(` is never called on
+    one character with an id sourced from another's authored data.
+18. **Projectile `data_id` uniqueness (AD-049).** Installing a roster whose characters
+    declare a duplicate `data_id` **fails loudly at install time**; it never silently
+    overwrites. A and B install clean.

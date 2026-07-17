@@ -48,10 +48,18 @@
    recorded contact — the incoming box *whiffs*. The whiff is recorded observably on
    the *attacker* (invuln whiff, see "Invulnerability" below), never dropped silently.
 5. **Hit resolution.** For each confirmed hit (respecting `id_group` single-hit,
-   or `rehit_interval` for cadenced multi-hit), apply damage (after scaling), set
-   the defender's `hit_reaction`/`block_reaction` state, set stun, set hitstop on
+   or `rehit_interval` for cadenced multi-hit), apply damage (after scaling), enter
+   the defender into its reaction state, set stun, set hitstop on
    both parties, apply pushback/launch, grant attacker `cancel_tags`, update combo
    state. Throwbox connects take the throw resolution path (below).
+   **The reaction state is resolved on the DEFENDER (AD-049).** The hitbox's
+   `hit_reaction`/`block_reaction` is a `ReactionKind` — an engine-level *semantic* name,
+   not a `state_id` — and the concrete state is `defender_character.reaction_map[kind]`,
+   i.e. the **defender's own** state. Never enter a defender into an id sourced from the
+   attacker's data: state ids are character-local, so an attacker-authored id is meaningless
+   in the defender's roster (`move-format.md` → "The character-namespace rule"). This applies
+   identically on the throw path, which enters the defender into the throwbox's
+   `hit_reaction` kind.
 6. **Advantage / neutral update.** Recompute advantage; flag neutral restoration.
 7. **Advance counters.** Decrement `hitstop`, `stun`; advance `tick`. Counters
    under active hitstop do not decrement (see below).

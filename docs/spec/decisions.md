@@ -58,6 +58,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-046** Double-tap direction command (dash) as a `ButtonMapEntry` shape + one-air-action economy via serialized `players[i].air_action_used` (air dash / double jump; reset on landing); divekick does not spend the air action — settled (P2)
 - **AD-047** Arc-projectile gravity: `ProjectileData.gravity` gives parabolic setplay projectiles; ground-contact despawn; the "falls-in-front" oki must resolve to a readable mixup (never an unblockable) by guard-height compatibility — settled (P2)
 - **AD-048** Match layer: `MatchState` wraps `SimState` + round/match fields, advanced by a pure `match_step`; health/round-wins/timer/RNG are serialized game state on the fixed timestep (Tenet 1 per-match); `MatchView` seam read; round-end **reason** is serialized truth — settled (P2)
+- **AD-049** **The character-namespace rule**, and reactions as defender-resolved kinds: a raw `state_id` is meaningful **only** inside its own character; no field authored on character X may carry a `state_id` read against character Y. `HitBox.hit_reaction`/`block_reaction` become a `ReactionKind` (engine-level semantic name) resolved through the **defender's** own `Character.reaction_map`; **every character must author every reaction kind** (reactions are defender-side content — you receive what the opponent inflicts); `knockdown_state_id` folds in as `REACTION_KNOCKDOWN`. Projectile `data_id` is declared a **global** namespace with install-time uniqueness enforcement. Fixes the cross-character wedge (P2-gate flags 2/3) and closes the third instance of an implicit-shared-namespace bug — settled (P2)
 
 ## Phase-pipeline latitude ratifications (JC-013..021)
 
@@ -2082,3 +2083,156 @@ Callers supply `character_id` only — the idle id is never a parameter (`idle_s
 caller has to know it). When no roster is installed for an id, the resolution falls back to `0`,
 preserving pre-existing no-roster test behavior. **"Fresh symmetric start" means idle-in-neutral, and
 that is per-character truth, not a constant.**
+
+---
+
+## AD-049 · The character-namespace rule; reactions are defender-resolved kinds — settled (P2)
+
+**Context.** The Developer's flag (`flags.md`, 2026-07-16): `HitBox.hit_reaction`/
+`block_reaction` is a raw `state_id` int authored on the **attacker's** move data, but
+`StepPhases._resolve_one_hit` applies it via `defender_character.get_state(...)` — it
+resolves against the **defender's** state list. State ids are character-local (A: 100s–160s,
+B: 300s+). Every hit in a real A-vs-B match therefore enters the defender into a state id
+that does not exist in its roster; `get_state` returns null, `PlayerView.boxes` goes empty,
+and phase 2's `move != null` guards — which gate *every* transition including stun-expiry —
+wedge the defender permanently: boxless, unhittable, un-actionable, until a round reset
+rebuilds `SimState`.
+
+This survived P0, P1, and P2's entire headless pass because every test and gate before now
+matched a character **against itself**. A shared id namespace made the lookup coincidentally
+resolve. The spec never required attacker and defender to share an id namespace — the code
+only worked because they always happened to.
+
+**This is the third instance of one bug class, and that is the finding that matters more
+than the fix.** JC-099/AD-048 was the second (round-start `state_id` "only *looked* correct
+because the P0 test character's idle happens to be id `0`"). TKT-P1.1-01 was the first
+(both players defaulted to `character_id 0 / state_id 0`, which a real roster never
+resolves). Three times, the engine worked only because two sides agreed on something the
+format never required them to agree on. The class is not "reactions are wrong." The class
+is **an identifier crossing a namespace boundary the format never declared.**
+
+### Decision 1 — the character-namespace rule (the general fix)
+
+> **A `state_id` is meaningful only within its own character. No field authored on
+> character X may contain a `state_id` that is resolved against character Y. Any state a
+> character enters that is *named by something outside that character* — the opponent's
+> move data, or the engine — is resolved through that character's **own** declared map,
+> never by a raw id crossing the boundary.**
+
+This is a stateable invariant, so it is greppable and testable rather than a habit. It is
+the rule `idle_state_id` and `knockdown_state_id` were already (accidentally) instances of:
+both exist precisely so no caller has to know another character's ids. Reactions were the
+one place the pattern was broken. The rule generalizes them.
+
+Corollary, and the part the old design got backwards: **reactions are defender-side
+content, not attacker-side content.** An attacker names *what happens* ("this launches");
+the defender owns *what that looks like on me*. Character C may never launch anyone, but A's
+`2H` will launch C, so C must have a launch reaction. Every character must author every
+reaction kind because every character can *receive* every reaction.
+
+### Decision 2 — `ReactionKind` + `Character.reaction_map`
+
+`HitBox.hit_reaction`/`block_reaction` change from a raw `state_id` to a **`ReactionKind`**:
+a small engine-level enum naming the reaction *semantically*. The slice's set:
+
+| Kind | Meaning |
+|---|---|
+| `REACTION_HITSTUN` | Standard grounded hitstun. |
+| `REACTION_LAUNCH` | Airborne launch hitstun (juggle-continuable; lands into `REACTION_KNOCKDOWN` per AD-043). |
+| `REACTION_AIR_RESET` | Airborne knock-away, **no follow-up** (A's `2H`). |
+| `REACTION_KNOCKDOWN` | Grounded hard knockdown / shared wakeup (AD-043). |
+| `REACTION_BLOCKSTUN` | Standing blockstun. |
+| `REACTION_CROUCH_BLOCKSTUN` | Crouching blockstun. |
+
+`Character` gains **`reaction_map`**: `ReactionKind → this character's own state_id`.
+`_resolve_one_hit` resolves `defender_character.reaction_state(kind)`. The attacker's data
+never contains a defender id; the defender never receives an id it did not author.
+
+**Every kind is required** on every character — a completeness obligation QA asserts
+statically over the roster (criterion 15). A defense-in-depth resolution floor exists so a
+content hole can never reproduce *this* failure mode: an unmapped kind falls back to
+`REACTION_HITSTUN`, an unmapped `REACTION_HITSTUN` to `idle_state_id`. The floor is a
+guardrail, not a license — shipped content that fires it fails the static check first.
+The point of the floor is that the worst case becomes "wrong-looking reaction," never
+"boxless permanent wedge."
+
+**`knockdown_state_id` folds in** as `REACTION_KNOCKDOWN` and is retired. It was the same
+concept under a second name (a character's own state for an engine-named situation);
+`_land`'s launch-into-ground transition reads `reaction_state(REACTION_KNOCKDOWN)`.
+Keeping both would be exactly the "two ways to say one thing" drift this record exists to
+prevent. `idle_state_id` **stays** — idle is not a reaction.
+
+**Surfaced content gap, and the proof the fix is real:** character B has **no `AIR_RESET`
+state** — it never needed one, because B never authored a move that inflicts it. But A's
+`2H` inflicts it, and B receives it. Under the old model this was invisible; under the new
+one it is a required-field hole the static check names. B authors one (TKT-P2-09).
+
+**Rejected.**
+
+- **A shared reserved id range** (e.g. 1–99 = universal reactions, every character authors
+  those ids). This is the *current bug wearing a convention*: nothing in the format would
+  require a character to author id 20, nothing would catch it if it didn't, and character C
+  reproduces the wedge on day one. It replaces an implicit agreement with a documented
+  implicit agreement — the failure mode this whole AD exists to kill. Rejected outright.
+- **Open, data-populated reaction *names*** (StringName keys, on the AD-018/JC-090
+  motion-table precedent). Genuinely tempting on Tenet 3 grounds, and rejected on one
+  point: an open key set **cannot express completeness**. If any character may invent a
+  reaction name, no static check can tell "C is missing `AIR_RESET`" from "C simply has no
+  such reaction" — which is precisely the hole that let this ship. The motion table is a
+  fair precedent for *recognition* (one side reads it; a missing motion is unreachable, not
+  corrupt), but a reaction has **two** sides that must agree, and that is exactly when a
+  closed set earns its cost. Reactions are also engine-semantic (they interact with
+  categories, launch/landing, advantage), so a new kind is honest engine work, not
+  authoring.
+- **Attacker-side reaction states** (the defender is entered into the attacker's own state,
+  resolved against the attacker's roster). Coherent and wrong: the defender would wear the
+  attacker's hurtbox geometry and animation. Rejected on the charter — a character must look
+  like itself while being hit.
+
+**Tenet 3.** The slice has two characters and is meant to make more characters *content, not
+engineering*. A reaction model that only works when both sides share an id namespace fails
+that tenet directly — it is not that character C would be hard, it is that character C would
+be **silently broken**, in a way that passes every structural check. The closed kind set with
+a required map inverts this: adding character C is authoring six states and a map, and the
+one thing that could go wrong is caught statically before it is ever played.
+
+### Decision 3 — projectile `data_id` is a declared global namespace, enforced
+
+Auditing for the same shape (below) found one more live instance. `ProjectileRegistry` is a
+**flat global** `data_id → ProjectileData` roster; `training_mode.gd` builds it by merging
+each character's roster into one dictionary, where a duplicate key **silently overwrites**.
+A uses `201–203`, B uses `220–222` — disjoint **by convention only**. Nothing in the format
+says projectile ids are global, nothing requires disjointness, and nothing catches a
+collision: character C authoring `data_id = 201` would silently steal A's fireball data,
+with A's move appearing to work while throwing C's projectile.
+
+Fixed the cheap, honest way rather than by re-namespacing: **`data_id` is hereby *declared*
+a global namespace in the format** (it already was one in fact — the id is serialized in
+`Projectile.to_dict` and resolved with no character context, so keying it per-character
+would touch serialization for no gain), and **`ProjectileRegistry.install` rejects duplicate
+`data_id`s at wiring time** — a loud failure where there was a silent overwrite. That
+converts the implicit agreement into an enforced one, which is the whole point. Rejected:
+per-character projectile namespaces (invasive, touches the serialized shape, and the global
+id is defensible once it is *declared* and *checked*).
+
+### The audit this triggered — are there more couplings of this shape?
+
+Recorded here because the finding is load-bearing for P2's thesis. Every place one
+character's authored data or the engine reaches a value resolved against another character:
+
+| Site | Verdict |
+|---|---|
+| `HitBox.hit_reaction`/`block_reaction` | **Broken.** Decision 2. |
+| Projectile `data_id` → `ProjectileRegistry` | **Latent.** Global-by-convention, silent collision. Decision 3. |
+| `HitBox.id_group` → `active_hit_ids` | **Safe.** Appended to and compared against the **attacker's own** memory only; never crosses. Disjoint A/B ranges are decorative, not load-bearing. |
+| `CancelRule.target` → `cancel_groups` | **Safe.** Resolved via `character.cancel_group()` on the **attacker's own** character. |
+| `CancelRule.requires_tag` / `HitBox.cancel_tags` | **Safe.** Tags are opaque strings granted to and consumed by the attacker; no id, no lookup. |
+| `guard_height` (attacker) × `is_crouch` (defender) | **Safe.** Both engine-level semantics, not ids — the *correct* pattern, and the model Decision 2 copies. |
+| `MoveState.category` | **Safe.** Engine-level enum, shared by definition. |
+| `button_map` `BUTTON_n`, motion ids | **Safe by design.** Generic per Tenet 2; each character maps them itself. |
+| `Character.id` → `MoveRegistry` | **Accepted.** Global by necessity (it is the namespace root), and collisions are wiring-time, not content-time. Noted, not fixed. |
+
+So: **two instances, one fixed structurally and one fixed by enforcement, and the rest of
+the surface is genuinely clean.** The pattern that made the safe sites safe is the same one
+Decision 1 now states as a rule: they pass engine-level *semantics* across the boundary, not
+character-local *identifiers*.
