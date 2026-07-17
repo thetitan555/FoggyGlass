@@ -79,6 +79,7 @@ func _run() -> void:
 	_test_6h_is_reachable_and_not_shadowed_by_5h()
 
 	_test_throw_connects_through_block()
+	_test_throw_connects_through_crouch_block_downback()
 	_test_throw_tech_window()
 	_test_throw_hard_knockdown()
 
@@ -470,6 +471,28 @@ func _test_throw_connects_through_block() -> void:
 			break
 	_true(connected, "throw connects through block (bypasses blockstun)")
 	_true(s.players[1].health < 1000, "throw dealt damage on connect")
+	_cleanup()
+
+
+## docs/flags.md 2026-07-17 "re: throw hitbox geometry" — positive confirmation
+## to KEEP: "the throw correctly beats a downback hold" (mirrors
+## test_character_a.gd's identical regression — see that file for the full
+## rationale). Defender starts in STATE_CROUCH and holds DOWN+RIGHT (down-back;
+## P1 faces -1) throughout.
+func _test_throw_connects_through_crouch_block_downback() -> void:
+	var s := _two_char_state(30)
+	s.players[0].state_id = CharacterB.STATE_THROW
+	s.players[0].frame_in_state = 0
+	s.players[1].state_id = CharacterB.STATE_CROUCH
+	var p1_down_back: int = InputFrame.DOWN | InputFrame.RIGHT
+	var connected: bool = false
+	for _k in range(10):
+		s = SimState.step(s, InputFrame.NEUTRAL, p1_down_back)
+		if s.players[1].state_id == CharacterB.STATE_KNOCKDOWN:
+			connected = true
+			break
+	_true(connected, "throw connects against a down-back (crouch-block) held defender")
+	_true(s.players[1].health < 1000, "throw dealt damage on connect (crouch-block case)")
 	_cleanup()
 
 

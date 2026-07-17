@@ -164,13 +164,24 @@ via a new shared `TrainingMode.HUD_LEFT_COLUMN_SAFE_MAX_Y` constant also now use
 against the pre-fix `.tscn`, it fails with the exact overlaps this flag reports. JC-110
 records the layout design in full.
 
-### [open] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: throw hitbox geometry
+### [resolved] 2026-07-17 · raised-by: User (P2 re-gate) · owner: Developer · re: throw hitbox geometry
 Problem: **the grab hitbox is comically large** — the user's estimate is that it should
 be roughly **a tenth** of its current size. Positive confirmation from the same item, to
 keep: **the throw correctly beats a downback hold** (AD-016/029 model working as
 intended).
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-17): Retuned both characters' throw hitbox from
+`Box.make(10, -60, 60, 60)` (area 3600 — reached 25 units past even the FAR edge of a
+defender's hurtbox at the tested range) to `Box.make(10, -30, 15, 25)` (area 375, ~a
+tenth), re-centered vertically on the torso rather than a literal ÷10 of the old
+(disproportionately head-height) origin. Preserved the positive behavior with a NEW
+regression test — the existing suite only covered a standing-block throw connect, never a
+down-back/crouch one — `_test_throw_connects_through_crouch_block_downback` (both
+characters) drives a `STATE_CROUCH` defender holding down-back and confirms the throw
+still lands; confirmed the test can actually fail (tried a deliberately-too-high box,
+watched it fail, reverted). All existing throw-connect/tech/knockdown tests (gap=30, the
+same spacing this box is tuned against) stay green. JC-111 records the full sizing
+rationale.
 
 ### [resolved] 2026-07-17 · raised-by: Strategist (from user re-gate) · owner: Architect · re: divekick active/recovery semantics (`character-b.md`, JC-095)
 Problem: the user's re-gate settles the JC-095 divekick tuning with a call that is

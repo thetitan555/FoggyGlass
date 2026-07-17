@@ -1140,7 +1140,11 @@ static func _build_throw() -> Array[MoveState]:
 	kf_start.hurtboxes = [_hurt_stand()]
 
 	var tb := HitBox.new()
-	tb.box = Box.make(FP.from_int(10), FP.from_int(-60), FP.from_int(55), FP.from_int(60))
+	# docs/flags.md 2026-07-17 "re: throw hitbox geometry": same retune as
+	# character_a.gd's throw (see that file's comment for the full sizing
+	# rationale) -- B's hurtbox dimensions are identical to A's, so the same
+	# ~a-tenth-area box (15x25, x=10/y=-30) applies unchanged.
+	tb.box = Box.make(FP.from_int(10), FP.from_int(-30), FP.from_int(15), FP.from_int(25))
 	tb.damage = THROW_DAMAGE
 	tb.hitstun = THROW_HITSTUN
 	tb.tech_window = THROW_TECH_WINDOW

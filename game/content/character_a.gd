@@ -1403,7 +1403,20 @@ static func _build_throw() -> Array[MoveState]:
 	kf_start.hurtboxes = [_hurt_stand()]
 
 	var tb := HitBox.new()
-	tb.box = Box.make(FP.from_int(10), FP.from_int(-60), FP.from_int(60), FP.from_int(60))   # ~60px range; AD-037 reflected
+	# docs/flags.md 2026-07-17 "re: throw hitbox geometry": the prior 60x60 box
+	# (area 3600) was "comically large" -- it reached to world x=attacker+70,
+	# 25 units past even the FAR edge of a defender's own 30-wide stand/crouch
+	# hurtbox at the tested 30-unit throw range. Retuned to ~a tenth of that
+	# area (15x25 = 375, ratio ~9.6): x=10 (unchanged -- starts right at the
+	# attacker's own pushbox edge, half-width 10), y=-30/h=25 (spans local y
+	# -30..-5, centered on the torso -- comfortably inside BOTH _hurt_stand's
+	# -80..0 and _hurt_crouch's -55..0 ranges, so stance doesn't matter), w=15
+	# (spans to world x=attacker+25, overlapping a defender's hurtbox
+	# (attacker+15..attacker+45 at gap 30) by a solid 10 units -- confirmed
+	# against _test_throw_connects_through_block/_tech_window/_hard_knockdown,
+	# all of which throw at this exact 30-unit gap and stay green). AD-037
+	# reflected.
+	tb.box = Box.make(FP.from_int(10), FP.from_int(-30), FP.from_int(15), FP.from_int(25))
 	tb.damage = THROW_DAMAGE
 	tb.hitstun = THROW_HITSTUN   # the hard-knockdown length (see const note above)
 	tb.tech_window = THROW_TECH_WINDOW

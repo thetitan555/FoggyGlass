@@ -67,6 +67,7 @@ func _run() -> void:
 	_test_dp_invuln_authored_and_full_punishable()
 	_test_dp_h_two_hit()
 	_test_throw_connects_through_block()
+	_test_throw_connects_through_crouch_block_downback()
 	_test_throw_tech_window()
 	_test_throw_hard_knockdown()
 	_test_special_cancel_2m_into_dp()
@@ -449,6 +450,32 @@ func _test_throw_connects_through_block() -> void:
 			break
 	_true(connected, "throw connects through block (bypasses blockstun)")
 	_true(s.players[1].health < 1000, "throw dealt damage on connect")
+	_cleanup()
+
+
+## docs/flags.md 2026-07-17 "re: throw hitbox geometry" — positive confirmation
+## to KEEP: "the throw correctly beats a downback hold." The prior 60x60
+## throwbox's own overlap-with-a-crouching-defender was never actually
+## exercised by an automated test (only standing block, above) — this closes
+## that gap: defender starts in STATE_CROUCH (the down-back stance,
+## AD-038/AD-045) and holds DOWN+RIGHT (down-back; P1 faces -1, so back =
+## RIGHT) throughout, using _hurt_crouch's shorter hurtbox. Would fail if the
+## retuned throwbox's vertical placement (y=-30/h=25) ever drifted outside
+## _hurt_crouch's -55..0 range.
+func _test_throw_connects_through_crouch_block_downback() -> void:
+	var s := _two_char_state(30)
+	s.players[0].state_id = CharacterA.STATE_THROW
+	s.players[0].frame_in_state = 0
+	s.players[1].state_id = CharacterA.STATE_CROUCH
+	var p1_down_back: int = InputFrame.DOWN | InputFrame.RIGHT
+	var connected: bool = false
+	for _k in range(10):
+		s = SimState.step(s, InputFrame.NEUTRAL, p1_down_back)
+		if s.players[1].state_id == CharacterA.STATE_KNOCKDOWN:
+			connected = true
+			break
+	_true(connected, "throw connects against a down-back (crouch-block) held defender")
+	_true(s.players[1].health < 1000, "throw dealt damage on connect (crouch-block case)")
 	_cleanup()
 
 

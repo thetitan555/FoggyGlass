@@ -430,3 +430,41 @@ my new layout is designed against, per point 5 above; the test's own logic/asser
 untouched.
 Serving: `docs/flags.md` (2026-07-17, "re: HUD (round 2)"); `training-mode.md` criterion
 14; AD-035.
+
+### JC-111 · 2026-07-17 · flag "re: throw hitbox geometry" · retuned to ~a tenth AREA (15×25 vs 60×60), re-centered on the torso, not a literal ×0.1 of each dimension — provisional
+**Decided:** both characters' throw `HitBox.box` (`character_a.gd`/`character_b.gd`
+`_build_throw`) moves from `Box.make(10, -60, 60, 60)` (area 3600; world reach to
+attacker+70 — 25 units past even the FAR edge of a defender's 30-wide hurtbox at the
+tested 30-unit throw range) to `Box.make(10, -30, 15, 25)` (area 375, ratio ~9.6 —
+"roughly a tenth," matching the user's estimate) — kept identical between A and B since
+both characters author identical `_hurt_stand`/`_hurt_crouch` dimensions.
+**Why NOT a literal ÷10 of width/height (6×6):** the old box's `y=-60` origin already sat
+20 units above the character's own head (character hurtbox height is 80, spanning
+`-80..0`) — a pure ÷10 scale keeps that same disproportionate origin, shrinking the box to
+a tiny sliver floating near head height, comfortably outside a CROUCHING defender's
+shorter `-55..0` hurtbox. Instead re-centered vertically on the torso (`y=-30`, `h=25` →
+spans `-30..-5`), which sits inside BOTH `_hurt_stand`'s `-80..0` and `_hurt_crouch`'s
+`-55..0` ranges — so stance doesn't change whether the throw connects (matching the
+existing "throws bypass block" design and the flag's own "beats a downback hold"
+confirmation to KEEP). `x=10`/width `15` were sized to still comfortably overlap a
+defender's hurtbox at the exact 30-unit gap the existing throw-connect tests (A's and B's
+`_test_throw_connects_through_block`/`_tech_window`/`_hard_knockdown`) already exercise —
+confirmed by running them green, not by construction alone.
+**Verified the retune doesn't quietly break the "beats a downback hold" behavior**, which
+had NO prior automated coverage (the existing throw-connect test only held a STANDING
+back-block). Added `_test_throw_connects_through_crouch_block_downback` to both
+`test_character_a.gd`/`test_character_b.gd`: defender starts in `STATE_CROUCH`, holds
+DOWN+RIGHT (down-back) throughout, asserts the throw still lands a hard knockdown.
+Confirmed this test can fail (not a tautology): temporarily moved the box to `y=-80,h=5`
+(a tiny sliver at head height, outside `_hurt_crouch`'s `-55..0` range) — the new test
+failed exactly as expected; reverted to the real tuned value, green again.
+**Alternative passed over:** a literal ÷10 scale of each dimension (6×6), keeping `x=10,
+y=-60` unchanged. Rejected per the above — it would either whiff entirely at the tested
+30-unit throw range (world reach only to attacker+16, short of a defender's hurtbox near
+edge at attacker+15... under gap 30 with hurtbox width 30 the near edge sits at
+attacker+15, so a 6-wide box barely grazes it with zero real margin) or, if nudged closer
+to compensate, still float near head height rather than the torso — a materially worse,
+less physically sensible box than a torso-centered one at the SAME "roughly a tenth"
+area the user asked for.
+Serving: `docs/flags.md` (2026-07-17, "re: throw hitbox geometry"); AD-016/AD-029's throw
+model (unchanged — geometry-only tuning, no new throw rule).
