@@ -55,7 +55,7 @@ effect but expect revision) · **superseded** (kept for history).
 - **AD-043** Airborne physics: persistent per-player velocity + per-tick gravity, a **continuous** runtime `pos_y ≥ ground_y` clamp fused with an `AIRBORNE→GROUNDED` landing transition, and knockdown-into-ground — the AD-036 remainder; air-move states carry fall momentum (fixes "air normal stops the jump arc"); **supersedes AD-036** and retires the net-zero-arc authoring invariant (character A's jump migrates to gravity) — settled (P2)
 - **AD-044** CancelRule **group-target resolution** is built (the AD-015 `target`=group path JC-023 deferred); B's gatling ladder is expressible with **no format extension**, so the format-generality test **passes** — settled (P2)
 - **AD-045** Directional block enforcement: `HitBox.guard_height` (HIGH/LOW/MID) × defender stance gates block validity; a wrong-stance block resolves as a hit; observable via `HitEvent`. Reverses the P1 stance-agnostic-block simplification and enforces A's lows — settled (P2), cross-ref Strategist scope flag
-- **AD-046** Double-tap direction command (dash) as a `ButtonMapEntry` shape + one-air-action economy via serialized `players[i].air_action_used` (air dash / double jump; reset on landing); divekick does not spend the air action — settled (P2)
+- **AD-046** Double-tap direction command (dash) as a `ButtonMapEntry` shape + one-air-action economy via serialized `players[i].air_action_used` (air dash / double jump; reset on landing); divekick does not spend the air action; **air actions are data-gated — `air_dash_speed`/`double_jump_velocity == 0` = no such action, so A (authoring neither) has neither** (2026-07-17 elaboration, mirror of AD-049) — settled (P2)
 - **AD-047** Arc-projectile gravity: `ProjectileData.gravity` gives parabolic setplay projectiles; ground-contact despawn; the "falls-in-front" oki must resolve to a readable mixup (never an unblockable) by guard-height compatibility — settled (P2)
 - **AD-048** Match layer: `MatchState` wraps `SimState` + round/match fields, advanced by a pure `match_step`; health/round-wins/timer/RNG are serialized game state on the fixed timestep (Tenet 1 per-match); `MatchView` seam read; round-end **reason** is serialized truth — settled (P2)
 - **AD-050** Divekick stays **active until it lands**, then lands into a **recovery redirect** (`MoveState.landing_state_id`) whose `duration == the move's blockstun` — yielding **height-dependent block advantage as an emergent property** (hit low ⇒ ≈ neutral, hit high ⇒ deeply minus), observable because contact height is the most visible thing on screen; resolves the JC-094 divekick-landing deferral — settled (P2)
@@ -1975,6 +1975,38 @@ one line on the AD-043 landing transition.
 two recognizer concepts); charging the divekick to the air action (would kill the airdash→divekick mixup
 the brief centers B's hardest legibility question on); deriving air-action state from position/velocity
 (not derivable — "have I spent my action this jump" is genuine mutable truth).
+
+**Elaboration — air actions are DATA-GATED, not engine-generic (2026-07-17, 2nd-gate ruling; the mirror
+of AD-049).** The second human gate found **character A can attempt an air dash and a double jump** (which
+instantly halt its air momentum). The contract this AD intends — stated here so it cannot be re-read
+generically — is: **a character has an air action only if its content authors it.** Concretely, the
+`CharacterPhysics.air_dash_speed` / `double_jump_velocity` fields (ratified from JC-075) carry the
+**same `0`-disables convention as `gravity`**: `air_dash_speed == 0` means the character has **no air
+dash**; `double_jump_velocity == 0` means it has **no double jump**. For a character whose corresponding
+field is `0`, the engine must **not** perform the air-action velocity-set at all — and therefore must not
+consume `air_action_used`, and must not touch the character's velocity. Character A, authoring **neither**
+field (both default `0`), has **neither air action** — its air momentum is left entirely alone.
+
+This is the **mirror of AD-049**: there, a character silently *received* kit (a state id) its content
+never authored; here, the engine silently *imposes* kit (an air action) a character's content never
+authored. Both violate the content seam — a character must wear exactly the kit its data declares,
+no more and no less. The `0`-disables gate is what keeps air mobility **B's authored signature and A's
+authored absence**, which the entire P2 content-seam thesis (and the A/B contrast) rests on.
+
+**Note on the double-jump recognition specifically:** `up`-while-airborne is a *universal* direction
+(every character presses up to jump), so the double-jump *recognition edge* is generic — but the
+*action* is gated on `double_jump_velocity != 0`. A character with `double_jump_velocity == 0` pressing
+up in the air performs no double jump (and, critically, its momentum is untouched). Likewise the air-dash
+recognition reuses the double-tap `button_map` entry a character authors for its **grounded** dash (A has
+one, for `66`/`44`); that a character can recognize an airborne double-tap does **not** entitle it to an
+air dash — the `air_dash_speed != 0` gate does. So authoring a ground dash never implies an air dash.
+
+**Verdict for the observed defect:** the intended contract is data-gated, so an engine that lets A
+air-dash / double-jump (halting momentum via a zero-velocity set) is an **implementation defect against
+this now-explicit contract** — the Developer's fix (gate the velocity-set and the `air_action_used`
+consumption on the authoring field being non-zero), not a design change routed back. Had the intended
+contract genuinely been engine-generic, that would have been a design problem for the Strategist/user;
+it is not — this AD (with JC-075) always meant `0` = no such action.
 
 ### AD-047 · Arc-projectile gravity: `ProjectileData.gravity`; falls-in-front oki must be a readable mixup — settled (P2)
 **Decision.** `ProjectileData` (AD-021/AD-030) gains an optional baked-FP **`gravity`** (default `0` =
