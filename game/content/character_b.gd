@@ -1494,12 +1494,24 @@ static func _build_air_normals() -> Array[MoveState]:
 	return out
 
 
+## SAFETY-TAIL FIX (2026-07-17, flags.md "AD-043 air-move semantics"): mirrors
+## character_a.gd's IDENTICAL `_build_air_normal` fix exactly -- this builder was
+## copied from A's (then-also-buggy) version at TKT-P2-06 time, so B inherited
+## the same defect. `duration` now extends `AIR_NORMAL_SAFETY_TAIL` frames past
+## startup+active (matching B's own jump `JUMP_DURATION`/divekick
+## `DIVEKICK_SAFETY_TAIL` conventions) so the AD-043 continuous ground clamp --
+## not the move's own short authored duration -- is what actually ends the
+## fall. See character_a.gd's `_build_air_normal` doc comment for the full root-
+## cause account (never a TKT-P2-01 regression: the physical clamp itself was
+## always correct; this content was simply never revisited when it superseded
+## the old duration-based pseudo-landing).
 static func _build_air_normal(state_id: int, startup: int, active: int, damage: int,
 		hitstop: int, id_group: int, hitbox_box: Box) -> MoveState:
+	const AIR_NORMAL_SAFETY_TAIL: int = 50   # mirrors character_a.gd's own margin
 	var m := MoveState.new()
 	m.id = state_id
 	m.category = MoveState.CATEGORY_AIRBORNE
-	m.duration = startup + active
+	m.duration = startup + active + AIR_NORMAL_SAFETY_TAIL
 	m.loop = false
 	var kf_start := Keyframe.new()
 	kf_start.frame_start = 1
@@ -1521,6 +1533,12 @@ static func _build_air_normal(state_id: int, startup: int, active: int, damage: 
 	kf_active.frame_end = startup + active
 	kf_active.hurtboxes = [_hurt_air()]
 	kf_active.hitboxes = [hb]
-	m.timeline = [kf_start, kf_active]
+	# Safety-tail keyframe: no authored motion -- inherits the ongoing fall
+	# (StepPhases._apply_keyframe_motion), supplies only the airborne hurtbox.
+	var kf_tail := Keyframe.new()
+	kf_tail.frame_start = startup + active + 1
+	kf_tail.frame_end = m.duration
+	kf_tail.hurtboxes = [_hurt_air()]
+	m.timeline = [kf_start, kf_active, kf_tail]
 	m.cancels = []   # air normals are not special-cancellable (mirrors character A)
 	return m

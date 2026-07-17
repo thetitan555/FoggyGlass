@@ -966,18 +966,40 @@ static func _build_jh() -> MoveState:
 
 
 ## Shared air-normal builder: startup (airborne hurtbox only), active (+ hitbox),
-## no authored recovery tail beyond active (air normals recover on landing --
-## the format has no "land" event, so the state ends at the end of active;
-## landing/actionability is a live-sim concern already handled by the
-## once-through-move-ended -> idle transition once frame_in_state exceeds
-## duration). category AIRBORNE (does not affect physics -- see header note --
-## but is the correct engine-level category label per move-format.md).
+## then a SAFETY-TAIL keyframe (airborne hurtbox only, no authored motion) that
+## extends `duration` well past the physical flight time (mirrors
+## `_build_jump_arcs`'s own `JUMP_DURATION` convention and character_b.gd's
+## identical divekick `DIVEKICK_SAFETY_TAIL`). Landing/actionability is a
+## live-sim concern resolved by the AD-043 CONTINUOUS ground clamp
+## (`StepPhases._land`), never by the state's own authored `duration` — the
+## tail exists purely so phase 2's once-through-ended transition can never
+## race the physical clamp (an air normal can be cancelled into at ANY point
+## across the jump's own up-to-`JUMP_DURATION`-tick window, so the worst-case
+## remaining flight after entry is nearly the whole arc).
+##
+## FIXED 2026-07-17 (flags.md, "AD-043 air-move semantics"): the PRIOR version
+## of this builder authored `duration = startup + active` alone (no tail),
+## under the OLD pre-AD-043 model where the once-through-ended -> idle
+## transition WAS the landing mechanism (paired with `_enter_state`'s AD-042
+## grounded-entry snap). AD-043/TKT-P2-01 built the real continuous physical
+## clamp as the landing mechanism but never touched this content, so the short
+## duration kept forcing an early idle transition mid-air -- and
+## `_enter_state`'s AD-042 snap (still live as a defensive backstop for other
+## paths) then teleported the character straight to the floor: the exact "air
+## normal snaps to the ground" defect. Never a regression in TKT-P2-01's own
+## engine work (the clamp itself was always correct) -- this content was simply
+## never revisited when the physical clamp superseded the duration-based
+## pseudo-landing it was originally authored against. category AIRBORNE (does
+## not affect physics -- see header note -- but is the correct engine-level
+## category label per move-format.md).
 static func _build_air_normal(state_id: int, startup: int, active: int, damage: int,
 		hitstop: int, id_group: int, hitbox_box: Box) -> MoveState:
+	const AIR_NORMAL_SAFETY_TAIL: int = 50   # matches JUMP_DURATION's own margin above the
+												 # ~43-tick physical flight time (see file note)
 	var m := MoveState.new()
 	m.id = state_id
 	m.category = MoveState.CATEGORY_AIRBORNE
-	m.duration = startup + active
+	m.duration = startup + active + AIR_NORMAL_SAFETY_TAIL
 	m.loop = false
 	var kf_start := Keyframe.new()
 	kf_start.frame_start = 1
@@ -1001,7 +1023,16 @@ static func _build_air_normal(state_id: int, startup: int, active: int, damage: 
 	kf_active.frame_end = startup + active
 	kf_active.hurtboxes = [_hurt_air()]
 	kf_active.hitboxes = [hb]
-	m.timeline = [kf_start, kf_active]
+	# Safety-tail keyframe: NO motion authored, so the persistent velocity +
+	# gravity carry the fall through untouched (inherits, per
+	# StepPhases._apply_keyframe_motion) all the way to the continuous ground
+	# clamp -- this keyframe supplies only the airborne hurtbox so the
+	# character stays a valid target while it finishes falling.
+	var kf_tail := Keyframe.new()
+	kf_tail.frame_start = startup + active + 1
+	kf_tail.frame_end = m.duration
+	kf_tail.hurtboxes = [_hurt_air()]
+	m.timeline = [kf_start, kf_active, kf_tail]
 	m.cancels = []
 	return m
 

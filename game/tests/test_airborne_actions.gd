@@ -283,20 +283,39 @@ func _test_held_back_repeated_jumps_land_flush_no_cumulative_drift() -> void:
 # ---------------------------------------------------------------------------
 # TKT-P1.1R3-02 (AD-042) — the D3 side effect: an air-normal-interrupted jump
 # (JUMP_F cut short by a mid-air L, mirroring
-# _test_mid_jump_button_reaches_matching_air_normal's script) now lands FLUSH
-# once the air normal's active window ends and the once-through-move-ended
-# transition returns to idle. Before AD-042 this was the re-gate-3 D3 aerial
-# float (the arc's frozen mid-air height was never reconciled to the floor);
-# the grounded-entry snap resolves it as an intended side effect (AD-042
-# "Rejected (a)" / the ticket's "resolves re-gate-3 D3").
+# _test_mid_jump_button_reaches_matching_air_normal's script) lands FLUSH.
+#
+# SUPERSEDED 2026-07-17 (flags.md, "AD-043 air-move semantics", a false-green):
+# the PRIOR version of this test asserted landing at tick 24 — the tick j.L's
+# OLD short authored `duration` (startup+active alone) expired — via the AD-042
+# grounded-entry snap. That snap-on-duration-expiry WAS the "air normal snaps
+# to the floor" defect this ticket exists to fix (the character was still
+# genuinely airborne at tick 24, per `p0.py` mid-flight the ticks just before
+# it — the "flush landing" this test celebrated was a teleport, not physics).
+# TKT-P2-01/AD-043's continuous ground clamp is now what actually lands j.L (a
+# safety-tail duration keeps the once-through-ended path from racing it — see
+# character_a.gd's `_build_air_normal`), and it does so LATER, at the REAL
+# physical landing tick (45, discovered via headless replay against this exact
+# script, matching this tree's established methodology) — still flush at
+# ground_y, but via genuine integration, not a duration-based snap. The AD-042
+# grounded-entry snap itself is UNCHANGED and stays live as a defensive
+# backstop for other paths (see `StepPhases._enter_state`'s own doc comment);
+# this test now demonstrates the CONTINUOUS CLAMP is what actually resolves
+# this case, by showing j.L is STILL genuinely airborne at the tick that used
+# to be the (wrong) landing tick.
 # ---------------------------------------------------------------------------
 
 func _test_air_normal_interrupted_jump_lands_flush() -> void:
-	var rows: Array[Dictionary] = TraceHarness.run("9*3 5*10 L*1 5*20", "", 26, _roster(), CharacterA.CHAR_ID)
+	var rows: Array[Dictionary] = TraceHarness.run("9*3 5*10 L*1 5*20", "", 50, _roster(), CharacterA.CHAR_ID)
 	_true(TraceHarness.check(rows, 14, "p0.state", CharacterA.STATE_JL),
 		"L mid-jump cancels JUMP_F into STATE_JL (unchanged reachability)")
-	_true(TraceHarness.check(rows, 24, "p0.state", CharacterA.STATE_IDLE),
-		"JL's active window ends and the once-through move returns to STATE_IDLE")
-	_true(TraceHarness.check(rows, 24, "p0.py", 0),
-		"the air-normal-interrupted jump now lands FLUSH at ground_y -- the AD-042 grounded-entry snap resolves the D3 aerial float")
+	_true(TraceHarness.check(rows, 24, "p0.state", CharacterA.STATE_JL),
+		"tick 24 (j.L's OLD short authored duration) -- j.L is STILL genuinely airborne here, not " +
+		"snapped to idle: the fix carries the fall past the move's own short active window")
+	var py_at_24: int = TraceHarness.row_at(rows, 24)["p0.py"]
+	_true(py_at_24 < 0, "j.L's height at tick 24 is genuinely negative (still above ground_y) -- a real mid-flight position, not a teleport")
+	_true(TraceHarness.check(rows, 45, "p0.state", CharacterA.STATE_IDLE),
+		"the air-normal-interrupted jump lands (returns to idle) at its REAL physical landing tick (45)")
+	_true(TraceHarness.check(rows, 45, "p0.py", 0),
+		"the landing is flush at ground_y -- via the AD-043 continuous ground clamp's genuine physics, not a duration-based snap")
 	MoveRegistry.clear()

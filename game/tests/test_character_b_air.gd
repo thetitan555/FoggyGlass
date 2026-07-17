@@ -438,7 +438,32 @@ func _test_arc_and_strike_never_require_incompatible_defense() -> void:
 
 # --- Air normals carry the fall (criterion 4) ---------------------------------
 
+## FIXED 2026-07-17 (flags.md, "AD-043 air-move semantics", a false-green):
+## the PRIOR version of this test only checked ONE tick of vel_y right after
+## the cancel, then looped until STATE_IDLE was reached and called that
+## "landed" — a duration-based early snap to the floor (the exact "air normal
+## snaps to the ground" defect) reaches STATE_IDLE too, just much sooner and
+## via a teleport rather than physical descent, so that assertion could not
+## fail against the real defect. This version compares against an
+## UNINTERRUPTED reference jump's own physical landing tick: j.L authors no
+## motion of its own (pure inherit, AD-043), so cancelling into it must not
+## change WHEN B lands at all.
 func _test_air_normals_carry_the_fall() -> void:
+	# Reference: an uninterrupted jump's own physical landing tick.
+	var s_ref := _two_char_state(300)
+	for _k in range(8):
+		s_ref = SimState.step(s_ref, InputFrame.UP, InputFrame.NEUTRAL)
+		if s_ref.players[0].state_id == CharacterB.STATE_JUMP_N:
+			break
+	_eq(s_ref.players[0].state_id, CharacterB.STATE_JUMP_N, "airborne in the neutral jump arc (reference setup)")
+	var reference_landed_tick: int = -1
+	for k in range(80):
+		s_ref = SimState.step(s_ref, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+		if s_ref.players[0].state_id == CharacterB.STATE_IDLE:
+			reference_landed_tick = k + 1
+			break
+	_true(reference_landed_tick != -1, "an uncancelled jump lands within 80 ticks (reference setup)")
+
 	var s := _two_char_state(300)
 	for _k in range(8):
 		s = SimState.step(s, InputFrame.UP, InputFrame.NEUTRAL)
@@ -453,13 +478,24 @@ func _test_air_normals_carry_the_fall() -> void:
 	# velocity plus one more tick of gravity (never reset/stopped).
 	_eq(s.players[0].vel_y, vy_before + MoveRegistry.character(CharacterB.CHAR_ID).physics.gravity,
 		"j.L inherits the ongoing vertical velocity (+gravity) -- does not stop the jump arc")
-	var landed: bool = false
-	for _k in range(60):
+
+	# THE REAL DEFECT CHECK: drive it all the way to landing and confirm it
+	# lands on the EXACT SAME physical tick the reference jump did. Counted
+	# from the SAME basis as reference_landed_tick (the tick JUMP_N was first
+	# observed) -- the cancel step just above already consumed one tick of that
+	# count, so it is added back in here (+1) rather than re-zeroed.
+	var landed_tick: int = -1
+	for k in range(80):
 		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
 		if s.players[0].state_id == CharacterB.STATE_IDLE:
-			landed = true
+			landed_tick = 1 + k + 1   # +1 for the cancel-input tick already taken above
 			break
-	_true(landed, "after j.L, B's jump still lands flush (the arc was carried, not reset)")
+	_true(landed_tick != -1, "after j.L, B's jump still lands (setup)")
+	_eq(landed_tick, reference_landed_tick,
+		"cancelling into j.L lands on the EXACT SAME physical tick as an uninterrupted jump -- the " +
+		"fall is carried all the way to the real ground clamp, not clipped by j.L's own short " +
+		"authored duration (the 'air normal snaps to the floor' defect, flags.md 2026-07-17)")
+	_eq(s.players[0].pos_y, s.stage.ground_y, "landing lands EXACTLY at ground_y via the continuous clamp, not a mid-air snap")
 	_cleanup()
 
 

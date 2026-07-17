@@ -107,8 +107,36 @@ func _test_grounded_state_never_accrues_gravity() -> void:
 # frame_in_state set, vel_x zeroed, vel_y UNTOUCHED) and confirm vel_y/pos_y
 # continue integrating from where they were — not reset — across the
 # transition, exactly like an uninterrupted jump would.
+#
+# FIXED 2026-07-17 (flags.md, "AD-043 air-move semantics", a false-green this
+# ticket's own audit missed): the PRIOR version of this test stopped after ONE
+# tick past the cancel, asserting only that vel_y ticked up by one gravity
+# increment. That is a single-tick snapshot, not "the fall keeps going" — it
+# could not distinguish a genuinely carried fall from an air normal whose own
+# short authored `duration` forces an early idle transition a few ticks later
+# (which then teleports pos_y straight to ground_y via `_enter_state`'s AD-042
+# grounded-entry snap — the exact "air normal snaps to the floor" defect this
+# same test was supposed to be TKT-P2-01's regression net against, and wasn't).
+# The extension below drives the REST of the flight and demands the air-normal-
+# cancelled jump land on the EXACT SAME physical tick an uninterrupted jump
+# does (j.L authors no motion of its own, so cancelling into it must not move
+# the landing time at all) — this is what actually distinguishes "carried" from
+# "snapped."
 
 func _test_velocity_persists_across_airborne_state_transition() -> void:
+	# Reference: an UNINTERRUPTED jump's own physical landing tick. Carrying the
+	# fall through a state transition must not change WHEN the character lands.
+	var s_ref := _two_char_state()
+	s_ref.players[0].state_id = CharacterA.STATE_JUMP_N
+	s_ref.players[0].frame_in_state = 0
+	var reference_landed_tick: int = -1
+	for k in range(80):
+		s_ref = SimState.step(s_ref, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+		if s_ref.players[0].state_id == CharacterA.STATE_IDLE:
+			reference_landed_tick = k + 1
+			break
+	_true(reference_landed_tick != -1, "an uncancelled jump lands within 80 ticks (setup/sanity)")
+
 	var s := _two_char_state()
 	s.players[0].state_id = CharacterA.STATE_JUMP_N
 	s.players[0].frame_in_state = 0
@@ -132,6 +160,23 @@ func _test_velocity_persists_across_airborne_state_transition() -> void:
 		"vel_y carries over into the air normal and gravity keeps accumulating on it (not reset to 0)")
 	_true(s.players[0].pos_y != py_before_cancel,
 		"pos_y keeps integrating from the carried velocity across the state transition")
+
+	# THE REAL DEFECT CHECK: drive it the rest of the way and confirm it lands
+	# on the exact same physical tick the uninterrupted reference jump did.
+	var ticks_elapsed: int = 1 + 15   # the loop above (15) + the cancel-input tick (1) just above
+	var landed_tick: int = -1
+	for k in range(80):
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+		if s.players[0].state_id == CharacterA.STATE_IDLE:
+			landed_tick = ticks_elapsed + k + 1
+			break
+	_true(landed_tick != -1, "the air-normal-cancelled jump eventually lands")
+	_eq(landed_tick, reference_landed_tick,
+		"cancelling into j.L (which authors no motion of its own — pure inherit, AD-043) lands on " +
+		"the EXACT SAME physical tick as an uninterrupted jump: the fall is carried all the way to " +
+		"the real ground clamp, not clipped by j.L's own short authored duration (the 'air normal " +
+		"snaps to the floor' defect, flags.md 2026-07-17)")
+	_eq(s.players[0].pos_y, 0, "landing lands EXACTLY at ground_y via the continuous clamp, not a mid-air snap")
 	_cleanup()
 
 

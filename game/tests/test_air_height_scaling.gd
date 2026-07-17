@@ -232,15 +232,54 @@ func _test_hit_event_reads_zero_on_block() -> void:
 
 
 ## character-a.md route 2: a deep j.H is plus enough to link 5M (startup 5).
+##
+## UPDATED 2026-07-17 (flags.md, "AD-043 air-move semantics"): j.H's `duration`
+## now correctly extends past the physical landing time (the fix for the "air
+## normal snaps to the floor" defect — TKT-P2-01 never actually built the
+## safety-tail content this needed). That means `Actionability.
+## frames_to_actionable`'s single live-advantage READ immediately after
+## contact — taken while B is STILL AIRBORNE — now honestly reports a large
+## remaining "recovery" (B genuinely hasn't landed yet), since it has no
+## fall-time-prediction (the SAME honest limitation AD-050 names for the
+## divekick, generalized here — deliberately not built, Tenet 3). The OLD
+## version of this test read that live-advantage snapshot as a PROXY for "can
+## this move actually combo," and only passed because j.H's short (buggy)
+## duration made the proxy read a small, misleadingly plus number.
+## character-a.md's route 2 is a REAL-GAMEPLAY claim (5M genuinely connects
+## before the defender recovers) — so this version drives the ACTUAL sequence:
+## deep j.H connects, B physically falls the rest of the way and lands, B
+## presses 5M for real, and 5M's own hitbox is confirmed to connect WHILE the
+## defender is still in hitstun. Exercises the thing, not a proxy for it.
 func _test_deep_jh_links_5m_route2() -> void:
 	var s := _jh_hit_state(-5)
-	var roster: Dictionary = MoveRegistry.roster()
-	var adv: AdvantageView = Advantage.live(s, roster)
-	# 5M's startup is 5f; a link needs the attacker plus by at least (startup - 1)
-	# so 5M's own first-active frame lands within/at the defender's stun expiry.
-	var five_m_startup: int = 5
-	_true(adv.value >= five_m_startup - 1,
-		"the deep j.H's live advantage (%d) is enough to link 5M (needs >= %d)" % [adv.value, five_m_startup - 1])
+	_true(s.last_hit != null, "the deep j.H connects (setup)")
+	_true(s.players[1].stun > 0, "the deep j.H put the defender in hitstun (setup)")
+
+	# Let B fall the rest of the way and actually land (idle, actionable) --
+	# purely physical, driven for real, no input.
+	var landed: bool = false
+	for _k in range(30):
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+		if s.players[0].state_id == CharacterA.STATE_IDLE:
+			landed = true
+			break
+		if s.players[1].stun == 0:
+			break   # the defender recovered before B even landed
+	_true(landed, "B physically lands (returns to idle) within budget (setup)")
+	_true(s.players[1].stun > 0, "the defender is STILL in hitstun the moment B lands -- route 2 is still alive at this point")
+
+	# Press 5M for real and confirm it actually connects WHILE the defender is
+	# still in hitstun -- a genuine combo, not a late free hit on a recovered
+	# opponent.
+	var linked: bool = false
+	for _k in range(10):
+		s = SimState.step(s, InputFrame.BUTTON_1, InputFrame.NEUTRAL)   # 5M
+		if s.players[0].move_contact == PlayerState.CONTACT_HIT:
+			linked = true
+			break
+		if s.players[1].stun == 0 and s.players[1].state_id == CharacterA.STATE_IDLE:
+			break   # the defender recovered first -- route 2 failed to link
+	_true(linked, "character-a.md route 2 holds through the REAL sequence: B lands fast enough off a deep j.H that 5M genuinely connects while the defender is still in hitstun")
 	_cleanup()
 
 
