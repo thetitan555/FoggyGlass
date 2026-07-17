@@ -204,25 +204,61 @@ user's gate.** All P2 tickets are landed, committed, and pushed:
   ratification pass: the **dedicated knockdown state** (JC-070 overturned) and
   the **AD-044 exact-self-repeat `CancelEval` fix**.
 
-**The content-seam claim — WITHDRAWN 2026-07-16, pending genuine re-proof.** This
-section previously read "the content-seam proof held … the P2 thesis, met." That
-declaration was **premature and is retracted**. It rested on B's kit being authored
-as data (true), no engine primitive invented (true), and QA's grep of `game/sim/*.gd`
-finding zero character-specific branches (also true) — and it was *still* wrong,
-because the first real A-vs-B hit at the human gate had **never worked**. Every hit
-across characters left the defender boxless, unhittable and permanently stuck
-(AD-049). A structural grep cannot see an **implicit** coupling — an identifier
-crossing a namespace the format never declared — and every test before the gate
-matched a character **against itself**, where the coupling silently holds. The claim
-was true of the evidence and the evidence didn't test the claim.
+**The content-seam claim — WITHDRAWN 2026-07-16, RE-PROVEN 2026-07-17.** This section
+once read "the content-seam proof held … the P2 thesis, met." That was **premature and
+was retracted**: it rested on B's kit being authored as data (true), no engine
+primitive invented (true), and QA's grep finding zero character-specific branches
+(true) — and was *still* wrong, because the first real A-vs-B hit had **never worked**.
+Every cross-character hit left the defender boxless and permanently stuck (AD-049). A
+structural grep can't see an **implicit** coupling — an identifier crossing a namespace
+the format never declared — and every test before the gate matched a character
+**against itself**, where the coupling silently holds. The claim was true of the
+evidence; the evidence didn't test the claim.
 
-The thesis is still *plausible* and probably right — the fix is a contract change,
-not an engine rewrite, and B's content genuinely was data. But it is not **proven**,
-and P2 exists to prove it. Re-proof = AD-049 landed + `combat-resolution.md` criteria
-15–18, which mandate asymmetric A-vs-B behavioural verification in **both directions**
-and state explicitly that a mirror matchup cannot satisfy them. That is cheaper than a
-full re-audit and is real evidence rather than a proxy for it (Architect's read,
-which I accept). **P2 does not close until it re-proves.**
+**Now re-proven, behaviourally.** AD-049 landed (reactions are defender-side content, no
+id crosses the boundary), and QA's re-audit (`audits/audit-p2-regate.md`, 2026-07-17)
+verified `combat-resolution.md` criteria 15–18 the way they demand: `test_reaction_map.gd`
+drives **real A-vs-B and B-vs-A contact, both directions, every inflicted reaction kind,
+with deliberately disjoint id ranges** (A 100s–160s, B 300s+) so a namespace bug can't
+coincidentally resolve — the exact thing a mirror matchup structurally cannot prove.
+Both halves the criterion demands now hold: the behavioural asymmetric matchup **and** a
+re-confirmed zero-character-branch grep. This is real evidence, not a proxy for it. **The
+content seam is proven: B was content, not engineering — established by exercising the
+thing, not by inferring it from structure.** (The lesson is kept in `audit-criterion.md`
+→ "Exercise the thing, not a proxy for it," so the *next* such claim is tested the same
+way rather than asserted from a grep.)
+
+**Status after the SECOND gate cycle (2026-07-17) — awaiting a third user gate.**
+The first re-gate (2026-07-16) found four defects (input lag, boxes-vanish-on-hit,
+divekick-unperformable, HUD overlap); the second (2026-07-17) ran on their fixes and
+found **ten items** — recorded in the checklist below and worked to resolution this
+session:
+
+- **All ten dispositioned.** The headline was a legibility defect, not a broken
+  mechanic: knockdown/launch/air-reset all rendered as the word "hitstun" because they
+  share `CATEGORY_HITSTUN`, so the gate-holder read a *working* mechanic as absent
+  (`reaction_kind` now leads the readout, AD-049-derived). Genuinely broken and now
+  fixed: air normals snapped to ground (criterion 15, never-covered), A carried
+  air-actions it never authored (AD-046, now data-gated both ways), sudden death
+  couldn't reach `MATCH_END` (criteria 1–8), the divekick landing mechanic (AD-050,
+  new). Plus the readout/HUD/tuning fixes and the settled JC-095 numbers.
+- **Ratified + re-audited.** JC-106..115 all ratified (three contract folds:
+  `reaction_kind`, per-strength slides, projectile single-source guard). QA's re-audit
+  passed all five fixes **behaviourally** — it verified each fails on the pre-fix commit
+  via git worktrees, not by trusting the report.
+- **Content seam re-proven** (above) — the milestone-load-bearing result.
+- **One new defect surfaced by QA's deeper testing:** `6H`'s hitbox is authored too high
+  to ever reach a crouching hurtbox, so crouch is a free dodge of B's dedicated
+  overhead — it undermines B-4's high/low guess. A geometry fix (`flags.md`, owner
+  Developer). This must land before the re-gate can honestly judge B's overhead.
+- **Also found:** the golden-file net was stale *and* never wired into the runner
+  (invisible drift the whole cycle) — QA re-baselined and wired it in; suite 47/47.
+- **Deferred, non-blocking:** trace-harness misleading output, match-mode `R` reset
+  binding, and the slide-knockdown dynamic-coverage gap (rides with the 6H fix). All
+  in `flags.md`.
+
+**The historical first-cycle detail below is kept for the record; the current truth is
+the block above.**
 
 **Remaining to close P2.**
 
