@@ -94,7 +94,18 @@ vertical span (y 16–460) once enlarged; kept the existing right-column x-range
 (750–1136) that `DummyModeIndicator`/`MatchPanel` already used instead.
 Serving: flag `docs/flags.md` (2026-07-16, "HUD text overlap," resolved).
 
-### JC-102 · 2026-07-16 · TKT-P2-09 (AD-049) · B's `STATE_AIR_RESET` framing — provisional
+### JC-102 · 2026-07-16 · TKT-P2-09 (AD-049) · B's `STATE_AIR_RESET` framing — RATIFIED (Architect, 2026-07-17)
+**Ratified as latitude; no contract surface moves.** The right call for the stated reason: B's
+receive-side air-reset is authored as a structural mirror of A's (CATEGORY_HITSTUN, B's own airborne
+hurtbox, flat duration) and converges into B's own `reaction_map[REACTION_KNOCKDOWN]` on landing via
+the **existing** `_land` mechanism — no invented engine special-case, exactly the AD-043/AD-049
+convergence. The `duration = 20` is slice-provisional tuning derived from A's own verified `gravity`
+and A's `2H` launch magnitude (the "physics determines the number" bar, JC-039/072-style), not a
+contract number — QA goldens the convergence, not the value. The distinctness-while-airborne
+constraint that is mine to honor is a pose/animation concern this headless build can't resolve either
+way, and it was not traded against anything — correctly **not** a flag. The CATEGORY_HITSTUN choice is
+also correct and unrelated to the headline readout-labelling defect (Developer-owned): the mechanics
+are right; only the instrument's category-name collapse is the bug.
 **Decided:** character B's new `STATE_AIR_RESET` (the reaction it never inflicts but must
 author to RECEIVE character A's `2H`) is authored as an exact structural mirror of character
 A's own `STATE_AIR_RESET`: `CATEGORY_HITSTUN`, B's existing airborne hurtbox (`_hurt_air()`),
@@ -125,7 +136,15 @@ consistent with A's.
 Serving: `TKT-P2-09` (`docs/tickets/p2-char-b-match.md`); `docs/briefs/character-b.md` "What
 B looks like when it receives"; AD-043's knockdown convergence.
 
-### JC-103 · 2026-07-16 · TKT-P2-09 (AD-049) · `ReactionMapEntry` as a typed Resource array — provisional
+### JC-103 · 2026-07-16 · TKT-P2-09 (AD-049) · `ReactionMapEntry` as a typed Resource array — RATIFIED (Architect, 2026-07-17)
+**Ratified as latitude; no contract surface moves.** Storing `Character.reaction_map` as
+`Array[ReactionMapEntry]` (typed Resource) behind the `reaction_state(kind)` accessor is exactly the
+internal-packaging call latitude covers — AD-049/move-format.md own the *accessor* and the required
+*mapping*, never the storage shape. The choice is also the consistent one: it mirrors the project's
+established `.tres`-diffable/golden-able authored-collection convention (`ButtonMapEntry`, `CancelGroup`
+per JC-079's identical reasoning), and Godot 4.3 has no typed-`Dictionary` export anyway, so a bare
+Dictionary would have been both the first such `.tres` export and a loss of `kind`/`state_id` type
+safety. Nothing else reads `reaction_map` directly, so the single scan path is clean.
 **Decided:** `Character.reaction_map` is `Array[ReactionMapEntry]` (a small typed Resource
 with `kind`/`state_id` fields, plus a `make()` convenience constructor), not a bare
 `Dictionary`. `Character.reaction_state(kind)` is the one resolution path (linear scan over
@@ -145,7 +164,16 @@ required mapping and `Character.reaction_state(kind)` as its resolution — the 
 behind that accessor is exactly the kind of internal packaging call latitude covers.
 Serving: `TKT-P2-09`; `move-format.md` → `Character.reaction_map`.
 
-### JC-104 · 2026-07-16 · TKT-P2-09 (AD-049) · test-only reaction_map reuse for unexercised kinds — provisional (test-only latitude)
+### JC-104 · 2026-07-16 · TKT-P2-09 (AD-049) · test-only reaction_map reuse for unexercised kinds — RATIFIED (Architect, 2026-07-17)
+**Ratified as test-only latitude; no production content affected.** The test doubles author a
+**complete** `reaction_map` (all six kinds — satisfying criterion 15's completeness shape) and map the
+kinds their scenarios never inflict onto an existing state (TestSupport's KNOCKDOWN → its existing
+`STATE_THROWN`, the closest grounded non-actionable analogue) rather than authoring dead states or
+leaning on the resolution floor. That is the correct reading of AD-049: the floor is a guardrail against
+a content hole, *not* an authoring license — reusing an existing state keeps the mapping honest and
+complete at zero content bloat, which is right for minimal hand-computable fixtures. Real roster (A, B)
+still maps every kind to a dedicated purpose-built state, so the content-seam proof is untouched. Correct
+restraint.
 **Decided:** the small test-only characters that predate AD-049 (`TestSupport`'s P0 test
 character, and `test_guard_height.gd`/`test_cancel_groups.gd`'s local minimal characters) are
 given a COMPLETE `reaction_map` (all six kinds, satisfying criterion 15's completeness shape),
@@ -170,7 +198,16 @@ authoring against it, which move-format.md explicitly says not to do.
 a dedicated, purpose-built state; only test-only fixtures reuse.
 Serving: `TKT-P2-09`; move-format.md criterion 15 (test-fixture side).
 
-### JC-105 · 2026-07-16 · TKT-P2-10 (AD-049) · `ProjectileRegistry.install` accepts a Dictionary OR an Array of Dictionaries — provisional
+### JC-105 · 2026-07-16 · TKT-P2-10 (AD-049) · `ProjectileRegistry.install` accepts a Dictionary OR an Array of Dictionaries — RATIFIED (Architect, 2026-07-17)
+**Ratified as latitude; no new contract surface.** AD-049 Decision 3 already owns the contract
+(projectile `data_id` is a declared global namespace, uniqueness enforced at install time); this call
+is the *how* of that enforcement, which is latitude. The reasoning is right and load-bearing: duplicate
+detection **must** happen inside the merge, because a plain Dictionary literal has already resolved any
+collision (silently, last-write-wins) before `install` could ever see it — so the merge itself has to
+go through the registry. Accepting Dictionary-or-Array (rather than migrating ~15 single-roster call
+sites to `Array[Dictionary]`) is the additive, churn-free way to get that guarantee at the one site
+that merges, and the `void`→`bool` return is source-compatible (bare-statement call sites ignore it;
+`training_mode.gd` checks it, `push_error` on false per JC-048's fail-fast convention). Correctly scoped.
 **Decided:** `ProjectileRegistry.install` takes an untyped `roster` parameter: a single
 `data_id -> ProjectileData` `Dictionary` (every existing single-source call site, unchanged
 behavior) is installed as-is; an `Array` of such Dictionaries is MERGED internally with
