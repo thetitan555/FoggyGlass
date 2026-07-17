@@ -224,9 +224,73 @@ headless green, determinism/round-trip included.
    branches** — the content-seam proof, verified structurally. No drift, no flags.
    The **golden-file regression net was absent and is now seeded** (A movement, B
    frame-data + geometry, full-match hash trace); **43/43** headless green.
-3. **The user's human-inspection gate — OPEN. This is the only thing left.** QA's
+3. **The user's human-inspection gate — RUN 2026-07-16. NOT CLEARED.** QA's
    objective pass is necessary but *not* sufficient, and QA correctly declined to
-   issue a done verdict while this stands. Only the user closes it.
+   issue a done verdict while this stood. The user ran it and it **did not clear**
+   — four defects, all open to the Developer in `flags.md`:
+   - **~1s input lag on both characters** (play/pause unaffected). Tax, and it
+     makes every readable-as-it-happens judgment on this gate unanswerable.
+   - **Collision + hurtbox vanish when a character is hit**, until their next input.
+     Correctness hole or overlay defect — diagnosis decides which.
+   - **The divekick cannot be performed at all** — so B-3 (the three divekicks
+     visually distinguishable) could not be judged. Likely downstream of the lag.
+   - **HUD text overlaps** and is becoming hard to read; the match result must be
+     legible on its face.
+
+   **Judged, standing:** *reactability* and the **JC-095 provisional tuning** both
+   take a **vacuous pass** — there is no art or audio yet, so there is nothing to
+   read a tell off, and tuning judged against a placeholder presentation through a
+   second of lag would be judgment we'd only have to redo. Both re-open at the
+   re-gate. The user's one substantive tuning observation: **the slide's advantage
+   does change live with spacing** (B-1's intent, holding).
+
+   **Re-gate when the four flags resolve**, against the brief-derived checklist
+   below — not against a fresh improvisation.
+
+### P2 human-gate checklist (Strategist-attached, per `audit-criterion.md`)
+
+The 2026-07-16 run exposed a defect in **my** artifact, recorded here rather than
+quietly fixed: `audit-criterion.md` requires the Strategist to attach a checklist
+**derived from the owning brief's enumerated surface** when declaring a gate. What I
+declared above ("What the gate must judge") was a 3-item summary, thinner than the
+briefs it was supposed to enumerate; QA correctly declined to author the list in its
+place, and the user ran the gate off QA's enumeration of unclosed items instead. That
+is the P1.1 completeness-gap lesson recurring in the exact place the rule was written
+to prevent it. The checklist below is derived from `spec/character-b.md` (1–6,
+B-1..B-6) and `spec/match-flow.md` (1–8) and is the standing list for the re-gate; the
+Architect's ticket "Cross-cutting" section is its other source.
+
+**Operability floor (new — the 07-16 run says this must be checked first).** Every
+item below assumes a human hand can reach the move. Before judging any legibility
+question: inputs register without perceptible lag, and every one of B's moves named
+below can actually be executed. A gate cannot judge readability through an input path
+that doesn't work — that is what happened this run, and it is why the list starts
+here rather than assuming it.
+
+1. **Every B move is executable by hand** — the 6 normals and the gatling ladder,
+   `5H`, `6H`, `2H`, the throw, all **three divekicks**, the slide, all three
+   projectile strengths, the airdash, the double jump, `2H`-JC→airdash.
+2. **The `6H` overhead reads as an overhead** as it happens (B-4's reaction-window
+   floor: placeholder 12 ticks vs. measured 17 — settles here).
+3. **The H-divekick reads as an overhead**, and the other two read as *not* overheads.
+4. **The three divekicks are visually distinguishable** in pose, not just trajectory
+   (B-3; the trajectory/timing half is headlessly proven).
+5. **The airdash crossup side is readable** (B-5).
+6. **The slide's advantage is visible on the instrument** — not merely computed
+   correctly — and tracks spacing (B-1). *Confirmed live on the 07-16 run.*
+7. **No unblockable off the projectile oki** as a human perceives it (B-2).
+8. **A's `2L`/`2M` enforce LOW and B's high/low mixup is answerable** by blocking,
+   not by knowing (AD-045; the no-knowledge-checks line).
+9. **The match result is legible on its face** — KO, TIMEOUT, and DOUBLE_KO each
+   read at a glance, without hunting through overlapping text.
+10. **Round/match flow reads** — best-of-3 scoring, the timer, sudden death.
+11. **The JC-095 tuning bundle settles** — divekick hang/dive profiles, projectile
+    parabolas, slide numbers, the B-4 floor. Keep or retune (spec says it settles
+    here; not a defect to audit).
+
+Items 2–5 and 11 are **presentation-limited until there is art or audio** and take a
+vacuous pass while that holds — recorded so we don't mistake a vacuous pass for a
+judged one when the slice's presentation phase lands.
 
 **How to run the gate:** open the project in Godot 4.3 and run
 `game/scenes/training_mode.tscn` (F6) — it boots the real A-vs-B match. P1
