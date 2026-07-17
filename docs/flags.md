@@ -46,7 +46,9 @@ pattern through a full `ROUND_START` beat and asserts the first `ACTIVE` tick
 already reflects same-tick input — verified failing on the prior code, passing
 on the fix. This is also the confirmed root cause of the divekick flag below
 (re-tested, see that entry) — NOT of the box-vanish flag, which is a distinct,
-independent defect (see that entry).
+independent defect (see that entry). Latitude call recorded: `docs/judgment-
+log.md` JC-100 (why the fix lives in `MatchTickHost` rather than making the
+driver phase-aware).
 
 ### [resolved] 2026-07-16 · raised-by: User (P2 human gate) · owner: Developer · re: sim state / geometry overlay
 Problem: **when a character is hit, their collision and hurtbox disappear** and stay
@@ -153,7 +155,7 @@ retuning — the divekick was always reachable in-sim (QA's headless pass alread
 proved this); only the driver's input timing blocked a human hand from reaching
 it. No code change beyond the flag-1 fix.
 
-### [open] 2026-07-16 · raised-by: User (P2 human gate) · owner: Developer · re: `game/scenes/training_mode.tscn` (HUD layout)
+### [resolved] 2026-07-16 · raised-by: User (P2 human gate) · owner: Developer · re: `game/scenes/training_mode.tscn` (HUD layout)
 Problem: **the on-screen text overlays overlap and are becoming hard to read.** The
 match result (KO / TIMEOUT / DOUBLE_KO) is a P2 gate item that must be "legible on
 its face"; timeout text does appear, but readability is degrading as readouts
@@ -165,4 +167,26 @@ That edit is a **workaround, not intended layout** — treat it as evidence of t
 defect and re-solve the layout properly; don't preserve it and don't silently revert
 it without saying so.
 ---
-Resolution (owner fills): …
+Resolution: **Root cause: `ControlsLegend` renders ~18 lines (every bound control
+plus the dummy record/playback workflow hint) but was allotted only a 244px-tall
+box since it was FIRST authored (TKT-P1.1-02) — undersized from day one, not a
+regression TKT-P2-08 introduced (P2-08 only added `MatchPanel` below the
+pre-existing stack; it never touched `ControlsLegend`'s box). The user's gate-time
+edit (`7c88462`) relocated the box to top-left to read it, but that was a
+workaround, not a fix: it didn't enlarge the box, so the identical overflow just
+started bleeding into `FrameDataPanel`/`LiveStatePanel` instead of
+`DummyModeIndicator`/`MatchPanel`.**
+Re-solved (did NOT preserve the hand-edited offsets, and did NOT silently revert to
+the pre-gate layout either — both changed): `ControlsLegend` moved back to the
+right column (x 750–1136, matching `DummyModeIndicator`/`MatchPanel`'s existing
+convention) with a box actually sized for its content (444px tall) and
+`autowrap_mode = 3` (word-wrap) added so its two long lines wrap inside the box
+instead of overflowing past the window edge. `DummyModeIndicator`/`MatchPanel`
+restacked below it with real clearance (y 470–494 / 504–624). Left column
+(`FrameDataPanel`/`LiveStatePanel`/`InputHistoryPanel`) untouched — their content
+already fit their boxes. Verified by loading the actual `.tscn` headlessly and
+reading back every panel's `Control.rect`: no two rects overlap, and the whole
+right column (max y=624) fits inside the 1152×648 default viewport with margin.
+Full headless suite re-run clean after the change (41/41, excluding the
+pre-existing unrelated `test_trace_harness` failure — see session notes).
+Latitude call recorded: `docs/judgment-log.md` JC-101.

@@ -19,4 +19,51 @@
 
 ## Provisional (awaiting ratification)
 
-*(none — all recorded calls are ratified/closed; their bodies are in `judgment-log-archive.md`.)*
+### JC-100 · 2026-07-16 · flag "~1 second of input lag" · fix MatchTickHost's own frame-query counter, not the driver — provisional
+Decided: fixed the input-frame desync (P2-gate flag 1: `MatchTickHost._advance`
+was querying `get_input(state.sim.tick)`, which freezes during `ROUND_START`/
+`ROUND_END`, while the real driver keeps calling `produce_next()` every real
+tick) by giving `MatchTickHost` its own `_frames_queried` counter — incremented
+once per `_advance()` call — and querying THAT instead of `state.sim.tick`. The
+change is entirely self-contained inside `match_tick_host.gd`; no other file
+(`training_mode.gd`, `MatchState`, any `InputSource`) changed.
+Alternative passed over: make `training_mode.gd`'s `_physics_process` aware of
+`match_phase` and skip calling `produce_next()` on the sources during non-
+`ACTIVE` phases, so the sources' own produced-count would stay 1:1 with
+`state.sim.tick` the way it already does for the plain `TickHost`/`SimState`
+path. Rejected: it would make the DRIVER (and by extension every `InputSource`
+caller) phase-aware, which cuts against input.md's "sources are dumb/generic"
+posture and Tenet 2's source/sim separation — the driver would need to reach
+into match-layer state just to decide whether to poll a device, coupling two
+things (device polling cadence, match phase) that don't need to know about each
+other. Keeping the fix inside `MatchTickHost` (a host that already introduces
+the discrepancy by wrapping a state machine with non-advancing phases) leaves
+`training_mode.gd`'s existing, already-tested per-tick pattern (mirrors
+`main.gd`'s own) completely untouched, and leaves `TickHost`'s own — provably
+correct — `state.tick`-as-query-index approach alone too, since that one still
+holds for the plain sandbox path.
+Serving: flag `docs/flags.md` (2026-07-16, "~1 second of input lag," resolved).
+
+### JC-101 · 2026-07-16 · flag "HUD text overlap" · training_mode.tscn right-column resize/restack — provisional
+Decided: re-solved the P2-gate HUD-overlap flag by (a) sizing `ControlsLegend`'s
+box to its actual ~18-line content (444px tall, up from 244px) with
+`autowrap_mode = 3` (WORD_SMART) added to its Label so its two long lines wrap
+inside the box rather than overflowing past the window edge, and (b) restacking
+`DummyModeIndicator`/`MatchPanel` below it in the same right column (x
+750–1136) with real clearance, verified by loading the actual `.tscn` headlessly
+and reading back every panel's `Control.rect` — no two overlap, and the whole
+right column (max y=624) still fits the 1152×648 default viewport with margin.
+Left column (`FrameDataPanel`/`LiveStatePanel`/`InputHistoryPanel`) untouched —
+their content already fit.
+Alternative passed over: keep `ControlsLegend` narrow and instead split its
+`_ACTIONS` list into two side-by-side columns (halving the needed height).
+Rejected as out of scope here: that changes `controls_legend.gd`'s own text-
+layout logic (a second Label/columnar text builder), not just this scene's
+box geometry — more surface than a flag about *layout* geometry calls for, and
+this session's single-box-resize fix already clears the overlap with no code
+change outside the `.tscn`. Also decided NOT to widen `ControlsLegend`
+horizontally past its existing 386px — doing so would collide with
+`InputHistoryPanel` (right edge x=700), which shares `ControlsLegend`'s new
+vertical span (y 16–460) once enlarged; kept the existing right-column x-range
+(750–1136) that `DummyModeIndicator`/`MatchPanel` already used instead.
+Serving: flag `docs/flags.md` (2026-07-16, "HUD text overlap," resolved).
