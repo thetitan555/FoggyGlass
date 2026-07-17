@@ -82,6 +82,19 @@ var air_action_used: bool = false
 ## "the hit whiffed because of invuln" (charter legibility / no knowledge checks).
 var invuln: Dictionary = {"strike": false, "throw": false}
 
+## This player's CURRENT state's own `ReactionKind` identity (`MoveState.REACTION_*`,
+## AD-049), or `-1` when the current state is not one the character authored into its
+## `reaction_map` (an ordinary move/idle/walk state — not a hit/block reaction). A
+## DERIVED projection (like `invuln`/`boxes`) — not a serialized `SimState` field:
+## resolved by reverse-scanning the roster character's OWN `reaction_map` for the
+## entry whose `state_id` matches this player's current `state_id`. Exists because
+## `state_category` alone collapses several distinct reactions into one bucket —
+## `STATE_KNOCKDOWN`/`STATE_HITSTUN_LAUNCH`/`STATE_AIR_RESET`/ordinary hitstun all
+## share `CATEGORY_HITSTUN` — so a reader (the live-state panel) needs the state's
+## own identity, not just its engine-level category, to tell them apart
+## (`docs/flags.md` 2026-07-17, "re: reaction legibility").
+var reaction_kind: int = -1
+
 # --- Inputs -----------------------------------------------------------------
 var input_current: int = InputFrame.NEUTRAL
 var input_history: PackedInt32Array = PackedInt32Array()   # oldest -> newest
@@ -136,8 +149,9 @@ func _init(state: SimState, i: int, roster: Dictionary = {}) -> void:
 	# (character-agnostic, criterion 5 — no character-specific branch).
 	var move: MoveState = null
 	var pushbox: Box = null
+	var character: Character = null
 	if roster.has(character_id):
-		var character: Character = roster[character_id]
+		character = roster[character_id]
 		move = character.get_state(state_id)
 		pushbox = character.pushbox_for(move)
 	if move != null:
@@ -150,6 +164,7 @@ func _init(state: SimState, i: int, roster: Dictionary = {}) -> void:
 		state_duration = 0
 		boxes = []
 		invuln = {"strike": false, "throw": false}
+	reaction_kind = _resolve_reaction_kind(character, state_id)
 
 	# actionable: stun == 0 AND not in committed recovery (inspection-surface.md).
 	# Committed-recovery determination reads move data; the sim's canonical
@@ -184,6 +199,24 @@ static func _resolve_invuln(move: MoveState, frame: int) -> Dictionary:
 		if kf.invuln_throw:
 			out["throw"] = true
 	return out
+
+
+## This player's current `state_id`'s own `ReactionKind` identity, or `-1` if the
+## character has no `reaction_map` entry pointing at that state (an ordinary
+## move/idle/walk state). Reverse-scans `character.reaction_map` — the SAME
+## authored mapping `Character.reaction_state(kind)` reads forward (move-format.md
+## "Reactions"; AD-049) — rather than adding a second engine-level lookup. Real
+## roster characters (A, B) map every kind to a DEDICATED state (JC-104), so this
+## reverse lookup is unambiguous for them; if a future/test character's
+## `reaction_map` happens to alias two kinds onto one state_id, the first matching
+## entry wins (documented, not a correctness concern for the real roster).
+static func _resolve_reaction_kind(character: Character, current_state_id: int) -> int:
+	if character == null:
+		return -1
+	for e in character.reaction_map:
+		if e.state_id == current_state_id:
+			return e.kind
+	return -1
 
 
 ## Resolve the player's active boxes this tick from move data (derived, not stored —

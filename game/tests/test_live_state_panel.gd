@@ -47,6 +47,9 @@ func _run() -> void:
 	_test_format_row_mentions_invuln_when_active()
 	_test_air_action_used_field()
 	_test_format_row_mentions_air_action_state()
+	_test_reaction_kind_resolves_from_reaction_map()
+	_test_reaction_kind_minus_one_for_non_reaction_state()
+	_test_format_row_distinguishes_the_four_hitstun_category_states()
 
 
 func _two_char_state(gap_x: int = 45) -> SimState:
@@ -182,3 +185,62 @@ func _test_format_row_mentions_air_action_state() -> void:
 	_true(line0.contains("ready"), "an unspent air action reads 'ready' in the formatted row")
 	_true(line1.contains("SPENT"), "a spent air action reads 'SPENT' in the formatted row")
 	MoveRegistry.clear()
+
+
+# --- docs/flags.md 2026-07-17 "re: reaction legibility" (THE HEADLINE FIX) ----
+# `state_category` alone collapsed STATE_KNOCKDOWN / STATE_HITSTUN_LAUNCH /
+# STATE_AIR_RESET / ordinary STATE_HITSTUN onto the single word "hitstun" (all
+# four share CATEGORY_HITSTUN), which is what led the P2 gate-holder to
+# conclude a working, briefed knockdown mechanic didn't exist. These tests
+# exercise the REAL readout path (PlayerView -> LiveStatePanelModel ->
+# format_row) against character A's actual authored reaction states, and
+# would fail against the pre-fix code (every rendered line was identical).
+
+func _test_reaction_kind_resolves_from_reaction_map() -> void:
+	var s := _two_char_state()
+	s.players[0].state_id = CharacterA.STATE_KNOCKDOWN
+	s.players[1].state_id = CharacterA.STATE_HITSTUN_LAUNCH
+	var roster: Dictionary = MoveRegistry.roster()
+	var view := InspectionView.new(s, roster)
+	var pv0: PlayerView = view.player(0)
+	var pv1: PlayerView = view.player(1)
+	_eq(pv0.reaction_kind, MoveState.REACTION_KNOCKDOWN, "P0 in STATE_KNOCKDOWN reads reaction_kind == REACTION_KNOCKDOWN")
+	_eq(pv1.reaction_kind, MoveState.REACTION_LAUNCH, "P1 in STATE_HITSTUN_LAUNCH reads reaction_kind == REACTION_LAUNCH")
+	MoveRegistry.clear()
+
+
+func _test_reaction_kind_minus_one_for_non_reaction_state() -> void:
+	var s := _two_char_state()   # both players start idle — not an authored reaction
+	var roster: Dictionary = MoveRegistry.roster()
+	var view := InspectionView.new(s, roster)
+	var pv0: PlayerView = view.player(0)
+	_eq(pv0.reaction_kind, -1, "an ordinary (non-reaction) state, e.g. idle, reads reaction_kind == -1")
+	MoveRegistry.clear()
+
+
+func _test_format_row_distinguishes_the_four_hitstun_category_states() -> void:
+	var expected_word_by_state: Dictionary = {
+		CharacterA.STATE_HITSTUN: "hitstun",
+		CharacterA.STATE_HITSTUN_LAUNCH: "launch",
+		CharacterA.STATE_AIR_RESET: "air reset",
+		CharacterA.STATE_KNOCKDOWN: "knockdown",
+	}
+	var seen_lines: Dictionary = {}
+	for state_id in expected_word_by_state.keys():
+		var expected_word: String = expected_word_by_state[state_id]
+		var s := _two_char_state()
+		s.players[0].state_id = state_id
+		var roster: Dictionary = MoveRegistry.roster()
+		var view := InspectionView.new(s, roster)
+		var rows: Array = LiveStatePanelModel.build(view)
+		var line: String = LiveStatePanelModel.format_row(rows[0])
+		_true(line.contains(expected_word),
+			"state %d renders the word '%s' in the readout (got: %s)" % [state_id, expected_word, line])
+		# All four states still carry CATEGORY_HITSTUN — confirm category is
+		# RETAINED alongside identity, not dropped in favor of it.
+		_true(line.contains("cat:hitstun"),
+			"state %d's readout still shows category alongside identity" % state_id)
+		seen_lines[line] = true
+		MoveRegistry.clear()
+	_eq(seen_lines.size(), 4,
+		"all four CATEGORY_HITSTUN states render 4 DISTINCT lines (pre-fix, all 4 rendered identically as 'hitstun')")

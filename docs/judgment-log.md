@@ -286,3 +286,53 @@ fall-time prediction), so a single live-advantage snapshot taken while B is stil
 would not honestly reflect the eventual outcome — the height-dependent minus is a property of
 the interaction RESOLVING, not of the contact-tick instant.
 Serving: `TKT-P2-11`; `AD-050`; `character-b.md` criterion B-7.
+
+### JC-108 · 2026-07-17 · flag "re: reaction legibility" (P2-gate headline) · `PlayerView.reaction_kind` — a new DERIVED field resolving state identity, reverse through the character's own `reaction_map` — provisional
+**Decided:** the fix for `category_name()` collapsing `STATE_KNOCKDOWN` /
+`STATE_HITSTUN_LAUNCH` / `STATE_AIR_RESET` / ordinary hitstun into one word ("hitstun",
+since all four share `CATEGORY_HITSTUN`) is a new `PlayerView.reaction_kind: int` field
+(default `-1`), computed at `_init` by reverse-scanning the roster character's own
+`reaction_map` (`Array[ReactionMapEntry]`) for the entry whose `state_id` equals the
+player's current `state_id`. `-1` when no entry matches (an ordinary move/idle/walk
+state — ​not a reaction). `LiveStatePanelModel.identity_name()` reads it and leads the
+row with the specific word ("knockdown"/"launch"/"air reset"/"hitstun"/"blockstun"/
+"crouch blockstun"); `category_name()` is kept and shown ALONGSIDE it in `format_row`
+(`cat:%s`), never dropped — per the flag's explicit "category is real information and
+may stay alongside; it is not a substitute for identity."
+**Why a new PlayerView field, not a panel-local lookup:** the panel model only holds an
+`InspectionView`/`PlayerView`, never the character roster (`InspectionView._roster` is
+private, with no accessor) — so the identity lookup has to happen wherever the roster is
+already in scope, which is `PlayerView._init` (the same place `state_category`/`invuln`/
+`boxes` are already resolved off the SAME `character`/`move` lookup, `move-format.md`
+"the state-machine reads that need move data"). This mirrors `invuln`'s own documented
+shape exactly: "a DERIVED projection (like box geometry) — not a serialized `SimState`
+field." No new `SimState` field, no new engine primitive — purely a reverse read of data
+`Character.reaction_map` already carries (AD-049's own forward accessor,
+`reaction_state(kind)`, is the SAME map read the other direction).
+**Ambiguity note, and why it's not a correctness risk for the real roster:** a
+`reaction_map` COULD in principle alias two kinds onto the same `state_id` (first match
+wins), but JC-104 already established real roster characters (A, B) map every kind to a
+DEDICATED state — only pre-AD-049 test-only fixtures alias, and this field is a training-
+mode readout concern, not a resolution-path concern (nothing in the sim reads it back).
+**Alternative passed over:** add a `display_name`/`state_name` string field authored
+directly on `MoveState` (one label per state, set by content). Rejected: broader surface
+change (every character's every `MoveState` would need authoring, including non-reaction
+states like every normal/idle/walk — a much bigger authoring lift for a defect that's
+specifically about the four REACTION states colliding), and it would duplicate
+information `Character.reaction_map` already carries for exactly the states in question
+— the flag names `ReactionKind` specifically ("surface the ReactionKind / the state's own
+identity"), and reusing the existing authored mapping is the minimal, DRY fix.
+**Spec note (routing, not asking):** `inspection-surface.md`'s `PlayerView` field table
+does not yet list `reaction_kind` — flagging this in the entry so the Architect can fold
+it in on ratification (the established pattern for prior additive derived fields, e.g.
+AD-046/`air_action_used`), not asking permission to proceed; the fix ships now per the
+flag's own "the requirement is mine, stated so it isn't re-litigated."
+**Also audited (same flag, "fix the class, not just the instance"):** `FrameDataPanelModel`
+(names `guard_height`/`block_valid`/advantage distinctly, no collapse), `InputHistoryPanelModel`
+(decodes raw direction/button bits individually, no collapse), `MatchPanelModel` (phase/
+reason each have their own name table, no collapse), `DummyModeIndicator` (each of the
+three dummy modes already has its own label). A repo-wide grep for `category_name`/
+`CATEGORY_HITSTUN`/`state_category` usage outside `live_state_panel_model.gd` returns
+nothing — the collapse was isolated to this one panel, not a repeated pattern.
+Serving: `docs/flags.md` (2026-07-17, "re: reaction legibility"); `inspection-surface.md`
+`PlayerView`; `training-mode.md` "Live-state panel."
