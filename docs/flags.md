@@ -286,6 +286,26 @@ the raw fact only, discoverable on a frame-step after the fact. Regression test 
 facing flip (the crossup shape) through the real readout path and asserts the rendered
 line reflects the new facing. JC-109 records the surfacing choice.
 
+### [open] 2026-07-17 · raised-by: Strategist · owner: Developer · re: `test_trace_harness.gd` prints "assert FAIL" on a passing run
+Problem: **the trace-harness test passes (exit 0, "69 checks passed"), but prints two
+`[TraceHarness] assert FAIL` lines during a normal run** — because acceptance criterion
+5 (lines 232–245) deliberately feeds a wrong expected value to verify `check()` reports
+a mismatch. The negative-path assertions print through the *same* channel as real
+failures, with nothing marking them as expected.
+Why it's worth a flag despite being cosmetic: **three consecutive Developer sessions
+(AD-049 build, and both 2026-07-17 batches) mis-reported the suite as "43/44, pre-existing
+trace-harness failure"** — reading the alarming stdout instead of the exit code. A
+passing test that looks like a failing one is our own instrument lying to its reader,
+the exact class of defect this whole gate cycle is about, aimed at the team instead of
+the player. It also erodes the suite's trustworthiness right when QA is about to audit
+how load-bearing that suite is (the QA flag above). Fix: mark the deliberately-failing
+checks as expected — e.g. print `[negative-test, expected]` or route them through a
+suppressed/labelled channel — so a passing run reads unambiguously green. **Low
+priority; do not displace the correctness or headline flags.** Note QA will likely
+surface this in its suite sweep too.
+---
+Resolution (owner fills): …
+
 ### [open] 2026-07-17 · raised-by: Strategist · owner: Developer · re: instrument ergonomics — match reset
 Problem: at match end the game stops until the window is closed, and `R` (`do_reset`) is
 a **no-op in match mode** (JC-098). Correct as specced, but it means **every re-gate
