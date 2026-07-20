@@ -163,7 +163,7 @@ the defect it uncovered took priority.
 Added to `run_tests.bat`. Full suite re-run 47/47 green (see the re-audit report,
 `docs/audits/audit-p2-regate.md`).
 
-### [open] 2026-07-17 · raised-by: Strategist · owner: Developer · re: `test_trace_harness.gd` prints "assert FAIL" on a passing run
+### [resolved] 2026-07-17 · raised-by: Strategist · owner: Developer · re: `test_trace_harness.gd` prints "assert FAIL" on a passing run
 Problem: **the trace-harness test passes (exit 0, "69 checks passed"), but prints two
 `[TraceHarness] assert FAIL` lines during a normal run** — because acceptance criterion
 5 (lines 232–245) deliberately feeds a wrong expected value to verify `check()` reports
@@ -181,9 +181,17 @@ suppressed/labelled channel — so a passing run reads unambiguously green. **Lo
 priority; do not displace the correctness or headline flags.** Note QA will likely
 surface this in its suite sweep too.
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-20, commit `8e7b50c`): `TraceHarness.check()`
+(`game/sim/trace_harness.gd`) takes a new `expect_to_fail: bool = false` param; when
+true it routes the printed line through a distinctly-labelled `[TraceHarness]
+negative-test, expected —` tag instead of `[TraceHarness] assert FAIL —`. Only the two
+deliberately-wrong-expectation calls in `test_trace_harness.gd`'s own criterion-5
+coverage pass `true`; every other call site across the suite (`test_airborne_actions.gd`,
+`test_held_input_stances.gd`, `test_dash_air_action.gd`) keeps the default and is
+unaffected. A fresh run now prints unambiguously green — verified directly (`[negative-
+test, expected]` lines instead of `assert FAIL` lines), 69/69 checks passing.
 
-### [open] 2026-07-17 · raised-by: Strategist · owner: Developer · re: instrument ergonomics — match reset
+### [resolved] 2026-07-17 · raised-by: Strategist · owner: Developer · re: instrument ergonomics — match reset
 Problem: at match end the game stops until the window is closed, and `R` (`do_reset`) is
 a **no-op in match mode** (JC-098). Correct as specced, but it means **every re-gate
 costs the user a full app relaunch per match** — and the user has now gated this project
@@ -194,9 +202,23 @@ by a gate that is expensive to run. Bind `R` to restart the match in match mode 
 why that is more than it looks and I'll drop it). **Low priority — do not let this
 displace the correctness flags above.**
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-20, commit `7f1c032`; JC-116): `TrainingMode.do_reset()`
+(`game/scenes/training_mode.gd`), in match mode, now calls a new private
+`_restart_match()` — builds a fresh `MatchState.new_match(CharacterA.CHAR_ID,
+CharacterB.CHAR_ID)` (the same construction `_ready_match_mode()` used to build the
+match the first time) and hands it to `MatchTickHost` via its own pre-existing
+`set_match_state()`. Both pieces already existed for other reasons, so this stayed
+clean wiring rather than new match-layer semantics — it does not reopen JC-098's
+scope trim, which is specifically about the mid-match snapshot/restore slot
+(`capture_reset`/`has_reset_point`, unchanged, still a no-op/false in match mode).
+New regression: `_test_match_mode_do_reset_restarts_the_match`
+(`test_training_mode_shell.gd`) drives a match into `PHASE_ACTIVE` with real tick
+progress, calls `do_reset()` through the shell's own public surface, and asserts the
+match is genuinely back at `ROUND_START`/full health/tick 0 and still steppable
+afterward — not merely that some field changed. Judgment call logged as JC-116
+(`docs/judgment-log.md`).
 
-### [open] 2026-07-17 · raised-by: QA (P2 re-gate re-audit) · owner: Developer · re: `6H`'s hitbox never reaches a crouching hurtbox — the overhead is a free dodge, not a mixup
+### [resolved] 2026-07-17 · raised-by: QA (P2 re-gate re-audit) · owner: Developer · re: `6H`'s hitbox never reaches a crouching hurtbox — the overhead is a free dodge, not a mixup
 Problem, found while closing the proxy-test-sweep gap on B's overheads (see the resolved
 flag above): character B's `6H` hitbox is authored `Box.make(x=20, y=-85, w=30, h=20)` —
 world y-range **-85..-65**. A crouching defender's hurtbox (`_hurt_crouch`,
@@ -233,4 +255,20 @@ to `game/tests/test_qa_p2_regate_overhead_enforcement.gd` (a placeholder for exa
 assertion is described but deliberately not committed red — see that file's header) once
 fixed, so the fix and its regression net land together.
 ---
-Resolution (owner fills): …
+Resolution (Developer, 2026-07-20, commit `96fe6f7`; JC-117): `6H`'s hitbox `h`
+20 → 45 (`character_b.gd::_build_6h`; `x`/`y`/`w` unchanged — same top at `y=-85`,
+same horizontal reach QA already confirmed sufficient). New bottom edge `-40`
+overlaps `_hurt_crouch`'s `-55..0` range by 15 units of real margin (not a bare
+graze), while staying a clear 20 units above B's own `2L` low-poke band
+(`-20..-5`) — still reads as an overhead over a low, not a mid-body strike.
+`guard_height` stays `HIGH`; geometry-only, no spec change. Re-baked
+`data/character-b.tres` and deliberately re-baselined
+`character_b_frame_data.golden.txt` (diffed first — confirmed the ONLY differing
+line was this exact hitbox's `h` field). Re-verified
+`test_character_b.gd::_test_6h_is_reachable_and_not_shadowed_by_5h` green
+(unaffected — it only checks input resolution and the authored `guard_height`
+field). Closed the placeholder this flag names: `_test_6h_hits_crouching_wrong_
+stance` (`test_qa_p2_regate_overhead_enforcement.gd`) drives `6H` against a
+defender held in `STATE_CROUCH` (actively holding down-back) and asserts
+`CONTACT_HIT`/`block_valid=false` — the exact defect reproduced, now a permanent
+green regression. Judgment call logged as JC-117 (`docs/judgment-log.md`).
