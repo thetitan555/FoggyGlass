@@ -418,6 +418,36 @@ func _test_slide_is_a_low_hard_knockdown() -> void:
 	_eq(hit_reaction, MoveState.REACTION_KNOCKDOWN, "the slide's hit_reaction is the REACTION_KNOCKDOWN kind (AD-049), which B's own reaction_map routes DIRECTLY into the shared knockdown state (AD-043, no air trip)")
 	_true(m.is_crouch, "the slide is authored crouched throughout (matches the LOW's animation, AD-045)")
 
+	# docs/flags.md 2026-07-17 "re: test_character_b_air.gd and the shape of
+	# our tests" (Strategist/QA): the checks above only read the AUTHORED
+	# hit_reaction constant back and compare it to itself -- they cannot fail
+	# for any realistic defect in knockdown RESOLUTION (the block path IS
+	# dynamically covered, via _test_slide_spacing_variable_advantage_is_
+	# instrument_readable, but nothing drove an actual ON-HIT connect). Drive
+	# the slide into a STANDING defender (a LOW move hits a standing back-hold,
+	# AD-045) through the real engine and confirm the defender genuinely
+	# reaches STATE_KNOCKDOWN, mirroring the exact pattern
+	# _test_knockdown_state_wired_and_shared already uses for 2H's launch.
+	var s := _two_char_state(40)
+	s.players[0].state_id = CharacterB.STATE_SLIDE
+	s.players[0].frame_in_state = 0
+	s.players[1].state_id = CharacterB.STATE_IDLE   # standing -- LOW hits, does not block
+	var hit_connected := false
+	for _k in range(CharacterB.SLIDE_STARTUP + CharacterB.SLIDE_ACTIVE + CharacterB.SLIDE_RECOVERY):
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+		if s.players[0].move_contact == PlayerState.CONTACT_HIT:
+			hit_connected = true
+			break
+	_true(hit_connected, "the slide connects as a genuine HIT against a standing defender (setup)")
+	var landed_into_knockdown := false
+	for _k in range(80):
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.NEUTRAL)
+		if s.players[1].state_id == CharacterB.STATE_KNOCKDOWN:
+			landed_into_knockdown = true
+			break
+	_true(landed_into_knockdown, "the slide's on-hit connect actually resolves the defender into STATE_KNOCKDOWN through the real engine -- not just an authored-data readback")
+	_cleanup()
+
 
 ## docs/flags.md 2026-07-17 "re: JC-095 provisional tuning — settled": "the
 ## slides' distances should vary much more between strengths" (JC-112). Before
