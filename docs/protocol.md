@@ -194,6 +194,34 @@ ledger stays small and cheap to read. **Batch where possible:** flags for the
 same owner should be raised and resolved together in one session; every separate
 session re-pays that role's full reading cost.
 
+**The owner flips its own flag — say so in the dispatch.** A recurring gap (three
+Developer sessions across the P2 re-gate): a role fixes-and-commits the code but leaves
+its flag `[open]` with an empty resolution line, because flipping the ledger is easy to
+forget once the real work is done. Two mitigations, both cheap: (1) **every dispatch that
+hands a role a flag names the finishing step explicitly** — "flip your resolved flags to
+`[resolved]` with a resolution line citing the commit before you finish"; the
+Developer's own finishing checklist (`.claude/agents/foggyglass-developer.md`) carries the
+same reminder. (2) When it's missed and the work is demonstrably committed, the fix is a
+**warm-agent resume** (SendMessage the still-open session to flip — near-free, keeps the
+owner authoring its own resolution) rather than a cold respawn; the Strategist may
+janitorially close-on-cited-commit only when the owner's session is gone and the
+resolution is already substantively written (a status-token correction, not authoring
+someone else's adjudication). Getting the flip done keeps the fresh-session cold-start
+honest: the live ledger should show only *genuinely* open work.
+
+**Strategist pre-dispatch diagnosis on gate-defect flags (a cheap, high-leverage step).**
+Before routing a user's gate-defect flag to a Developer, the Strategist does a **quick
+read of the relevant code** (a grep, a state-id check) to confirm what the defect actually
+is. Twice in the P2 re-gate this paid for itself many times over: a reported "knockdown is
+broken / no knockdown by any means" was, on inspection, a *readout-labelling* bug (the
+mechanic worked; the instrument collapsed four states onto one word) — which changed the
+owner, the fix, and saved a Developer session chasing a non-existent combat bug; and the
+facing / air-reset defects split cleanly into *design-first* (Architect/Strategist) vs.
+*implementation* (Developer) only because the pre-dispatch read showed which was which. The
+Strategist doesn't fix and doesn't write the spec — but a few minutes reading before
+dispatch shrinks the Developer session, routes it to the right owner, and catches
+"the instrument is lying" before it becomes a wasted build.
+
 ## Cadence
 
 - **Per session (Strategist).** At the start of every session, before other
@@ -267,25 +295,45 @@ trade differently:
     rule). This keeps granular, reviewable history AND caps a mid-batch death to the
     single uncommitted ticket — neutralizing the old batch-big failure mode (three P1
     mid-batch deaths). It is *not* the old "one big commit at the end" batch.
-  - **Ends on one real checkpoint**, and **watch the context ceiling** — R3's batch
-    hit ~281k, the largest single session of P1.1; bigger batches climb toward the
-    zone where within-session cost grows and a death costs more. A batch big enough to
-    risk the runaway guard is too big; split it.
+  - **Ends on one real checkpoint**, and **watch BOTH ceilings — context and the
+    usage window.** Two independent size limits, and the second is the one that
+    actually bit:
+    - *Context ceiling:* R3's batch hit ~281k, the largest single session of P1.1;
+      bigger batches climb toward the zone where within-session cost grows and a death
+      costs more. A batch big enough to risk the runaway guard is too big.
+    - *Usage-window ceiling (added P2 re-gate, 2026-07-20):* a single heavy session
+      must **land well inside one usage window** and must not span a window reset. The
+      P2 5-unit instrument batch (~423k tokens) consumed **~150% of a 5-hour window and
+      ran across the boundary — it nearly bricked**, and only survived because work was
+      committed as it went. Per-unit efficiency was *fine* (~85k/unit); the session was
+      simply too long. **Measured comfortable size: ~2–4 units / ≲~350k tokens** (P2
+      correctness 353k/4 was fine; instrument 423k/5 was over). Five heavy units is too
+      big **regardless of per-unit efficiency** — token-per-unit is not the constraint
+      that binds here; wall-clock-within-a-window is. When in doubt, split; commit-as-
+      you-go is insurance against a mid-window death, not a license to court one.
+    - *Small-independent clusters are the exception that stays safe:* a batch of
+      several *small* items (e.g. the P2 loose-ends pass: 4 units / 142k) is safe even
+      with **low read-overlap**, because none can balloon toward either ceiling. The
+      read-overlap condition is what heavy tickets need; small items amortize the fixed
+      read without the size risk.
   Per-ticket dispatch remains the right tool for a novel/independent/large ticket, or
   where the user needs a checkpoint between tickets to steer. (History: the strict
   per-ticket default itself replaced an unmeasured "batch-big" mandate; see
-  `flags-archive.md`, 2026-07-08. This revision is the measured middle, from P1.1.)
+  `flags-archive.md`, 2026-07-08. The measured middle came from P1.1; the two-ceiling
+  sizing rule from the P2 re-gate near-brick.)
 
-**The batching tradeoff, named.** A bigger batch amortizes reading but costs two
-things: fewer checkpoints for the user to catch a wrong turn, and more lost work
-if a session dies mid-flight (a limit, a crash) — interrupted work that wasn't
-checkpointed or logged has to be reconstructed. So batch size trades tokens
-against steerability and blast-radius. Right-size it to **as much as can run
-before a genuine decision point or a natural checkpoint** — and commit and write
-judgment-log / flag entries *as you go*, not at the end, so an interruption loses
-as little as possible. (`claude --resume` softens the blast radius further — an
-interrupted batch can resume rather than respawn from a cold start — but that is
-insurance, not a license to skip the as-you-go checkpoints.)
+**The batching tradeoff, named.** A bigger batch amortizes reading but costs three
+things: fewer checkpoints for the user to catch a wrong turn, more lost work if a
+session dies mid-flight (a limit, a crash), and — the one the P2 re-gate found —
+**duration risk: a session long enough to span a usage-window reset can die at the
+reset with work in flight.** So batch size trades per-unit tokens against
+steerability, blast-radius, *and* wall-clock-within-a-window. Right-size it to **as
+much as can run before a genuine decision point or a natural checkpoint, and still
+land inside one usage window** — and commit and write judgment-log / flag entries *as
+you go*, not at the end, so an interruption loses as little as possible. (`claude
+--resume` softens the blast radius further — an interrupted batch can resume rather
+than respawn from a cold start — but that is insurance, not a license to skip the
+as-you-go checkpoints or to oversize the batch.)
 
 **Prioritize spend by drift-cost.** Put scrutiny where divergence is expensive —
 determinism, the contracts multiple roles build against, the charter's legibility

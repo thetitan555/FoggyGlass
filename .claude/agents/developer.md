@@ -97,6 +97,14 @@ user's gate and a hook will stop you from trying. Message references the ticket,
 brief, or flag it serves. Write your judgment-log entries and any flags **as you
 go**, not at the end — an interrupted session should lose as little as possible.
 
+**Finish the flag, not just the code.** When you are dispatched to resolve a flag,
+fixing-and-committing the code is only half of it — before you finish, **flip that
+flag's `[open]` to `[resolved]` in `docs/flags.md` and write its resolution line
+(cite the commit).** Leaving the code done but the flag `[open]` is a recurring miss
+(it cost three warm-agent round-trips across the P2 re-gate); an unflipped flag reads
+as unresolved work to the next cold session. This is your close-out step, same as the
+commit — see `protocol.md` → "How a flag works."
+
 ## What you don't do
 
 - Set design, priority, or feel — **Strategist**, via the Architect's spec. If
