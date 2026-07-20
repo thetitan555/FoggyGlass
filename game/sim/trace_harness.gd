@@ -221,19 +221,30 @@ static func row_at(rows: Array[Dictionary], tick: int) -> Dictionary:
 ## tree (e.g. test_record_playback.gd), so a script asserting a brief behavior
 ## the sim does not yet satisfy FAILS the suite rather than passing silently
 ## (acceptance criterion 5 — "the harness catches the omission").
-static func check(rows: Array[Dictionary], tick: int, field: String, expected) -> bool:
+##
+## `expect_to_fail` (default false): set true ONLY by a test that is
+## deliberately feeding a wrong expectation to verify this detector itself
+## (e.g. test_trace_harness.gd's own criterion-5 coverage). Routes the printed
+## line through a distinctly-labelled `[negative-test, expected]` tag instead
+## of `assert FAIL`, so a passing suite run never prints a line that reads
+## like a real failure (docs/flags.md 2026-07-17, "test_trace_harness.gd
+## prints 'assert FAIL' on a passing run").
+static func check(rows: Array[Dictionary], tick: int, field: String, expected,
+		expect_to_fail: bool = false) -> bool:
+	var tag: String = "[TraceHarness] negative-test, expected —" if expect_to_fail \
+		else "[TraceHarness] assert FAIL —"
 	var row: Dictionary = row_at(rows, tick)
 	if row.is_empty():
-		printerr("[TraceHarness] assert FAIL — tick=%d field=%s expected=%s actual=<no such tick recorded (ran %d ticks)>"
-			% [tick, field, str(expected), rows.size()])
+		printerr("%s tick=%d field=%s expected=%s actual=<no such tick recorded (ran %d ticks)>"
+			% [tag, tick, field, str(expected), rows.size()])
 		return false
 	if not row.has(field):
-		printerr("[TraceHarness] assert FAIL — tick=%d field=%s expected=%s actual=<unknown field>"
-			% [tick, field, str(expected)])
+		printerr("%s tick=%d field=%s expected=%s actual=<unknown field>"
+			% [tag, tick, field, str(expected)])
 		return false
 	var actual = row[field]
 	if actual != expected:
-		printerr("[TraceHarness] assert FAIL — tick=%d field=%s expected=%s actual=%s"
-			% [tick, field, str(expected), str(actual)])
+		printerr("%s tick=%d field=%s expected=%s actual=%s"
+			% [tag, tick, field, str(expected), str(actual)])
 		return false
 	return true

@@ -237,11 +237,14 @@ func _test_replay_source_equivalent_to_a_raw_step_loop() -> void:
 func _test_assert_runner_fails_loudly_on_wrong_expectation() -> void:
 	var rows: Array[Dictionary] = TraceHarness.run("5*3", "5*3", 3, _roster(), CharacterA.CHAR_ID)
 	# p0 is IDLE at tick 1 under neutral input; assert something else and confirm
-	# the runner reports the mismatch rather than passing.
-	var wrong_passed: bool = TraceHarness.check(rows, 1, "p0.state", CharacterA.STATE_WALK_F)
+	# the runner reports the mismatch rather than passing. `expect_to_fail=true`
+	# routes the printed line through TraceHarness's own negative-test tag so a
+	# passing suite run never prints something that reads like a real failure
+	# (docs/flags.md 2026-07-17, "test_trace_harness.gd prints 'assert FAIL'").
+	var wrong_passed: bool = TraceHarness.check(rows, 1, "p0.state", CharacterA.STATE_WALK_F, true)
 	_false(wrong_passed, "check() reports FAIL when the expected value does not match the trace")
 	# An assertion against a tick that was never recorded also fails, not silently.
-	var missing_tick_passed: bool = TraceHarness.check(rows, 99, "p0.state", CharacterA.STATE_IDLE)
+	var missing_tick_passed: bool = TraceHarness.check(rows, 99, "p0.state", CharacterA.STATE_IDLE, true)
 	_false(missing_tick_passed, "check() reports FAIL for a tick the run never recorded")
 	MoveRegistry.clear()
 
