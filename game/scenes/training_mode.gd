@@ -475,17 +475,32 @@ func step_once() -> void:
 ## readout instruments only — no new mechanics/control surface"; the match
 ## layer's OWN determinism/round-trip bar is already proven headlessly by
 ## TKT-P2-07's test_match_state.gd, independent of any interactive reset
-## control). So in match mode these are a documented no-op / false rather than
+## control). So in match mode `capture_reset`/`has_reset_point` (the
+## situation-snapshot slot) stay a documented no-op / false rather than
 ## silently reaching into the wrong host — a future ticket that wants an
-## interactive match reset builds the MatchState-shaped harness twin then.
+## interactive mid-match snapshot builds the MatchState-shaped harness twin
+## then. `do_reset()` itself is a NARROWER, separate operation in match mode —
+## see its own doc below (docs/flags.md 2026-07-17 "instrument ergonomics —
+## match reset").
 func capture_reset() -> void:
 	if _match_mode:
 		return
 	_harness.capture_reset()
 
 
+## In SANDBOX mode: restore to the last captured reset point (TrainingHarness,
+## unchanged). In MATCH MODE: restart the whole match from the top (fresh
+## `MatchState.new_match`, same fixed A-vs-B wiring `_ready_match_mode` used to
+## build the ORIGINAL match) — NOT a restore-to-snapshot (there is no snapshot
+## slot in match mode; see capture_reset's note above). Fixes docs/flags.md
+## 2026-07-17 "instrument ergonomics — match reset": before this, `R` was a
+## no-op in match mode (JC-098), so every gate cost a full app relaunch per
+## match. This is plain wiring, not new match-state semantics: `MatchState.
+## new_match` and `MatchTickHost.set_match_state` both already existed for
+## exactly this construction/replacement (JC recorded in docs/judgment-log.md).
 func do_reset() -> void:
 	if _match_mode:
+		_restart_match()
 		return
 	_harness.do_reset()
 
@@ -494,6 +509,19 @@ func has_reset_point() -> bool:
 	if _match_mode:
 		return false
 	return _harness.has_reset_point()
+
+
+## Rebuild a fresh MatchState (same fixed A-vs-B character wiring, AD-048) and
+## hand it to `_match_tick_host` via its own `set_match_state` — the SAME two
+## calls `_ready_match_mode` used to build the match the first time. Does NOT
+## touch `_source_p1`/`_source_p2` (their own recorded buffers / dummy mode are
+## orthogonal to match state and untouched by a restart) or `_frames_queried`
+## (MatchTickHost's own field doc: it is a plain per-real-tick production
+## counter into the sources' growing `_answers` array, decoupled from `state.
+## sim.tick` BY DESIGN — restarting the match's clock does not desync it).
+func _restart_match() -> void:
+	var match_state := MatchState.new_match(CharacterA.CHAR_ID, CharacterB.CHAR_ID)
+	_match_tick_host.set_match_state(match_state)
 
 
 ## Record/playback dummy mode switch (TKT-P1-04) for player index 0/1. Routed

@@ -54,6 +54,7 @@ func _run() -> void:
 	await _test_fresh_record_on_recording_entry_replaces_not_concatenates()
 	await _test_fresh_record_resets_the_playback_cursor()
 	await _test_match_mode_wires_a_vs_b_and_ticks()
+	await _test_match_mode_do_reset_restarts_the_match()
 	await _test_match_mode_leaves_sandbox_default_unaffected()
 
 
@@ -406,6 +407,39 @@ func _test_match_mode_wires_a_vs_b_and_ticks() -> void:
 	var tick_after_beat: int = tm.inspection_view().tick()
 	tm.step_once()
 	_eq(tm.inspection_view().tick(), tick_after_beat + 1, "an ACTIVE step_once() through the shell advances combat by one tick")
+	tm.get_parent().queue_free()
+
+
+## docs/flags.md 2026-07-17 "instrument ergonomics — match reset": `do_reset()`
+## (what `R`/`tm_do_reset` binds to, training_mode.gd `_unhandled_input`) must
+## restart the match in match mode rather than the pre-fix no-op (JC-098).
+## Drives real damage/tick progress past ROUND_START, calls `do_reset()`
+## through the shell's own public surface (never MatchTickHost directly, per
+## this file's own seam-discipline rule), and asserts the match is genuinely
+## back at the top — not merely "some field changed."
+func _test_match_mode_do_reset_restarts_the_match() -> void:
+	var tm := await _make_match_shell()
+	tm.set_paused(true)
+	for i in range(MatchState.ROUND_START_BEAT_TICKS):
+		tm.step_once()
+	var mv_active: MatchView = tm.match_view()
+	_eq(mv_active.match_phase, MatchState.PHASE_ACTIVE, "setup: driving through ROUND_START reaches ACTIVE before reset")
+	var tick_before_reset: int = tm.inspection_view().tick()
+	_true(tick_before_reset > 0, "setup: the match has actually ticked forward before reset")
+
+	tm.do_reset()
+
+	var mv_after: MatchView = tm.match_view()
+	_eq(mv_after.match_phase, MatchState.PHASE_ROUND_START, "do_reset() in match mode returns the match to ROUND_START")
+	_eq(mv_after.health[0], MatchState.FULL_HEALTH, "do_reset() in match mode restores P1 to full health")
+	_eq(mv_after.health[1], MatchState.FULL_HEALTH, "do_reset() in match mode restores P2 to full health")
+	_eq(tm.inspection_view().tick(), 0, "do_reset() in match mode resets the tick clock to 0")
+
+	# The restarted match is still steppable through the shell's own surface
+	# (not a dead/half-wired state) — drive it through ACTIVE again.
+	for i in range(MatchState.ROUND_START_BEAT_TICKS):
+		tm.step_once()
+	_eq(tm.match_view().match_phase, MatchState.PHASE_ACTIVE, "the restarted match reaches ACTIVE again under the same shell driving")
 	tm.get_parent().queue_free()
 
 
