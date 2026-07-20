@@ -257,8 +257,39 @@ session:
   binding, and the slide-knockdown dynamic-coverage gap (rides with the 6H fix). All
   in `flags.md`.
 
-**The historical first-cycle detail below is kept for the record; the current truth is
-the block above.**
+**Status after the THIRD gate cycle (2026-07-20) — P2 still open; three defects held
+for a fresh session.** The user re-gated on the second cycle's fixes. Confirmed working:
+the reaction-identity readout (the headline fix landed), air normals carry the fall, A
+has no air actions, the settled tuning. The `6H` overhead defect and the two deferred
+loose-ends (trace-harness output, match-mode `R` reset) were all fixed and re-audited
+green (47/47) — the small bounded loose-ends pass. **Three NEW defects surfaced, two of
+them AD-049-class foundational misses** (a foundational thing never exercised until two
+characters actually interacted in the gate), and all three are **held for a fresh
+Strategist session** because two need a design decision before any build:
+
+1. **Facing never flips** (`flags.md`, owner **Architect**). No auto-facing code exists —
+   `facing` is set at init and never updated by relative position. Load-bearing for
+   crossups, block direction, and motion-input forward/back. *When* facing flips is a
+   spec/design call (grounded-only? actionable-only?), so it needs an AD before a ticket.
+2. **Air-reset contradicts its own brief** (`flags.md`, owner **Strategist** first). The
+   brief says `AIR_RESET` is "neutral fall, B recovers, nothing follows"; JC-102 (ratified)
+   built it as land-into-knockdown. I owe a brief clarification (what "recovers" means —
+   air tech? soft neutral landing?), then it's an Architect upstream-correction of the
+   ratified call, then a Developer build.
+3. **B's double jump snaps at apex** (`flags.md`, owner **Developer**). A pure
+   airborne-physics implementation bug; sequenced to batch with #2 in **one**
+   airborne-physics session (shared cold-start).
+
+**How the fresh session opens:** sweep the ledgers (clean — three open flags above,
+JC-116/117 provisional awaiting ratification), then the design work on #1 and #2 comes
+first (Architect facing-rule AD; Strategist air-reset brief clarification → Architect
+re-spec), which unblocks a single airborne-physics + facing Developer pass carrying #3.
+Then a fourth user gate. P2 does not close until that gate clears — but the content-seam
+thesis it exists to prove is already **re-proven** (above); what remains is finishing B's
+combat surface so the matchup is legible, not re-proving the architecture.
+
+**The historical first/second-cycle detail below is kept for the record; the current
+truth is the two blocks above.**
 
 **Remaining to close P2.**
 
