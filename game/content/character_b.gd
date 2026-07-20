@@ -995,7 +995,19 @@ static func _build_6h() -> MoveState:
 	kf_start.has_motion = true
 	kf_start.motion_vel_x = FP.from_units(1.0)
 	var hb := HitBox.new()
-	hb.box = Box.make(FP.from_int(20), FP.from_int(-85), FP.from_int(30), FP.from_int(20))
+	# docs/flags.md 2026-07-17 "re: 6H's hitbox never reaches a crouching
+	# hurtbox": the ORIGINAL h=20 box (world y -85..-65) sat entirely above
+	# _hurt_crouch()'s top (y=-55) -- a 10-unit gap no spacing could close, so
+	# crouching was a free dodge of this overhead. h=45 (world y -85..-40)
+	# keeps the SAME top (still starts above the standing hurtbox's own head,
+	# same wind-up read) and extends the bottom edge 15 units PAST the crouch
+	# hurtbox's top (real overlap margin, not a bare graze) while staying a
+	# clear 20 units clear of 2L's low-poke hitbox band (y -20..-5) against a
+	# standing target -- still reads as an overhead over a low poke, never
+	# reaching the leg/shin region a genuine low occupies. Geometry/tuning
+	# call, not a spec change (guard_height stays HIGH) -- logged
+	# docs/judgment-log.md.
+	hb.box = Box.make(FP.from_int(20), FP.from_int(-85), FP.from_int(30), FP.from_int(45))
 	hb.guard_height = HitBox.GUARD_HIGH
 	hb.damage = 55
 	hb.hitstun = 24

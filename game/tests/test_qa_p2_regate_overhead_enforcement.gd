@@ -22,10 +22,14 @@ extends SceneTree
 ## must be blocked standing (hits a crouching back-hold)"). This makes
 ## permanent crouching a FREE, zero-risk dodge of B's dedicated command
 ## overhead — undermining the high/low mixup `character-b.md` B-4 centers on.
-## **This file does not assert the currently-broken 6H-vs-crouch behavior**
-## (this project's convention per flags.md: a red assertion is not committed
-## to the suite; the fix commit adds the permanent green regression) — it
-## documents the finding here and asserts only what currently holds.
+##
+## FIXED (Developer, 2026-07-20, this same session — docs/judgment-log.md):
+## `6H`'s hitbox `h` 20 -> 45 (world y -85..-40), closing the gap with real
+## margin (15 units past the crouch hurtbox's top) while staying clear of
+## 2L's low-poke band. `_test_6h_hits_crouching_wrong_stance` below is the
+## permanent regression for exactly this claim — added alongside the fix per
+## this project's convention (a red assertion is never committed to the
+## suite; the fix commit adds the green regression together with the fix).
 ##
 ## The H-divekick (the OTHER named overhead) does NOT share this defect: its
 ## hitbox tracks B's own falling position, so it geometrically reaches both a
@@ -98,7 +102,7 @@ func _two_char_state(gap_units: int = 40) -> SimState:
 
 func _run() -> void:
 	_test_6h_blocked_standing()
-	# 6H-vs-crouching is a KNOWN, ROUTED defect (see file header) — not asserted here.
+	_test_6h_hits_crouching_wrong_stance()
 	_test_h_divekick_blocked_standing_pinned_at_wall()
 	_test_h_divekick_hits_crouching_wrong_stance()
 	_test_negative_control_5l_still_blocked_crouching()
@@ -122,6 +126,33 @@ func _test_6h_blocked_standing() -> void:
 	_eq(resolved, PlayerState.CONTACT_BLOCK, "6H is BLOCKED by a STANDING back-hold (driven through the real engine, not authored-data readback)")
 	_eq(s.last_hit.guard_height, HitBox.GUARD_HIGH, "the resolved HitEvent reports guard_height=HIGH")
 	_true(s.last_hit.block_valid, "block_valid true (correct stance for a HIGH attack)")
+	_cleanup()
+
+
+## The permanent regression for docs/flags.md "re: 6H hitbox never reaches a
+## crouching hurtbox" (fixed this session, see file header). A defender held
+## STATIONARY in STATE_CROUCH (not a movement/spacing artifact, mirroring the
+## flag's own repro method) must be HIT by 6H, not left untouched — a
+## crouching back-hold is the WRONG stance against a HIGH attack
+## (combat-resolution.md AD-045: "HIGH... hits a crouching back-hold").
+func _test_6h_hits_crouching_wrong_stance() -> void:
+	var s := _two_char_state(40)
+	s.players[0].state_id = CharacterB.STATE_6H
+	s.players[0].frame_in_state = 0
+	s.players[1].state_id = CharacterB.STATE_CROUCH
+	var resolved: int = PlayerState.CONTACT_NONE
+	for _k in range(30):
+		# Held down-back throughout (mirrors _test_h_divekick_hits_crouching_
+		# wrong_stance) -- P1 faces -1, so P2's back = RIGHT: even ACTIVELY
+		# attempting to crouch-block, a HIGH still beats it (AD-045).
+		s = SimState.step(s, InputFrame.NEUTRAL, InputFrame.DOWN | InputFrame.RIGHT)
+		if s.players[0].move_contact != PlayerState.CONTACT_NONE:
+			resolved = s.players[0].move_contact
+			break
+	_eq(resolved, PlayerState.CONTACT_HIT, "6H beats a CROUCHING back-hold -- resolves as a HIT, not a whiff or a block (the exact defect this flag reports)")
+	if resolved == PlayerState.CONTACT_HIT:
+		_eq(s.last_hit.guard_height, HitBox.GUARD_HIGH, "the resolved HitEvent reports guard_height=HIGH")
+		_true(not s.last_hit.block_valid, "block_valid false (wrong stance)")
 	_cleanup()
 
 
